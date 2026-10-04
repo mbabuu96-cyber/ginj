@@ -3,824 +3,848 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#EDF0EC">
+<meta name="theme-color" content="#EEF1EF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1412" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Гинж">
-<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAEAUlEQVR4nO3cQY7TQBCGUYM4wOxYIHE4NMdCnJEbwAopGjGQxHZX+a/31mja5f7UDhPwh89fv/zaIMTH6guAIwmaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImyqfqC9jjx+vL3X/22/efp13HKtPmfcaHz1+//Kq+iEc8sqnvudJmT5t3r0sEfcSmvqfjZk+b90itgz5zY9/qsNHT5j1D278UrtzcivWq16+e9ywtg6662da9vlYfOTrd4BWP5GnzrtDmhO60udt2/vVMm3eVFkF3vZlnXde0eVcq/8ix9ybe86hcsca9ps272iW/KXz0ht/++SueQtPm3aP0hH70ZleelEesPW3eCmWfoatv8KM/b+9JN23eKiVBV2/usz/32U2eNm+lFr/l+JezH33dHq3T5j3a8qA7/hPIR9Z59NSaNm+1tif06pOk+uSaNu9ZWgZddbOte31Lg77a4+s9984xbd4O2p3Q1afGtEd/9fpHaxc07LHsq+8rPbbukTbP//x4fbnEad7qhO5ywzr++uxMXa7jCK2Chr0ETRRBE0XQRBE0UQRNFEETRdBEaRV0l2/fVl3HtHlXWPbV97fvP6Nu3IrXCXRylW8TW53QsFe7oKtPtWlvAa1e/2hLg77KY+t/7p1j2rwdtDuht23e62WnrXumlkFvm0d/2nqrLA+643+hP/NVA9Pmrdb2hP7De5qv9fOrlQTd5ZVUq17RNW3eSmUndPUmr97cafNWueQLz/fc7NXrVa9fPe9ql3zh+e0mTfgKetq8e5Sf0NvWewPOOK2mzbtSi99ydL2JXd7TvErX63pEi6C3rd/NnPae5m7X86wWHzneqnwkV2zstHnP1OaEvjXt9bLT1j1Ty6C3zVtA09ZbpeVHjrfOfCR33Nhp8x7pEkHfOmKzr7Sp0+bd63JB30r+V2N/M23eZ1w6aHir7V8K4RmCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJspvFx1S2FOYofwAAAAASUVORK5CYII=">
-<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAEAUlEQVR4nO3cQY7TQBCGUYM4wOxYIHE4NMdCnJEbwAopGjGQxHZX+a/31mja5f7UDhPwh89fv/zaIMTH6guAIwmaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImyqfqC9jjx+vL3X/22/efp13HKtPmfcaHz1+//Kq+iEc8sqnvudJmT5t3r0sEfcSmvqfjZk+b90itgz5zY9/qsNHT5j1D278UrtzcivWq16+e9ywtg6662da9vlYfOTrd4BWP5GnzrtDmhO60udt2/vVMm3eVFkF3vZlnXde0eVcq/8ix9ybe86hcsca9ps272iW/KXz0ht/++SueQtPm3aP0hH70ZleelEesPW3eCmWfoatv8KM/b+9JN23eKiVBV2/usz/32U2eNm+lFr/l+JezH33dHq3T5j3a8qA7/hPIR9Z59NSaNm+1tif06pOk+uSaNu9ZWgZddbOte31Lg77a4+s9984xbd4O2p3Q1afGtEd/9fpHaxc07LHsq+8rPbbukTbP//x4fbnEad7qhO5ywzr++uxMXa7jCK2Chr0ETRRBE0XQRBE0UQRNFEETRdBEaRV0l2/fVl3HtHlXWPbV97fvP6Nu3IrXCXRylW8TW53QsFe7oKtPtWlvAa1e/2hLg77KY+t/7p1j2rwdtDuht23e62WnrXumlkFvm0d/2nqrLA+643+hP/NVA9Pmrdb2hP7De5qv9fOrlQTd5ZVUq17RNW3eSmUndPUmr97cafNWueQLz/fc7NXrVa9fPe9ql3zh+e0mTfgKetq8e5Sf0NvWewPOOK2mzbtSi99ydL2JXd7TvErX63pEi6C3rd/NnPae5m7X86wWHzneqnwkV2zstHnP1OaEvjXt9bLT1j1Ty6C3zVtA09ZbpeVHjrfOfCR33Nhp8x7pEkHfOmKzr7Sp0+bd63JB30r+V2N/M23eZ1w6aHir7V8K4RmCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJspvFx1S2FOYofwAAAAASUVORK5CYII=">
-<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%D0%93%D0%B8%D0%BD%D0%B6%22%2C%22short_name%22%3A%22%D0%93%D0%B8%D0%BD%D0%B6%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23EDF0EC%22%2C%22theme_color%22%3A%22%23EDF0EC%22%2C%22start_url%22%3A%22.%22%7D">
-<title>Гинж — Арилжааны журнал</title>
+<meta name="apple-mobile-web-app-title" content="Алхам">
+<meta name="description" content="Deriv Step Index ба XAUUSD-д зориулсан арилжааны тэмдэглэл.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%2316201B'/%3E%3Cpath d='M6 22h5v-5h5v-5h5V7h3' fill='none' stroke='%23D3A94B' stroke-width='2.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>Алхам арилжааны тэмдэглэл</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Unbounded:wght@500;700&display=swap">
 <style>
+/* Layout: багажны самбар — наалдсан толгой ба табууд, доор нь 12 баганат сүлжээ; утсан дээр нэг багана */
 :root{
-  --paper:#EDF0EC;
-  --card:#F7F9F6;
-  --ink:#171E1B;
-  --soft:#5D6862;
-  --faint:#8A948E;
-  --rule:#CBD3CB;
-  --clinical:#2E5E6E;
-  --kept:#3C7A57;
-  --broken:#9C3F35;
-  --streak:#B5822B;
-  --shadow:0 1px 0 rgba(23,30,27,.06), 0 8px 24px -18px rgba(23,30,27,.5);
-  --r:10px;
+  --bg:#EEF1EF; --surface:#FFFFFF; --surface-2:#E4E9E6; --ink:#16201B; --muted:#5A6A62; --line:#D0D8D3;
+  --accent:#8E6A17; --accent-soft:#F1E7CF; --accent-ink:#FFFFFF;
+  --gain:#1C7449; --gain-soft:#D7EEDF; --loss:#B13636; --loss-soft:#F6DCDC; --warn:#A8670F; --warn-soft:#F7E6CC;
+  --f-display:"Unbounded","IBM Plex Sans",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:10px; --shadow:0 1px 2px rgba(20,30,25,.06),0 4px 14px rgba(20,30,25,.05);
 }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0E1412; --surface:#151D1A; --surface-2:#1C2622; --ink:#E4EBE7; --muted:#92A29A; --line:#28342F;
+  --accent:#D3A94B; --accent-soft:#3A3020; --accent-ink:#1A1406;
+  --gain:#4FC48C; --gain-soft:#173326; --loss:#F07C7C; --loss-soft:#3A1E1E; --warn:#E6B45C; --warn-soft:#3A2D17;
+  --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0E1412; --surface:#151D1A; --surface-2:#1C2622; --ink:#E4EBE7; --muted:#92A29A; --line:#28342F;
+  --accent:#D3A94B; --accent-soft:#3A3020; --accent-ink:#1A1406;
+  --gain:#4FC48C; --gain-soft:#173326; --loss:#F07C7C; --loss-soft:#3A1E1E; --warn:#E6B45C; --warn-soft:#3A2D17;
+  --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark }
+
 *{box-sizing:border-box}
-html,body{margin:0;padding:0}
-body{
-  background:var(--paper);
-  color:var(--ink);
-  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-  font-size:15px;line-height:1.5;
-  -webkit-font-smoothing:antialiased;
-  padding-bottom:88px;
-}
-.wrap{max-width:760px;margin:0 auto;padding:0 16px}
-h1,h2,h3{font-family:'Archivo','Inter',sans-serif;font-weight:700;letter-spacing:-.02em;margin:0}
-.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+.num,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.pos{color:var(--gain)} .neg{color:var(--loss)} .muted{color:var(--muted)}
+h1,h2,h3{margin:0;text-wrap:balance}
+h2{font-size:15px;font-weight:600}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
 
 /* header */
-header{padding:22px 0 14px;border-bottom:1px solid var(--rule);margin-bottom:18px}
-.brandrow{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-h1{font-size:21px}
-.tag{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.top-in{max-width:1240px;margin:0 auto;padding:10px 16px 0;display:flex;flex-direction:column;gap:8px}
+.brandrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.logo{width:30px;height:30px;flex:none}
+.brand b{font-family:var(--f-display);font-weight:700;font-size:18px;letter-spacing:.02em}
+.brand span{font-size:12px;color:var(--muted)}
+.mode{font-size:11px;padding:3px 8px;border-radius:99px;background:var(--surface-2);color:var(--muted)}
+.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{border:0;background:none;padding:9px 12px 11px;cursor:pointer;color:var(--muted);font-weight:500;border-bottom:2px solid transparent;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab:focus-visible,.btn:focus-visible,.seg button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-/* tabs */
-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(247,249,246,.94);backdrop-filter:blur(12px);border-top:1px solid var(--rule);z-index:40;padding-bottom:env(safe-area-inset-bottom)}
-.tabs{max-width:760px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
-.tab{background:none;border:0;padding:12px 4px 13px;font:500 12px 'Inter',sans-serif;color:var(--faint);cursor:pointer;border-top:2px solid transparent;margin-top:-1px}
-.tab[aria-selected="true"]{color:var(--clinical);border-top-color:var(--clinical);font-weight:600}
+.btn{border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.danger{color:var(--loss);border-color:var(--loss)}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btn.ghost{border-color:transparent;background:none}
 
-section[hidden]{display:none}
+main{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:18px 60px;display:flex;flex-direction:column;gap:16px}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}
+.c12{grid-column:span 12}.c8{grid-column:span 8}.c7{grid-column:span 7}.c6{grid-column:span 6}.c5{grid-column:span 5}.c4{grid-column:span 4}
+@media (max-width:900px){.c8,.c7,.c6,.c5,.c4{grid-column:span 12}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.panel-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.panel-h h2{margin-right:auto}
 
-/* card */
-.card{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
-.card h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);font-weight:600;font-family:'IBM Plex Mono',monospace;margin-bottom:12px}
+/* banner */
+.banner{border-radius:var(--r);padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid}
+.banner.demo{background:var(--accent-soft);border-color:var(--accent);}
+.banner.stop{background:var(--loss-soft);border-color:var(--loss);color:var(--ink)}
+.banner.info{background:var(--surface-2);border-color:var(--line)}
+.banner p{margin:0;flex:1;min-width:220px}
 
-/* THE CHAIN — signature element */
-.chainwrap{padding:18px 16px 14px}
-.chain{display:flex;align-items:center;gap:0;overflow-x:auto;padding:8px 0 12px;scrollbar-width:none}
-.chain::-webkit-scrollbar{display:none}
-.link{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:5px;width:30px;position:relative}
-.link .dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--rule);background:transparent;transition:transform .15s}
-.link.kept .dot{background:var(--streak);border-color:var(--streak)}
-.link.broke .dot{background:transparent;border-color:var(--broken);position:relative}
-.link.broke .dot::after{content:"";position:absolute;inset:2px;background:
-  linear-gradient(45deg,transparent 44%,var(--broken) 44%,var(--broken) 56%,transparent 56%),
-  linear-gradient(-45deg,transparent 44%,var(--broken) 44%,var(--broken) 56%,transparent 56%)}
-.link .bar{position:absolute;top:9px;left:23px;width:14px;height:2px;background:var(--rule)}
-.link.kept.linked .bar{background:var(--streak)}
-.link:last-child .bar{display:none}
-.link .d{font:500 9.5px 'IBM Plex Mono',monospace;color:var(--faint)}
-.link.today .dot{box-shadow:0 0 0 3px rgba(46,94,110,.18)}
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+@media (max-width:1000px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:520px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.kpi .v{font-family:var(--f-mono);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .s{font-size:12px;color:var(--muted)}
+.meter{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent)}
 
-.streakrow{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.bignum{font-family:'Archivo',sans-serif;font-size:52px;font-weight:700;line-height:.9;letter-spacing:-.04em}
-.bignum small{font-size:15px;font-weight:500;color:var(--soft);letter-spacing:0;margin-left:6px}
-.goal{font-size:12.5px;color:var(--soft);text-align:right;max-width:230px}
-.goal b{color:var(--streak)}
+/* tables */
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--surface-2);position:sticky;top:0}
+td.r,th.r{text-align:right}
+tbody tr:last-child td{border-bottom:0}
+tr.click{cursor:pointer} tr.click:hover td{background:var(--surface-2)}
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap}
+.pill.good{background:var(--gain-soft);color:var(--gain)} .pill.bad{background:var(--loss-soft);color:var(--loss)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.neutral{background:var(--surface-2);color:var(--muted)}
+.dir{font-family:var(--f-mono);font-size:12px;font-weight:600}
+.dir.buy{color:var(--gain)} .dir.sell{color:var(--loss)}
 
-/* status banner */
-.banner{border-radius:var(--r);padding:13px 15px;margin-bottom:14px;font-size:14px;line-height:1.45;border:1px solid}
-.banner.ok{background:rgba(60,122,87,.09);border-color:rgba(60,122,87,.35);color:#2C5B41}
-.banner.warn{background:rgba(181,130,43,.1);border-color:rgba(181,130,43,.4);color:#7C5A17}
-.banner.stop{background:rgba(156,63,53,.1);border-color:rgba(156,63,53,.4);color:#7C312A}
-.banner b{font-weight:600}
+/* bars */
+.bars{display:flex;flex-direction:column;gap:8px}
+.bar{display:grid;grid-template-columns:110px 1fr 76px;gap:10px;align-items:center;font-size:13px}
+.bar .t{position:relative;height:14px;background:var(--surface-2);border-radius:3px}
+.bar .t i{position:absolute;top:0;bottom:0;border-radius:3px}
+.bar .t .zero{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--muted);left:50%}
+.bar .n{text-align:right}
 
-/* counters */
-.counters{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.ctr{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:12px 10px;text-align:center}
-.ctr .v{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-.02em}
-.ctr .l{font-size:10.5px;color:var(--faint);letter-spacing:.06em;text-transform:uppercase;margin-top:3px}
-.ctr.hot .v{color:var(--broken)}
+/* calendar */
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .dh{font-size:11px;color:var(--muted);text-align:center;padding-bottom:2px}
+.cal .d{border-radius:6px;min-height:58px;padding:5px 6px;background:var(--surface-2);display:flex;flex-direction:column;justify-content:space-between;font-size:11px;min-width:0}
+.cal .d.out{opacity:.35}
+.cal .d .dn{color:var(--muted)}
+.cal .d .dp{font-family:var(--f-mono);font-weight:600;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal .d.today{outline:2px solid var(--accent);outline-offset:-2px}
+@media (max-width:520px){.cal .d{min-height:44px;padding:3px}.cal .d .dp{font-size:9px}}
 
 /* forms */
-label{display:block;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--soft);font-weight:600;margin-bottom:5px;font-family:'IBM Plex Mono',monospace}
-input,select,textarea{
-  width:100%;padding:10px 11px;border:1px solid var(--rule);border-radius:8px;
-  background:#fff;color:var(--ink);font:400 15px 'Inter',sans-serif;
-}
-input.mono,select.mono{font-family:'IBM Plex Mono',monospace}
-textarea{resize:vertical;min-height:60px;line-height:1.45}
-input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--clinical);outline-offset:1px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.field{margin-bottom:12px}
-.hint{font-size:12px;color:var(--faint);margin-top:5px;line-height:1.4}
+dialog{border:0;padding:0;border-radius:14px;background:var(--surface);color:var(--ink);width:min(920px,calc(100vw - 24px));max-height:calc(100vh - 24px);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(8,14,12,.55)}
+.dlg{display:flex;flex-direction:column;max-height:calc(100vh - 24px)}
+.dlg-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.dlg-h h2{margin-right:auto;font-family:var(--f-display);font-size:15px;font-weight:500}
+.dlg-b{overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:18px}
+.dlg-f{display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--line);flex-wrap:wrap;align-items:center}
+.dlg-f .sp{margin-right:auto}
+fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+legend{padding:0;margin-bottom:8px}
+.fg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 12px}
+@media (max-width:700px){.fg{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f.w2{grid-column:span 2} .f.w4{grid-column:1/-1}
+.f label,.lbl{font-size:12px;color:var(--muted);font-weight:500}
+input[type=text],input[type=number],input[type=datetime-local],input[type=url],select,textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg);min-width:0}
+textarea{min-height:64px;resize:vertical}
+input[type=number]{font-family:var(--f-mono)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;width:max-content}
+.seg button{border:0;background:var(--bg);padding:7px 12px;cursor:pointer;font-size:13px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);font-weight:600}
+.seg.yn button[data-v="y"][aria-pressed="true"]{background:var(--gain);color:#fff}
+.seg.yn button[data-v="n"][aria-pressed="true"]{background:var(--loss);color:#fff}
+.seg.yn.rev button[data-v="y"][aria-pressed="true"]{background:var(--loss);color:#fff}
+.seg.yn.rev button[data-v="n"][aria-pressed="true"]{background:var(--gain);color:#fff}
+.seg.bs button[data-v="Buy"][aria-pressed="true"]{background:var(--gain);color:#fff}
+.seg.bs button[data-v="Sell"][aria-pressed="true"]{background:var(--loss);color:#fff}
+.qrow{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.qrow:last-child{border-bottom:0}
+.qrow span{flex:1;min-width:200px}
+.preview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;background:var(--surface-2);border-radius:8px;padding:10px 12px}
+@media (max-width:700px){.preview{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.preview div{display:flex;flex-direction:column;min-width:0}
+.preview b{font-family:var(--f-mono);font-size:15px;font-variant-numeric:tabular-nums}
+.warns{display:flex;flex-direction:column;gap:6px}
+.warns div{font-size:13px;padding:6px 10px;border-radius:6px;background:var(--warn-soft);color:var(--warn)}
+.warns div.bad{background:var(--loss-soft);color:var(--loss)}
 
-button.btn{
-  width:100%;padding:13px;border:0;border-radius:9px;background:var(--clinical);color:#fff;
-  font:600 15px 'Inter',sans-serif;cursor:pointer;transition:opacity .15s;
-}
-button.btn:disabled{background:var(--rule);color:var(--faint);cursor:not-allowed}
-button.btn.ghost{background:transparent;border:1px solid var(--rule);color:var(--soft);font-weight:500}
-button.btn.danger{background:var(--broken)}
-.btnrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.filters select{width:auto}
+.empty{padding:28px 16px;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:10px;align-items:center}
 
-/* gate */
-.gate{border:1px dashed var(--rule);border-radius:var(--r);padding:14px;margin-bottom:14px;background:rgba(46,94,110,.035)}
-.gate h3{font-size:13px;margin-bottom:4px}
-.gatehint{font-size:12.5px;color:var(--soft);margin:0 0 12px}
-.reason{display:flex;gap:8px;align-items:center;margin-bottom:8px}
-.reason .n{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--faint);width:14px;flex:0 0 14px}
+/* 20 trade dots */
+.dots{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:8px}
+.dot{aspect-ratio:1;max-width:100%;border-radius:50%;border:2px dashed var(--line);display:grid;place-items:center;font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.dot.ok{border:0;background:var(--gain);color:#fff}
+.dot.okl{border:0;background:var(--accent);color:var(--accent-ink)}
+.bigstat{font-family:var(--f-display);font-size:34px;font-weight:700}
 
-/* checks */
-.check{display:flex;align-items:flex-start;gap:11px;padding:11px 0;border-bottom:1px solid var(--rule);cursor:pointer}
-.check:last-of-type{border-bottom:0}
-.check input{width:20px;height:20px;flex:0 0 20px;margin:1px 0 0;accent-color:var(--kept)}
-.check span{font-size:14px;line-height:1.4}
-.scorepill{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;padding:4px 10px;border-radius:20px;background:var(--rule);color:var(--soft)}
-.scorepill.full{background:var(--streak);color:#fff}
-
-/* trades */
-.trade{background:var(--card);border:1px solid var(--rule);border-left-width:3px;border-radius:var(--r);padding:12px 13px;margin-bottom:9px}
-.trade.win{border-left-color:var(--kept)}
-.trade.loss{border-left-color:var(--broken)}
-.trade.be{border-left-color:var(--faint)}
-.trade.open{border-left-color:var(--clinical);border-left-style:dashed}
-.thead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-.tpair{font-family:'Archivo',sans-serif;font-weight:600;font-size:15px;letter-spacing:-.01em}
-.tr{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15px}
-.tr.pos{color:var(--kept)} .tr.neg{color:var(--broken)}
-.tmeta{font-size:11.5px;color:var(--faint);font-family:'IBM Plex Mono',monospace;margin-top:3px;letter-spacing:.02em}
-.treasons{font-size:13px;color:var(--soft);margin-top:8px;padding-left:14px}
-.treasons li{margin-bottom:2px}
-.flag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:rgba(156,63,53,.13);color:var(--broken);margin-top:7px}
-.tactions{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap}
-.tactions button{flex:1;min-width:62px;padding:7px 4px;border:1px solid var(--rule);background:#fff;border-radius:7px;font:500 12.5px 'Inter',sans-serif;color:var(--soft);cursor:pointer}
-.tactions button.sel{background:var(--ink);color:#fff;border-color:var(--ink)}
-.tactions button.del{flex:0 0 auto;min-width:0;padding:7px 11px;color:var(--broken);border-color:rgba(156,63,53,.3)}
-
-/* stats */
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-.stat{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:13px}
-.stat .v{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:-.03em}
-.stat .l{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.07em;margin-top:2px}
-.stat .sub{font-size:11.5px;color:var(--soft);margin-top:4px}
-table{width:100%;border-collapse:collapse;font-size:13.5px}
-th{text-align:left;font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:0 0 7px;border-bottom:1px solid var(--rule)}
-td{padding:9px 0;border-bottom:1px solid var(--rule)}
-td.num{text-align:right;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
-tr:last-child td{border-bottom:0}
-
-svg.curve{width:100%;height:110px;display:block}
-
-.empty{text-align:center;padding:34px 18px;color:var(--faint);font-size:14px;line-height:1.55}
-.empty b{display:block;color:var(--soft);font-weight:600;margin-bottom:5px;font-size:15px}
-
-.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:80px;background:var(--ink);color:#fff;padding:11px 18px;border-radius:24px;font-size:13.5px;opacity:0;pointer-events:none;transition:all .25s;z-index:60;max-width:90vw;text-align:center}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-
-.divider{height:1px;background:var(--rule);margin:16px 0}
-.sub{font-size:13px;color:var(--soft);line-height:1.5}
-.sub strong{color:var(--ink);font-weight:600}
-
-@media (max-width:420px){
-  .grid3{grid-template-columns:1fr 1fr}
-  .bignum{font-size:44px}
-  .goal{text-align:left;max-width:none}
-}
+.principle{border-left:3px solid var(--accent);padding:4px 0 4px 12px;font-size:13px}
+.principle b.lab{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:13px;z-index:100;max-width:calc(100vw - 32px)}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--loss-soft);padding:8px 10px;border-radius:8px;font-size:13px}
+svg text{font-family:var(--f-mono)}
+.inst-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:6px;align-items:end}
+@media (max-width:700px){.inst-row{grid-template-columns:1fr 1fr 1fr}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}</style>
 </head>
 <body>
 
-<div class="wrap">
-<header>
-  <div class="brandrow">
-    <h1>Гинж</h1>
-    <span class="tag" id="balTag">—</span>
+<header class="top">
+  <div class="top-in">
+    <div class="brandrow">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="7" fill="var(--ink)"/><path d="M6 22h5v-5h5v-5h5V7h3" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        <div><b>Алхам</b><br><span>Step Index ба XAUUSD арилжааны тэмдэглэл</span></div>
+      </div>
+      <span class="mode" id="modeTag">Ачаалж байна…</span>
+      <button class="btn primary" id="addBtn" type="button">+ Арилжаа</button>
+    </div>
+    <nav class="tabs" role="tablist" id="tabs">
+      <button class="tab" role="tab" data-v="dash">Самбар</button>
+      <button class="tab" role="tab" data-v="trades">Арилжаанууд</button>
+      <button class="tab" role="tab" data-v="day">Өдрийн бэлтгэл</button>
+      <button class="tab" role="tab" data-v="ex">20 арилжааны дасгал</button>
+      <button class="tab" role="tab" data-v="review">Дүгнэлт</button>
+      <button class="tab" role="tab" data-v="settings">Тохиргоо</button>
+    </nav>
   </div>
-  <div class="tag" style="margin-top:4px">Сахилга батын журнал</div>
 </header>
 
-<!-- ================= TODAY ================= -->
-<section id="s-today">
-  <div id="banner"></div>
+<main id="app"></main>
 
-  <div class="card chainwrap">
-    <h2>Сүүлийн 21 хоног</h2>
-    <div class="chain" id="chain"></div>
-    <div class="streakrow">
-      <div>
-        <div class="bignum" id="streakN">0<small>хоног</small></div>
-        <div class="tag" style="margin-top:6px">Тасраагүй гинж</div>
-      </div>
-      <div class="goal" id="goalTxt"></div>
-    </div>
-  </div>
-
-  <div class="counters" style="margin-bottom:14px">
-    <div class="ctr" id="ctrTrades"><div class="v">0/3</div><div class="l">Арилжаа</div></div>
-    <div class="ctr" id="ctrLoss"><div class="v">0</div><div class="l">Алдагдал</div></div>
-    <div class="ctr" id="ctrR"><div class="v">0.0R</div><div class="l">Өнөөдөр</div></div>
-  </div>
-
-  <!-- pre-trade gate -->
-  <div class="card">
-    <h2>Арилжаанд орох</h2>
-    <div class="gate">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-        <h3>Нөхцөл бүрдсэн үү?</h3>
-        <span class="scorepill" id="condPill">0/0</span>
-      </div>
-      <p class="gatehint">Бүх нөхцөл чагтлагдтал товч идэвхжихгүй. Асуулт нь «шалтгаан олж чадах уу?» биш, «нөхцөл бүрдсэн үү?».</p>
-      <div id="condList"></div>
-      <div class="field" style="margin:12px 0 0">
-        <label>Нэмэлт тэмдэглэл (заавал биш)</label>
-        <textarea id="cNote" placeholder="Жагсаалтад багтахгүй ажигласан зүйл"></textarea>
-      </div>
-    </div>
-
-    <div class="grid2">
-      <div class="field"><label>Хос</label><input id="pair" class="mono" placeholder="EURUSD" autocapitalize="characters"></div>
-      <div class="field"><label>Чиглэл</label><select id="dir"><option value="Long">Long</option><option value="Short">Short</option></select></div>
-    </div>
-    <div class="grid2">
-      <div class="field"><label>Setup</label><select id="setup">
-        <option>Trend pullback</option><option>Breakout retest</option>
-        <option>S/R өшгөлт</option><option>Range хязгаар</option><option>Бусад</option>
-      </select></div>
-      <div class="field"><label>Сесс</label><select id="sess">
-        <option>London</option><option>New York</option><option>Asia</option><option>Overlap</option>
-      </select></div>
-    </div>
-    <div class="grid3">
-      <div class="field"><label>Entry</label><input id="entry" class="mono" type="number" step="any" inputmode="decimal"></div>
-      <div class="field"><label>Stop</label><input id="sl" class="mono" type="number" step="any" inputmode="decimal"></div>
-      <div class="field"><label>Target</label><input id="tp" class="mono" type="number" step="any" inputmode="decimal"></div>
-    </div>
-    <div class="hint" id="sizeHint" style="margin-bottom:12px"></div>
-    <button class="btn" id="logBtn" disabled>Арилжаа бүртгэх</button>
-  </div>
-
-  <!-- daily 5 checks -->
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-      <h2 style="margin:0">Өдрийн 5 шалгалт</h2>
-      <span class="scorepill" id="scorePill">0/5</span>
-    </div>
-    <div id="checks"></div>
-    <div class="field" style="margin:14px 0 12px"><label>Тэмдэглэл (заавал биш)</label><textarea id="dayNote" placeholder="Өнөөдөр юу мэдэрсэн бэ?"></textarea></div>
-    <button class="btn" id="saveDay">Өдрийг хаах</button>
-  </div>
-</section>
-
-<!-- ================= TRADES ================= -->
-<section id="s-trades" hidden>
-  <div class="card">
-    <h2>Шүүлт</h2>
-    <div class="grid2">
-      <select id="fSetup" class="mono"><option value="">Бүх setup</option></select>
-      <select id="fRes" class="mono">
-        <option value="">Бүх үр дүн</option><option value="open">Нээлттэй</option>
-        <option value="win">Ашигтай</option><option value="loss">Алдагдалтай</option><option value="be">Тэнцүү</option>
-      </select>
-    </div>
-  </div>
-  <div id="tradeList"></div>
-</section>
-
-<!-- ================= STATS ================= -->
-<section id="s-stats" hidden>
-  <div class="stats" id="statGrid"></div>
-  <div class="card">
-    <h2>Хуримтлагдсан R</h2>
-    <svg class="curve" id="curve" viewBox="0 0 300 110" preserveAspectRatio="none"></svg>
-    <div class="hint" id="curveHint"></div>
-  </div>
-  <div class="card">
-    <h2>Setup тус бүрээр</h2>
-    <div id="setupTable"></div>
-  </div>
-  <div class="card">
-    <h2>Сахилга бат</h2>
-    <div id="discTable"></div>
-  </div>
-</section>
-
-<!-- ================= SETTINGS ================= -->
-<section id="s-set" hidden>
-  <div class="card">
-    <h2>Данс ба эрсдэл</h2>
-    <div class="grid2">
-      <div class="field"><label>Үлдэгдэл ($)</label><input id="sBal" class="mono" type="number" step="any" inputmode="decimal"></div>
-      <div class="field"><label>Эрсдэл (%)</label><input id="sRisk" class="mono" type="number" step="0.05" inputmode="decimal"></div>
-    </div>
-    <div class="grid2">
-      <div class="field"><label>Өдрийн дээд арилжаа</label><input id="sMax" class="mono" type="number" inputmode="numeric"></div>
-      <div class="field"><label>Зогсох алдагдал</label><input id="sStop" class="mono" type="number" inputmode="numeric"></div>
-    </div>
-    <div class="field"><label>Пипийн үнэ ($ / 1.0 лот)</label><input id="sPip" class="mono" type="number" step="any" inputmode="decimal"></div>
-    <div class="hint">Ихэнх XXX/USD хосуудад 10. JPY хосуудад ханшаас хамаарна.</div>
-    <div class="divider"></div>
-    <button class="btn" id="saveSet">Хадгалах</button>
-  </div>
-
-  <div class="card">
-    <h2>Орох нөхцөлүүд</h2>
-    <p class="sub">Тайван байхдаа нэг удаа бич. Арилжааны дундуур бүү өөрчил — өөрчлөх бол зах зээл хаалттай үед.</p>
-    <div id="condEdit" style="margin-top:12px"></div>
-    <button class="btn ghost" id="addCond" style="margin-top:6px">+ Нөхцөл нэмэх</button>
-    <div class="divider"></div>
-    <button class="btn" id="saveConds">Нөхцөлүүдийг хадгалах</button>
-  </div>
-
-  <div class="card">
-    <h2>Нөөцлөлт</h2>
-    <p class="sub">Өгөгдлөө JSON файлаар татаж ав. Долоо хоног бүр нэг удаа хий — журнал алдагдвал бүх ажил дэмий болно.</p>
-    <div class="btnrow" style="margin-top:12px">
-      <button class="btn ghost" id="expBtn">Татах</button>
-      <button class="btn ghost" id="impBtn">Сэргээх</button>
-    </div>
-    <input type="file" id="impFile" accept="application/json,.json" hidden>
-  </div>
-
-  <div class="card">
-    <h2>Устгах</h2>
-    <p class="sub">Бүх арилжаа, өдрийн оноо устана. Буцаах боломжгүй.</p>
-    <button class="btn danger" id="wipeBtn" style="margin-top:12px">Бүгдийг устгах</button>
-  </div>
-
-  <div class="card">
-    <h2>Санамж</h2>
-    <p class="sub"><strong>5/5 бол ялалт — мөнгө алдсан ч.</strong> 4/5 бол бүтэлгүй — мөнгө олсон ч. Энэ журнал ашгийг биш, гүйцэтгэлийг хэмждэг.</p>
-    <p class="sub" style="margin-top:10px">Дүрэм зөрчсөн өдрийн дараа <strong>24 цаг арилжаа байхгүй</strong>. Өөрийгөө буруутгах биш, зүгээр л завсарлага.</p>
-  </div>
-</section>
-</div>
-
-<nav><div class="tabs">
-  <button class="tab" data-t="today" aria-selected="true">Өнөөдөр</button>
-  <button class="tab" data-t="trades" aria-selected="false">Арилжаа</button>
-  <button class="tab" data-t="stats" aria-selected="false">Статистик</button>
-  <button class="tab" data-t="set" aria-selected="false">Тохиргоо</button>
-</div></nav>
-
-<div class="toast" id="toast"></div>
+<dialog id="dlg"><form class="dlg" id="tradeForm" method="dialog" novalidate></form></dialog>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
 
 <script>
+(function(){
 "use strict";
+/* ---------------- helpers ---------------- */
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num=v=>{if(v===""||v==null)return null;const n=+v;return isFinite(n)?n:null};
+const pad=n=>String(n).padStart(2,"0");
+const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const nowLocal=()=>{const d=new Date();return `${ymd(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const uid=()=>"t"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const clone=o=>JSON.parse(JSON.stringify(o));
+function fm(v,dec=2){if(v==null||!isFinite(v))return "—";const s=Math.abs(v).toLocaleString("en-US",{minimumFractionDigits:dec,maximumFractionDigits:dec});return (v<0?"−":"")+s}
+function money(v){if(v==null||!isFinite(v))return "—";const c=S.settings.currency||"$";return (v<0?"−":v>0?"+":"")+c+Math.abs(v).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
+function rfmt(v){if(v==null||!isFinite(v))return "—";return (v<0?"−":v>0?"+":"")+Math.abs(v).toFixed(2)+"R"}
+function pct(v,d=0){if(v==null||!isFinite(v))return "—";return (v*100).toFixed(d)+"%"}
+const cls=v=>v==null?"":v>0?"pos":v<0?"neg":"";
+function isoWeek(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);const y=t.getUTCFullYear();const w=Math.ceil(((t-Date.UTC(y,0,1))/864e5+1)/7);return `${y}-W${pad(w)}`}
+function weekStart(key){const [y,w]=key.split("-W").map(Number);const s=new Date(y,0,4);const day=s.getDay()||7;s.setDate(s.getDate()-day+1+(w-1)*7);return s}
+let toastT;function toast(msg){let el=$(".toast");if(!el){el=document.createElement("div");el.className="toast";el.setAttribute("role","status");document.body.appendChild(el)}el.textContent=msg;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,3200)}
 
-/* ---------- state ---------- */
-const KEY = "ginj:v1";
-const DEFAULT_CONDS = [
-  "Тогтоосон цагийн цонхонд байна",
-  "H1 дээр чиглэл тодорхой",
-  "Үнэ миний тэмдэглэсэн түвшинд хүрсэн",
-  "Орох дохио үүссэн (лаа / бүтэц)",
-  "R:R хамгийн багадаа 1:1.5"
-];
-const DEFAULTS = {
-  settings:{ balance:2500, riskPct:0.25, maxTrades:3, stopLosses:2, pipValue:10, conditions:DEFAULT_CONDS.slice() },
-  trades:[], days:{}
+/* ---------------- defaults ---------------- */
+const DEFAULT_SETTINGS={
+  currency:"$",startBalance:1000,riskPct:1,maxRiskPct:2,dailyLossPct:3,maxTradesDay:5,
+  instruments:[
+    {name:"Step Index",cs:10,minLot:0.1,lotStep:0.01,tick:0.1,kind:"step"},
+    {name:"Step Index 200",cs:10,minLot:0.1,lotStep:0.01,tick:0.2,kind:"step"},
+    {name:"Step Index 300",cs:10,minLot:0.1,lotStep:0.01,tick:0.3,kind:"step"},
+    {name:"Step Index 400",cs:10,minLot:0.1,lotStep:0.01,tick:0.4,kind:"step"},
+    {name:"Step Index 500",cs:10,minLot:0.1,lotStep:0.01,tick:0.5,kind:"step"},
+    {name:"XAUUSD",cs:100,minLot:0.01,lotStep:0.01,tick:0.01,kind:"gold"}
+  ],
+  setups:["Тренд үргэлжлэл","Дэмжлэг/эсэргүүцлээс буцалт","Breakout","Range-ийн хил","Сешн нээлтийн хөдөлгөөн"],
+  rules:{entry:"",stop:"",target:"",size:"",time:"",noTrade:""}
 };
-let D = JSON.parse(JSON.stringify(DEFAULTS));
-let memoryOnly = false;
-
-const CHECKS = [
-  "Тогтоосон цонхондоо л арилжаалсан",
-  "Арилжаа бүрт бүх нөхцөл бүрдсэн байсан",
-  "Stop loss-оо огт зөөгөөгүй",
-  "Өдрийн арилжааны хязгаараас хэтрээгүй",
-  "Зогсох дүрэмдээ хүрээд зогссон"
+const EMOTIONS=["Тайван","Айдас","Шунал","Найдвар","Өшөө авах","Уйдал","Хэт итгэл","Яаруу"];
+const EXITS=["Stop-д хүрсэн","Зорилтод хүрсэн","Дүрмээр гарсан","Айснаасаа","Найдвар тасарсан","Бусад"];
+const DAY_Q=[
+  "Өнөөдрийн арилжааны төлөвлөгөө (ямар setup хайх) тодорхой юу?",
+  "Өнөөдрийн хамгийн их алдагдлын хязгаар тогтоосон уу?",
+  "Нэг арилжаанд тохиргоонд заасан эрсдэлээс ихгүй авахаар шийдсэн үү?",
+  "Сэтгэл санаа тайван уу? (уурласан, ядарсан, өшөө авах хүсэлгүй)",
+  "Өчигдрийн алдагдлыг буцааж авах гэсэн бодолгүй юу?",
+  "Өчигдөр том ашиг олсон бол хэт итгэлгүй, дүрмээ мөрдөхөд бэлэн үү?",
+  "Аль ч арилжаа алдагдалтай байж болно гэдгийг хүлээн зөвшөөрч байна уу?",
+  "Зах зээл юу ч хийж болно. Би таамаглахгүй, дүрмээрээ хариу үйлдэл хийхэд бэлэн үү?"
+];
+const REVIEW_Q=[
+  "Хамгийн сайн гүйцэтгэсэн арилжаа аль вэ, яагаад? (үр дүнгээр биш)",
+  "Хамгийн муу арилжаа аль вэ, ямар дүрэм зөрчсөн бэ?",
+  "Алдагдлаа хүлээн зөвшөөрөхөд хэр амархан байсан бэ?",
+  "Ашигтай позицоо эрт хаасан уу? Айдас нөлөөлсөн үү?",
+  "Аль арилжааны үр дүнг санамсаргүй гэж тайван хүлээж авч чадсан бэ?",
+  "Ямар мэдрэмж хамгийн их зардал гаргасан бэ?",
+  "Том ашгийн дараа сахилга бат сулрсан уу?",
+  "Үр дүнгээ зах зээл, азаар тайлбарласан уу? Хариуцлагаа бүрэн хүлээсэн үү?",
+  "Ирэх долоо хоногт өөрчлөх НЭГ зүйл:"
+];
+const BELIEF_Q=["Мөнгө бол ...","Баян хүмүүс бол ...","Би их мөнгө олвол ...","Трейдингээр хурдан олсон мөнгө ...","Алдагдал хүлээх нь надад ... мэт санагддаг","Би буруу байх үедээ ...","Ашиг олсны дараа би ...","Миний дансны тааз гэж мэдрэгддэг дүн бол ...","Би амжилтанд хүрэх эрхтэй, учир нь ...","Зах зээл надад ... өртэй гэж санагддаг"];
+const PRINCIPLES=[
+  ["Сахилгат трейдер","Зах зээл дүрэм тогтоодоггүй. Дүрмийг би тогтоож, би мөрдөнө. Үр дүнгийн хариуцлага 100% минийх."],
+  ["Бүсэд арилжаа хийх","Нэг арилжааны үр дүн санамсаргүй. Давуу тал маань олон арилжааны цуваанд л харагдана."],
+  ["Бүсэд арилжаа хийх","Орохоосоо өмнө эрсдэлээ бүрэн хүлээн зөвшөөр. Хүлээн зөвшөөрөөгүй бол бүү ор."],
+  ["Сайн ялагдагч","Алдагдлыг жижиг, хурдан, тайван хүлээн зөвшөөр. Stop-ийг хэзээ ч алдагдал руу бүү хөдөлгө."],
+  ["Сайн ялагдагч","Алдагдалтай позицид хэзээ ч бүү нэм. Зөвхөн ашигтай позицид нэм."],
+  ["Сахилгат трейдер","Том ашгийн дараа хамгийн болгоомжтой бай. Ашгаа буцааж өгөх хандлага тэр үед гардаг."]
 ];
 
-const $ = id => document.getElementById(id);
-const todayKey = () => new Date().toLocaleDateString("en-CA");
-const fmt = n => (n>=0?"+":"") + n.toFixed(2);
+/* ---------------- state ---------------- */
+const S={settings:clone(DEFAULT_SETTINGS),trades:{},days:{},reviews:{},beliefs:{},mode:"local",
+  view:"dash",filter:{inst:"all",res:"all",month:"all"},cal:null,week:isoWeek(new Date()),month:ymd(new Date()).slice(0,7),
+  localCache:null,canSave:true};
+{const d=new Date();S.cal=`${d.getFullYear()}-${pad(d.getMonth()+1)}`}
+try{const v=localStorage.getItem("alkham-view");if(v)S.view=v}catch(e){}
+if(/^#(dash|trades|day|ex|review|settings)$/.test(location.hash))S.view=location.hash.slice(1);
 
-function toast(msg){
-  const t=$("toast"); t.textContent=msg; t.classList.add("show");
-  clearTimeout(t._x); t._x=setTimeout(()=>t.classList.remove("show"),2200);
-}
+function mergeSettings(o){const s=Object.assign(clone(DEFAULT_SETTINGS),o||{});if(!Array.isArray(s.instruments)||!s.instruments.length)s.instruments=clone(DEFAULT_SETTINGS.instruments);if(!Array.isArray(s.setups))s.setups=clone(DEFAULT_SETTINGS.setups);s.rules=Object.assign({},DEFAULT_SETTINGS.rules,s.rules||{});return s}
 
-/* ---------- persistence ---------- */
-const hasCloud = typeof window.storage !== "undefined" && window.storage && typeof window.storage.get === "function";
-let hasLocal = false;
-try{ const k="__t"; window.localStorage.setItem(k,"1"); window.localStorage.removeItem(k); hasLocal = true; }catch(e){ hasLocal = false; }
+/* ---------------- storage ---------------- */
+const LS="alkham-journal-v1";
+function lsLoad(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):null}catch(e){return null}}
+function lsSave(){if(S.mode!=="local")return;try{localStorage.setItem(LS,JSON.stringify({settings:S.settings,trades:S.trades,days:S.days,reviews:S.reviews,beliefs:S.beliefs}))}catch(e){}}
+(function initLocal(){const d=lsLoad();S.localCache=d;if(d){S.settings=mergeSettings(d.settings);S.trades=d.trades||{};S.days=d.days||{};S.reviews=d.reviews||{};S.beliefs=d.beliefs||{}}})();
 
-async function load(){
-  let raw = null;
-  if(hasCloud){
-    try{ const res = await window.storage.get(KEY); if(res && res.value) raw = res.value; }catch(e){}
-  }
-  if(raw === null && hasLocal){
-    try{ raw = window.localStorage.getItem(KEY); }catch(e){}
-  }
-  if(raw){
-    try{ D = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), JSON.parse(raw)); }catch(e){}
-  }
-  memoryOnly = !hasCloud && !hasLocal;
-}
-async function save(){
-  const s = JSON.stringify(D);
-  let ok = false;
-  if(hasCloud){ try{ await window.storage.set(KEY, s); ok = true; }catch(e){} }
-  if(hasLocal){ try{ window.localStorage.setItem(KEY, s); ok = true; }catch(e){} }
-  if(!ok){ memoryOnly = true; toast("Хадгалж чадсангүй — өгөгдлөө татаж ав"); }
-}
+let BASE=null,SETDOC=null;
+const queues={};
+function enqueue(key,fn){const p=(queues[key]||Promise.resolve()).then(fn).catch(handleErr);queues[key]=p;return p}
+function handleErr(e){const c=e&&e.code;
+  if(c==="quota_exceeded")toast("Хадгалах сан дүүрсэн байна. Хуучин арилжаа устгаж эсвэл экспортолж чөлөөлнө үү.");
+  else if(c==="invalid_argument"){S.canSave=false;toast("Энэ хуудсанд хадгалах эрх алга. Өөрийн хуулбар дээр ажиллана уу.")}
+  else if(c==="revoked")toast("Хадгалах сантай холбоо тасарлаа.");
+  else toast("Хадгалж чадсангүй. Түр хүлээгээд дахин оролдоно уу.")}
+function put(coll,id,obj){S[coll]=Object.assign({},S[coll],{[id]:obj});render();
+  if(S.mode==="cloud")return enqueue(coll+"/"+id,()=>BASE.collection(coll).doc(id).set(obj));lsSave();return Promise.resolve()}
+function del(coll,id){const m=Object.assign({},S[coll]);delete m[id];S[coll]=m;render();
+  if(S.mode==="cloud")return enqueue(coll+"/"+id,()=>BASE.collection(coll).doc(id).delete());lsSave();return Promise.resolve()}
+function saveSettings(o){S.settings=mergeSettings(o);render();if(S.mode==="cloud")return enqueue("settings",()=>SETDOC.set(clone(S.settings)));lsSave();return Promise.resolve()}
 
-/* ---------- derived ---------- */
-const tradesOn = d => D.trades.filter(t=>t.date===d);
-function dayScore(d){
-  const rec=D.days[d]; if(!rec) return null;
-  return rec.checks.filter(Boolean).length;
-}
-function streak(){
-  let n=0; const dt=new Date();
-  for(let i=0;i<400;i++){
-    const k=dt.toLocaleDateString("en-CA");
-    const s=dayScore(k);
-    if(s===5) n++;
-    else if(s!==null) break;
-    else if(i>0 && n>0){ /* skipped day: not a break, just no data */ }
-    dt.setDate(dt.getDate()-1);
-  }
-  return n;
-}
-function tradeR(t){
-  if(t.result==="open") return 0;
-  if(t.result==="be") return 0;
-  if(typeof t.r==="number") return t.r;
-  return t.result==="win" ? 1 : -1;
-}
-
-/* ---------- render: chain ---------- */
-function renderChain(){
-  const el=$("chain"); el.innerHTML="";
-  const days=[];
-  const dt=new Date(); dt.setDate(dt.getDate()-20);
-  for(let i=0;i<21;i++){ days.push(dt.toLocaleDateString("en-CA")); dt.setDate(dt.getDate()+1); }
-  days.forEach((k,i)=>{
-    const s=dayScore(k);
-    const div=document.createElement("div");
-    div.className="link"+(s===5?" kept":"")+(s!==null&&s<5?" broke":"")+(k===todayKey()?" today":"");
-    if(s===5 && i<20 && dayScore(days[i+1])===5) div.classList.add("linked");
-    div.innerHTML='<div class="dot"></div><div class="bar"></div><div class="d">'+k.slice(8)+'</div>';
-    div.title = k + (s===null?" — тэмдэглэгээгүй":" — "+s+"/5");
-    el.appendChild(div);
-  });
-
-  const n=streak();
-  $("streakN").innerHTML = n + '<small>хоног</small>';
-  const goal = n<14 ? 14 : 28;
-  const risk = n>=28 ? 0.75 : n>=14 ? 0.5 : 0.25;
-  $("goalTxt").innerHTML = "Одоогийн эрсдэл <b>"+risk+"%</b> ≈ $"+(D.settings.balance*risk/100).toFixed(2)+
-    "<br>Дараагийн шат: <b>"+goal+"</b> хоног ("+Math.max(0,goal-n)+" үлдсэн)";
-}
-
-/* ---------- render: today ---------- */
-function renderToday(){
-  const k=todayKey(), ts=tradesOn(k);
-  const losses=ts.filter(t=>t.result==="loss").length;
-  const rSum=ts.reduce((a,t)=>a+tradeR(t),0);
-  const closed = D.days[k] && D.days[k].closed;
-
-  $("ctrTrades").querySelector(".v").textContent = ts.length+"/"+D.settings.maxTrades;
-  $("ctrTrades").classList.toggle("hot", ts.length>=D.settings.maxTrades);
-  $("ctrLoss").querySelector(".v").textContent = losses;
-  $("ctrLoss").classList.toggle("hot", losses>=D.settings.stopLosses);
-  $("ctrR").querySelector(".v").textContent = fmt(rSum)+"R";
-  $("ctrR").classList.toggle("hot", rSum<0);
-
-  const movedAny = ts.some(t=>t.movedSL);
-  let b="";
-  if(closed) b='<div class="banner ok">Өнөөдрийн журнал хаагдсан. Дараагийн арилжаа маргааш.</div>';
-  else if(movedAny) b='<div class="banner stop"><b>Stop loss зөөгдсөн.</b> Дүрмээр өнөөдөр дуусав — үр дүн ямар ч байсан. Маргааш 24 цагийн завсарлага.</div>';
-  else if(losses>=D.settings.stopLosses) b='<div class="banner stop"><b>Зогсох дүрэм идэвхжлээ.</b> '+losses+' алдагдал. Платформоо хаа.</div>';
-  else if(ts.length>=D.settings.maxTrades) b='<div class="banner stop"><b>Зоос дууслаа.</b> '+ts.length+' арилжаа хийгдсэн. Өнөөдөр дуусав.</div>';
-  else if(losses===1) b='<div class="banner warn"><b>30 минутын завсарлага.</b> Дараагийн арилжаа хамгийн эрт '+new Date(Date.now()+18e5).toTimeString().slice(0,5)+'-д. Одоо график битгий хар.</div>';
-  else if(ts.length===0) b='<div class="banner ok">Өдөр цэвэр. '+D.settings.maxTrades+' зоос гарт байна.</div>';
-  else b='<div class="banner ok">'+ts.length+' арилжаа. '+(D.settings.maxTrades-ts.length)+' зоос үлдсэн.</div>';
-  $("banner").innerHTML=b;
-
-  const blocked = closed || movedAny || losses>=D.settings.stopLosses || ts.length>=D.settings.maxTrades;
-  renderConds();
-  gateCheck(blocked);
-  renderSize();
-  renderChecks();
-}
-
-let condState = [];
-
-function renderConds(){
-  const list = D.settings.conditions || [];
-  if(condState.length !== list.length) condState = list.map(()=>false);
-  const el=$("condList"); el.innerHTML="";
-  list.forEach((txt,i)=>{
-    const l=document.createElement("label");
-    l.className="check"; l.style.cssText="text-transform:none;letter-spacing:0;font-family:Inter,sans-serif;font-weight:400;color:var(--ink)";
-    l.innerHTML='<input type="checkbox" '+(condState[i]?"checked":"")+'><span>'+esc(txt)+'</span>';
-    l.querySelector("input").onchange=e=>{ condState[i]=e.target.checked; renderToday(); };
-    el.appendChild(l);
-  });
-  const n=condState.filter(Boolean).length;
-  $("condPill").textContent=n+"/"+list.length;
-  $("condPill").classList.toggle("full", list.length>0 && n===list.length);
-}
-
-function gateCheck(blocked){
-  const list=D.settings.conditions||[];
-  const allCond = list.length>0 && condState.filter(Boolean).length===list.length;
-  const fields = $("pair").value.trim() && $("entry").value && $("sl").value;
-  const btn=$("logBtn");
-  btn.disabled = blocked || !allCond || !fields;
-  btn.textContent = blocked ? "Өнөөдөр хаагдсан"
-    : !allCond ? "Нөхцөл бүрдээгүй — бүү ор"
-    : !fields ? "Хос, Entry, Stop бөглө"
-    : "Арилжаа бүртгэх";
-}
-
-function renderSize(){
-  const e=parseFloat($("entry").value), s=parseFloat($("sl").value);
-  const n=streak();
-  const risk = n>=28 ? 0.75 : n>=14 ? 0.5 : 0.25;
-  const amt = D.settings.balance*risk/100;
-  if(!isFinite(e)||!isFinite(s)||e===s){ $("sizeHint").textContent="Эрсдэл "+risk+"% = $"+amt.toFixed(2)+". Entry, Stop оруулбал лот тооцно."; return; }
-  const pair=($("pair").value||"").toUpperCase();
-  const pipSize = pair.includes("JPY") ? 0.01 : 0.0001;
-  const pips = Math.abs(e-s)/pipSize;
-  const lots = amt/(pips*D.settings.pipValue);
-  const tp=parseFloat($("tp").value);
-  let rr="";
-  if(isFinite(tp)) rr = " · R:R 1:"+(Math.abs(tp-e)/Math.abs(e-s)).toFixed(2);
-  $("sizeHint").textContent = "Эрсдэл $"+amt.toFixed(2)+" · "+pips.toFixed(1)+" пип · Лот "+lots.toFixed(2)+rr;
-}
-
-function renderChecks(){
-  const k=todayKey();
-  const rec=D.days[k]||{checks:[false,false,false,false,false],note:"",closed:false};
-  const ts=tradesOn(k);
-  // auto-suggest #2, #3, #4
-  if(!D.days[k]){
-    rec.checks[1] = ts.length>0 && ts.every(t=>t.reasons&&t.reasons.length>0);
-    rec.checks[2] = !ts.some(t=>t.movedSL);
-    rec.checks[3] = ts.length<=D.settings.maxTrades;
-  }
-  const c=$("checks"); c.innerHTML="";
-  CHECKS.forEach((txt,i)=>{
-    const l=document.createElement("label"); l.className="check"; l.style.textTransform="none"; l.style.letterSpacing="0"; l.style.fontFamily="Inter,sans-serif"; l.style.fontWeight="400"; l.style.color="var(--ink)";
-    l.innerHTML='<input type="checkbox" '+(rec.checks[i]?"checked":"")+'><span>'+txt+'</span>';
-    l.querySelector("input").onchange=e=>{
-      rec.checks[i]=e.target.checked; D.days[k]=rec; save();
-      $("scorePill").textContent=rec.checks.filter(Boolean).length+"/5";
-      $("scorePill").classList.toggle("full", rec.checks.filter(Boolean).length===5);
-      renderChain();
-    };
-    c.appendChild(l);
-  });
-  $("dayNote").value=rec.note||"";
-  const sc=rec.checks.filter(Boolean).length;
-  $("scorePill").textContent=sc+"/5";
-  $("scorePill").classList.toggle("full", sc===5);
-  $("saveDay").textContent = rec.closed ? "Хаагдсан — дахин хадгалах" : "Өдрийг хаах";
-  D.days[k]=rec;
-}
-
-/* ---------- render: trades ---------- */
-function renderTrades(){
-  const fs=$("fSetup").value, fr=$("fRes").value;
-  const setups=[...new Set(D.trades.map(t=>t.setup))];
-  const cur=$("fSetup").value;
-  $("fSetup").innerHTML='<option value="">Бүх setup</option>'+setups.map(s=>'<option'+(s===cur?" selected":"")+'>'+s+'</option>').join("");
-
-  let list=D.trades.slice().reverse();
-  if(fs) list=list.filter(t=>t.setup===fs);
-  if(fr) list=list.filter(t=>t.result===fr);
-
-  const el=$("tradeList");
-  if(!list.length){ el.innerHTML='<div class="card empty"><b>Хоосон</b>Арилжаа бүртгэвэл энд харагдана.</div>'; return; }
-  el.innerHTML=list.map(t=>{
-    const r=tradeR(t);
-    return '<div class="trade '+t.result+'">'+
-      '<div class="thead"><span class="tpair">'+t.pair+' · '+t.dir+'</span>'+
-      '<span class="tr '+(r>0?"pos":r<0?"neg":"")+'">'+(t.result==="open"?"—":fmt(r)+"R")+'</span></div>'+
-      '<div class="tmeta">'+t.date+' '+t.time+' · '+t.sess+' · '+t.setup+' · E '+t.entry+' / SL '+t.sl+(t.tp?' / TP '+t.tp:'')+'</div>'+
-      '<ol class="treasons">'+(t.reasons||[]).map(x=>'<li>'+esc(x)+'</li>').join("")+'</ol>'+
-      (t.note?'<div class="treasons" style="padding-left:0;font-style:italic">'+esc(t.note)+'</div>':'')+
-      (t.movedSL?'<span class="flag">Stop зөөсөн</span>':'')+
-      '<div class="tactions" data-id="'+t.id+'">'+
-        ['win','loss','be','open'].map(k=>'<button data-r="'+k+'" class="'+(t.result===k?"sel":"")+'">'+
-          ({win:"Ашиг",loss:"Алдагдал",be:"Тэнцүү",open:"Нээлттэй"})[k]+'</button>').join("")+
-        '<button data-m="1" class="'+(t.movedSL?"sel":"")+'">SL зөөсөн</button>'+
-        '<button data-x="1" class="del">Устгах</button>'+
-      '</div></div>';
-  }).join("");
-
-  el.querySelectorAll(".tactions").forEach(g=>{
-    const id=g.dataset.id;
-    g.querySelectorAll("button").forEach(b=>b.onclick=()=>{
-      const t=D.trades.find(x=>x.id===id); if(!t) return;
-      if(b.dataset.x){ if(confirm("Энэ арилжааг устгах уу?")){ D.trades=D.trades.filter(x=>x.id!==id); } }
-      else if(b.dataset.m){ t.movedSL=!t.movedSL; }
-      else {
-        t.result=b.dataset.r;
-        if(t.result==="win"){
-          const v=prompt("Хэдэн R ашигтай дууссан бэ?", t.r>0?t.r:"1.5");
-          t.r = v===null?1:(parseFloat(v)||1);
-        } else if(t.result==="loss"){ t.r=-1; }
-        else t.r=0;
-      }
-      save(); renderAll();
+async function connect(){
+  if(!window.claude||typeof window.claude.use!=="function"){setMode();return}
+  try{
+    const [user,db]=await Promise.all([claude.use("user"),claude.use("db")]);
+    if(!user||!db){setMode();return}
+    const id=await user.id();if(!id){setMode();return}
+    BASE=db.doc(`data/users/${id}/journal`);SETDOC=db.doc(`data/users/${id}/settings`);
+    S.mode="cloud";S.trades={};S.days={};S.reviews={};S.beliefs={};S.cloudLoaded=false;
+    ["trades","days","reviews","beliefs"].forEach(name=>{
+      BASE.collection(name).onSnapshot(snap=>{const m={};snap.docs.forEach(d=>{m[d.id]=d.data()});S[name]=m;if(name==="trades")S.cloudLoaded=true;render()},
+        err=>{handleErr(err)});
     });
-  });
+    SETDOC.onSnapshot(d=>{if(d.exists)S.settings=mergeSettings(clone(d.data()));render()},err=>handleErr(err));
+    setMode();render();
+  }catch(e){setMode()}
 }
-function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function setMode(){const t=$("#modeTag");if(S.mode==="cloud"){t.textContent="Хувийн санд хадгалагдана";t.title="Өгөгдөл таны бүртгэлд хадгалагдаж, өөр төхөөрөмж дээр ч харагдана. Бусад хүн харахгүй."}else{t.textContent="Энэ хөтөч дээр хадгалагдана";t.title="Өгөгдөл зөвхөн энэ хөтөчид хадгалагдана. Тохиргооноос экспортолж нөөцлөөрэй."}}
 
-/* ---------- render: stats ---------- */
-function renderStats(){
-  const closed=D.trades.filter(t=>t.result!=="open");
-  const wins=closed.filter(t=>t.result==="win"), losses=closed.filter(t=>t.result==="loss");
-  const wr = closed.length? wins.length/closed.length*100 : 0;
-  const avgW = wins.length? wins.reduce((a,t)=>a+tradeR(t),0)/wins.length : 0;
-  const avgL = losses.length? Math.abs(losses.reduce((a,t)=>a+tradeR(t),0)/losses.length) : 0;
-  const exp = closed.length? (wr/100*avgW)-((1-wr/100)*avgL) : 0;
-  const totR = closed.reduce((a,t)=>a+tradeR(t),0);
-  const dayKeys=Object.keys(D.days).filter(k=>D.days[k].closed);
-  const perfect=dayKeys.filter(k=>dayScore(k)===5).length;
-  const discPct = dayKeys.length? perfect/dayKeys.length*100 : 0;
-  const moved = D.trades.filter(t=>t.movedSL).length;
+/* ---------------- calculations ---------------- */
+function instOf(name){return S.settings.instruments.find(i=>i.name===name)||{name:name||"?",cs:1,minLot:0.01,lotStep:0.01,tick:0.01,kind:"other"}}
+function sessionOf(t,ins){if(ins.kind==="step")return "24/7";if(!t.open)return "—";const d=new Date(t.open);if(isNaN(d))return "—";const h=d.getUTCHours();
+  if(h>=12&&h<16)return "Лондон+NY";if(h>=7&&h<12)return "Лондон";if(h>=16&&h<21)return "Нью-Йорк";return "Ази"}
+function calc(t){
+  const ins=instOf(t.inst),cs=+ins.cs||1,dir=t.dir==="Sell"?-1:1;
+  const e=num(t.entry),sl=num(t.sl),tp=num(t.tp),x=num(t.exit),lots=num(t.lots),fees=num(t.fees)||0;
+  const risk=(e!=null&&sl!=null&&lots!=null&&e!==sl)?Math.abs(e-sl)*lots*cs:null;
+  let pnl=null;const act=num(t.actual);
+  if(act!=null)pnl=act;else if(e!=null&&x!=null&&lots!=null)pnl=(x-e)*dir*lots*cs+fees;
+  const R=(pnl!=null&&risk)?pnl/risk:null;
+  const bal=num(t.balance);const riskPct=(risk!=null&&bal)?risk/bal:null;
+  const rr=(e!=null&&sl!=null&&tp!=null&&e!==sl)?Math.abs(tp-e)/Math.abs(e-sl):null;
+  const steps=(e!=null&&sl!=null&&+ins.tick)?Math.round(Math.abs(e-sl)/ins.tick):null;
+  const closed=pnl!=null;
+  const quality=!closed||!t.followed?null:t.followed==="y"?(pnl>=0?"Сайн":"Сайн алдагдал"):(pnl>0?"Муу ашиг":"Муу");
+  const when=t.close||t.open||"";
+  return {ins,cs,risk,pnl,R,riskPct,rr,steps,closed,quality,session:sessionOf(t,ins),when,date:when.slice(0,10)};
+}
+function enriched(trades){return Object.entries(trades).map(([id,t])=>Object.assign({id},t,{_:calc(t)})).sort((a,b)=>(a._.when<b._.when?-1:a._.when>b._.when?1:0))}
+function stats(list){
+  const closed=list.filter(t=>t._.closed);
+  const wins=closed.filter(t=>t._.pnl>0),losses=closed.filter(t=>t._.pnl<0);
+  const net=closed.reduce((a,t)=>a+t._.pnl,0);
+  const gw=wins.reduce((a,t)=>a+t._.pnl,0),gl=Math.abs(losses.reduce((a,t)=>a+t._.pnl,0));
+  const Rs=closed.filter(t=>t._.R!=null).map(t=>t._.R);
+  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  const fy=list.filter(t=>t.followed==="y").length,fn=list.filter(t=>t.followed==="n").length;
+  return {n:closed.length,wins:wins.length,losses:losses.length,net,winRate:closed.length?wins.length/closed.length:null,
+    pf:gl?gw/gl:(gw?Infinity:null),exp:avg(Rs),sumR:Rs.reduce((a,b)=>a+b,0),
+    avgWinR:avg(Rs.filter(r=>r>0)),avgLossR:avg(Rs.filter(r=>r<0)),worstR:Rs.length?Math.min(...Rs):null,
+    disc:(fy+fn)?fy/(fy+fn):null,fy,fn,
+    moved:list.filter(t=>t.movedStop==="y").length,addL:list.filter(t=>t.addedLoser==="y").length,addW:list.filter(t=>t.addedWinner==="y").length,
+    notAcc:list.filter(t=>t.accepted==="n").length,overRisk:list.filter(t=>t._.riskPct!=null&&t._.riskPct>S.settings.maxRiskPct/100).length,
+    badWin:list.filter(t=>t._.quality==="Муу ашиг").length,fearExit:list.filter(t=>t.exitReason==="Айснаасаа").length,
+    calm:avg(list.filter(t=>t.calm).map(t=>+t.calm))};
+}
+function groupBy(list,keyFn){const m=new Map();list.forEach(t=>{const k=keyFn(t);if(k==null||k==="")return;if(!m.has(k))m.set(k,[]);m.get(k).push(t)});return m}
+function currentBalance(list){return (+S.settings.startBalance||0)+list.filter(t=>t._.closed).reduce((a,t)=>a+t._.pnl,0)}
 
-  $("statGrid").innerHTML=[
-    ["Сахилга бат", discPct.toFixed(0)+"%", perfect+"/"+dayKeys.length+" хоног 5/5", discPct>=90?"kept":"broken"],
-    ["Expectancy", fmt(exp)+"R", "нэг арилжаанд", exp>0?"kept":"broken"],
-    ["Win rate", wr.toFixed(0)+"%", closed.length+" хаагдсан арилжаа",""],
-    ["Нийт", fmt(totR)+"R", "≈ $"+(totR*D.settings.balance*0.0025).toFixed(0)+" (0.25%-аар)",""],
-    ["Дундаж ашиг", "+"+avgW.toFixed(2)+"R", wins.length+" арилжаа",""],
-    ["SL зөөсөн", moved+"", moved?"дүрэм зөрчсөн":"цэвэр", moved?"broken":"kept"]
-  ].map(([l,v,s,c])=>'<div class="stat"><div class="v"'+(c?' style="color:var(--'+c+')"':'')+'>'+v+'</div><div class="l">'+l+'</div><div class="sub">'+s+'</div></div>').join("");
-
-  // curve
-  const pts=[]; let cum=0;
-  closed.forEach(t=>{ cum+=tradeR(t); pts.push(cum); });
-  const svg=$("curve");
-  if(pts.length<2){ svg.innerHTML='<text x="150" y="58" text-anchor="middle" fill="#8A948E" font-size="11" font-family="IBM Plex Mono">Хангалттай өгөгдөл алга</text>'; $("curveHint").textContent=""; }
-  else{
-    const mx=Math.max(...pts,0.5), mn=Math.min(...pts,-0.5);
-    const X=i=>i/(pts.length-1)*296+2, Y=v=>104-((v-mn)/(mx-mn))*98;
-    const dd=pts.map((v,i)=>(i?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)).join(" ");
-    const zero=Y(0);
-    svg.innerHTML='<line x1="0" y1="'+zero.toFixed(1)+'" x2="300" y2="'+zero.toFixed(1)+'" stroke="#CBD3CB" stroke-width="1" stroke-dasharray="3 3"/>'+
-      '<path d="'+dd+'" fill="none" stroke="'+(cum>=0?"#3C7A57":"#9C3F35")+'" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
-    let peak=-1e9, ddwn=0; pts.forEach(v=>{ peak=Math.max(peak,v); ddwn=Math.min(ddwn,v-peak); });
-    $("curveHint").textContent="Хамгийн их татагдалт: "+ddwn.toFixed(2)+"R";
+/* ---------------- demo data (харуулах жишээ, хадгалагдахгүй) ---------------- */
+function demoTrades(){
+  let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646};
+  const out={};const base=new Date();base.setHours(0,0,0,0);base.setDate(base.getDate()-41);
+  let bal=1000;
+  for(let i=0;i<46;i++){
+    const d=new Date(base);d.setDate(d.getDate()+Math.floor(i*0.9));
+    const gold=rnd()<0.45;const inst=gold?"XAUUSD":(rnd()<0.6?"Step Index":"Step Index 200");
+    const ins=instOf(inst);const hour=gold?[9,16,21,22][Math.floor(rnd()*4)]:Math.floor(rnd()*24);
+    d.setHours(hour,Math.floor(rnd()*60));
+    const dir=rnd()<0.5?"Buy":"Sell";const e=gold?+(2380+rnd()*80).toFixed(2):+(7000+rnd()*800).toFixed(1);
+    const stopDist=gold?+(3+rnd()*4).toFixed(2):+(ins.tick*(20+Math.floor(rnd()*30))).toFixed(1);
+    const lots=gold?Math.max(0.01,+((bal*0.01)/(stopDist*100)).toFixed(2)):Math.max(0.1,+((bal*0.01)/(stopDist*10)).toFixed(2));
+    const sign=dir==="Buy"?1:-1;const emo=rnd()<0.62?"Тайван":EMOTIONS[1+Math.floor(rnd()*7)];
+    const followed=emo==="Тайван"?(rnd()<0.9?"y":"n"):(rnd()<0.45?"y":"n");
+    let r=rnd()<(followed==="y"?0.47:0.35)?(1+rnd()*2.2):-1;
+    if(followed==="n"&&r<0&&rnd()<0.5)r=-1.4-rnd()*0.8;
+    const exit=+(e+sign*r*stopDist).toFixed(gold?2:1);
+    const close=new Date(d.getTime()+(20+rnd()*240)*6e4);
+    const t={inst,dir,open:`${ymd(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`,close:`${ymd(close)}T${pad(close.getHours())}:${pad(close.getMinutes())}`,
+      entry:e,sl:+(e-sign*stopDist).toFixed(gold?2:1),tp:+(e+sign*stopDist*2.5).toFixed(gold?2:1),exit,lots,fees:0,actual:"",balance:+bal.toFixed(2),
+      setup:S.settings.setups[Math.floor(rnd()*S.settings.setups.length)],emotion:emo,
+      exitReason:r>2?"Зорилтод хүрсэн":r>0?(rnd()<0.3?"Айснаасаа":"Дүрмээр гарсан"):"Stop-д хүрсэн",
+      accepted:followed==="y"?"y":(rnd()<0.5?"n":"y"),movedStop:followed==="n"&&r<-1?"y":"n",addedLoser:followed==="n"&&rnd()<0.2?"y":"n",addedWinner:r>2&&rnd()<0.4?"y":"n",
+      followed,exercise:i>=30?"y":"",calm:emo==="Тайван"?4+Math.round(rnd()):2+Math.round(rnd()),notes:"Жишээ арилжаа",chart:""};
+    bal+=calc(t).pnl||0;out["demo"+i]=t;
   }
+  return out;
+}
+let DEMO=null;
+function isDemo(){return !Object.keys(S.trades).length&&(S.mode==="local"||S.cloudLoaded)}
+function tradesForView(){if(isDemo()){if(!DEMO)DEMO=demoTrades();return DEMO}return S.trades}
 
-  // setup table
-  const groups={};
-  closed.forEach(t=>{ (groups[t.setup]=groups[t.setup]||[]).push(t); });
-  const rows=Object.entries(groups).map(([k,v])=>{
-    const w=v.filter(t=>t.result==="win").length;
-    const r=v.reduce((a,t)=>a+tradeR(t),0);
-    const e=r/v.length;
-    return '<tr><td>'+esc(k)+'</td><td class="num">'+v.length+'</td><td class="num">'+(w/v.length*100).toFixed(0)+'%</td>'+
-      '<td class="num" style="color:var(--'+(e>0?"kept":"broken")+')">'+fmt(e)+'R</td></tr>';
-  }).join("");
-  $("setupTable").innerHTML = rows
-    ? '<table><thead><tr><th>Setup</th><th style="text-align:right">Тоо</th><th style="text-align:right">Win</th><th style="text-align:right">Exp</th></tr></thead><tbody>'+rows+'</tbody></table>'
-    : '<div class="empty">Хаагдсан арилжаа алга.</div>';
-
-  // discipline table
-  const dRows=Object.keys(D.days).sort().reverse().slice(0,14).map(k=>{
-    const s=dayScore(k);
-    return '<tr><td class="mono" style="font-size:12.5px">'+k+'</td>'+
-      '<td class="num" style="color:var(--'+(s===5?"kept":"broken")+');font-weight:600">'+s+'/5</td>'+
-      '<td class="num">'+tradesOn(k).length+'</td>'+
-      '<td class="num">'+fmt(tradesOn(k).reduce((a,t)=>a+tradeR(t),0))+'R</td></tr>';
-  }).join("");
-  $("discTable").innerHTML = dRows
-    ? '<table><thead><tr><th>Өдөр</th><th style="text-align:right">Оноо</th><th style="text-align:right">Арилжаа</th><th style="text-align:right">R</th></tr></thead><tbody>'+dRows+'</tbody></table>'
-    : '<div class="empty">Хаагдсан өдөр алга.</div>';
+/* ---------------- charts ---------------- */
+function equitySVG(list,w){
+  const closed=list.filter(t=>t._.closed);const start=+S.settings.startBalance||0;
+  const pts=[start];closed.forEach(t=>pts.push(pts[pts.length-1]+t._.pnl));
+  const H=220,L=58,R=12,T=14,B=26;w=Math.max(280,w);
+  if(pts.length<2)return `<div class="empty">Хаагдсан арилжаа нэмэгдмэгц энд дансны өсөлтийн муруй гарна.</div>`;
+  let min=Math.min(...pts),max=Math.max(...pts);if(min===max){min-=1;max+=1}const padv=(max-min)*0.08;min-=padv;max+=padv;
+  const x=i=>L+(w-L-R)*i/(pts.length-1),y=v=>T+(H-T-B)*(1-(v-min)/(max-min));
+  const ticks=4;let grid="";for(let k=0;k<=ticks;k++){const v=min+(max-min)*k/ticks;const yy=y(v);grid+=`<line x1="${L}" x2="${w-R}" y1="${yy}" y2="${yy}" stroke="var(--line)" stroke-width="1"/><text x="${L-8}" y="${yy+4}" text-anchor="end" font-size="10" fill="var(--muted)">${esc(S.settings.currency)}${Math.round(v).toLocaleString("en-US")}</text>`}
+  let d="";pts.forEach((v,i)=>{d+=(i?"L":"M")+x(i).toFixed(1)+","+y(v).toFixed(1)});
+  const area=d+`L${x(pts.length-1).toFixed(1)},${H-B}L${x(0).toFixed(1)},${H-B}Z`;
+  let peak=-Infinity,dd=0;pts.forEach(v=>{peak=Math.max(peak,v);dd=Math.max(dd,peak-v)});
+  const last=pts[pts.length-1],up=last>=start;const col=up?"var(--gain)":"var(--loss)";
+  const xl=[0,Math.floor((pts.length-1)/2),pts.length-1].map(i=>`<text x="${x(i)}" y="${H-8}" text-anchor="${i===0?"start":i===pts.length-1?"end":"middle"}" font-size="10" fill="var(--muted)">#${i}</text>`).join("");
+  return `<svg viewBox="0 0 ${w} ${H}" width="100%" height="${H}" role="img" aria-label="Дансны өсөлтийн муруй">
+    ${grid}<line x1="${L}" x2="${w-R}" y1="${y(start)}" y2="${y(start)}" stroke="var(--muted)" stroke-dasharray="3 4" stroke-width="1"/>
+    <path d="${area}" fill="${col}" fill-opacity=".12"/><path d="${d}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="${x(pts.length-1)}" cy="${y(last)}" r="4" fill="${col}"/>${xl}</svg>
+    <div class="muted" style="font-size:12px">Эхлэл ${money(start).replace("+","")} → одоо <span class="num ${cls(last-start)}">${money(last).replace("+","")}</span> · Хамгийн их уналт <span class="num neg">${S.settings.currency}${fm(dd)}</span></div>`;
+}
+function barsHTML(rows,valFmt){
+  if(!rows.length)return `<div class="muted">Өгөгдөл алга.</div>`;
+  const mx=Math.max(...rows.map(r=>Math.abs(r.v)),0.0001);
+  return `<div class="bars">${rows.map(r=>{const w=Math.abs(r.v)/mx*50;const left=r.v>=0?50:50-w;
+    return `<div class="bar"><span title="${esc(r.k)}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.k)} <span class="muted">(${r.n})</span></span><div class="t"><i style="left:${left}%;width:${w}%;background:${r.v>=0?"var(--gain)":"var(--loss)"}"></i><span class="zero"></span></div><span class="n num ${cls(r.v)}">${valFmt(r.v)}</span></div>`}).join("")}</div>`;
 }
 
-function renderAll(){
-  $("balTag").textContent="$"+D.settings.balance.toLocaleString()+" · "+D.settings.riskPct+"%";
-  renderChain(); renderToday(); renderTrades(); renderStats();
+/* ---------------- views ---------------- */
+function kpi(label,val,sub,extra=""){return `<div class="kpi"><span class="eyebrow">${label}</span><span class="v">${val}</span>${extra}<span class="s">${sub}</span></div>`}
+
+function viewDash(){
+  const demo=isDemo();const list=enriched(tradesForView());const st=stats(list);
+  const today=ymd(new Date());const tl=list.filter(t=>t._.date===today);const tst=stats(tl);
+  const bal=currentBalance(list);const lossLimit=bal*(S.settings.dailyLossPct/100);
+  const w=Math.min(($("#app").clientWidth||900)*0.62,760);
+  let h="";
+  if(demo)h+=`<div class="banner demo"><p><b>Жишээ өгөгдөл харагдаж байна.</b> Программ хэрхэн ажиллахыг харуулах зохиомол 46 арилжаа. Эхний арилжаагаа нэмэхэд жишээ алга болж, таны өгөгдөл гарна.</p><button class="btn primary" data-act="add">Эхний арилжаагаа нэмэх</button></div>`;
+  if(!demo&&tst.net<0&&Math.abs(tst.net)>=lossLimit&&lossLimit>0)h+=`<div class="banner stop"><p><b>Өдрийн алдагдлын хязгаарт хүрлээ.</b> Өнөөдөр ${money(tst.net)} (${S.settings.dailyLossPct}% хязгаар ≈ ${S.settings.currency}${fm(lossLimit)}). Өнөөдөр дахин арилжаа хийхгүй. Сайн ялагдагч хязгаараа хүндэтгэдэг.</p></div>`;
+  h+=`<div class="kpis">
+    ${kpi("Цэвэр ашиг/алдагдал",`<span class="${cls(st.net)}">${money(st.net)}</span>`,`${st.n} хаагдсан арилжаа`)}
+    ${kpi("Хожлын хувь",pct(st.winRate),`${st.wins} ашиг · ${st.losses} алдагдал`)}
+    ${kpi("Дундаж R",`<span class="${cls(st.exp)}">${rfmt(st.exp)}</span>`,`Нийт ${rfmt(st.sumR)}`)}
+    ${kpi("Profit factor",st.pf==null?"—":st.pf===Infinity?"∞":st.pf.toFixed(2),"Нийт ашиг ÷ нийт алдагдал")}
+    ${kpi("Сахилга бат",pct(st.disc),"Дүрмээ баримталсан хувь",`<div class="meter"><i style="width:${(st.disc||0)*100}%"></i></div>`)}
+    ${kpi("Өнөөдөр",`<span class="${cls(tst.net)}">${money(tst.net)}</span>`,`${tl.length}/${S.settings.maxTradesDay} арилжаа · хязгаар −${S.settings.currency}${fm(lossLimit,0)}`)}
+  </div>`;
+  // post-win insight
+  let pw=[];list.forEach((t,i)=>{if(i>0&&list[i-1]._.R!=null&&list[i-1]._.R>=2)pw.push(t)});const pws=stats(pw);
+  const ins=[];
+  if(pws.disc!=null&&st.disc!=null)ins.push(`Том ашгийн (≥2R) дараах арилжаанд дүрмээ баримталсан хувь <b class="num">${pct(pws.disc)}</b>, нийт дундаж <b class="num">${pct(st.disc)}</b>. ${pws.disc<st.disc-0.05?"Ашгийн дараа сахилга сулрах хандлага байна.":"Ашгийн дараа ч тогтвортой байна."}`);
+  const emo=groupBy(list.filter(t=>t._.R!=null),t=>t.emotion);let worst=null;emo.forEach((a,k)=>{const s=a.reduce((x,t)=>x+t._.R,0);if(!worst||s<worst.v)worst={k,v:s}});
+  if(worst&&worst.v<0)ins.push(`Хамгийн их зардал гаргасан мэдрэмж: <b>${esc(worst.k)}</b> (<span class="num neg">${rfmt(worst.v)}</span>).`);
+  if(st.avgLossR!=null&&st.avgLossR<-1.15)ins.push(`Дундаж алдагдал <b class="num neg">${rfmt(st.avgLossR)}</b>: −1R-ээс их байна. Stop-оо хүндэтгэхгүй байгаа дохио.`);
+  if(st.badWin)ins.push(`Дүрэм зөрчөөд ашиг олсон <b>${st.badWin}</b> арилжаа байна. Энэ нь буруу зуршлыг шагнадаг.`);
+
+  // calendar
+  const [cy,cm]=S.cal.split("-").map(Number);const first=new Date(cy,cm-1,1);const off=(first.getDay()+6)%7;
+  const daysIn=new Date(cy,cm,0).getDate();const byDay=groupBy(list.filter(t=>t._.closed),t=>t._.date);
+  let mx=0;byDay.forEach(a=>{mx=Math.max(mx,Math.abs(a.reduce((x,t)=>x+t._.pnl,0)))});
+  let cal=["Да","Мя","Лх","Пү","Ба","Бя","Ня"].map(d=>`<div class="dh">${d}</div>`).join("");
+  let monthNet=0;
+  for(let i=0;i<42;i++){const dn=i-off+1;if(i>=35&&dn>daysIn)break;
+    if(dn<1||dn>daysIn){cal+=`<div class="d out"></div>`;continue}
+    const key=`${cy}-${pad(cm)}-${pad(dn)}`;const a=byDay.get(key);let style="",inner="";
+    if(a){const p=a.reduce((x,t)=>x+t._.pnl,0);monthNet+=p;const al=0.18+0.6*Math.abs(p)/(mx||1);style=`background:color-mix(in srgb, ${p>=0?"var(--gain)":"var(--loss)"} ${Math.round(al*100)}%, var(--surface-2))`;
+      inner=`<span class="dp">${p>=0?"+":"−"}${fm(Math.abs(p),0)}</span><span style="font-size:10px">${a.length} арилжаа</span>`}
+    cal+=`<div class="d${key===today?" today":""}" style="${style}" title="${key}"><span class="dn">${dn}</span>${inner}</div>`}
+  const monthName=["1-р сар","2-р сар","3-р сар","4-р сар","5-р сар","6-р сар","7-р сар","8-р сар","9-р сар","10-р сар","11-р сар","12-р сар"][cm-1];
+
+  const instRows=[];groupBy(list.filter(t=>t._.closed),t=>t.inst).forEach((a,k)=>{const s=stats(a);instRows.push({k,s})});
+  instRows.sort((a,b)=>b.s.net-a.s.net);
+  const sesRows=[];groupBy(list.filter(t=>t._.R!=null),t=>t._.session).forEach((a,k)=>sesRows.push({k,n:a.length,v:a.reduce((x,t)=>x+t._.R,0)}));
+  const emoRows=[];emo.forEach((a,k)=>emoRows.push({k,n:a.length,v:a.reduce((x,t)=>x+t._.R,0)}));emoRows.sort((a,b)=>b.v-a.v);
+  const setRows=[];groupBy(list.filter(t=>t._.R!=null),t=>t.setup).forEach((a,k)=>setRows.push({k,n:a.length,v:a.reduce((x,t)=>x+t._.R,0)}));setRows.sort((a,b)=>b.v-a.v);
+  const hourRows=[];const hb=["00–04","04–08","08–12","12–16","16–20","20–24"];groupBy(list.filter(t=>t._.R!=null&&t.open),t=>hb[Math.floor(new Date(t.open).getHours()/4)]).forEach((a,k)=>hourRows.push({k,n:a.length,v:a.reduce((x,t)=>x+t._.R,0)}));hourRows.sort((a,b)=>a.k<b.k?-1:1);
+
+  const mist=[["Stop-ийг алдагдал руу хөдөлгөсөн",st.moved,0],["Алдагдалтай позицид нэмсэн",st.addL,0],["Эрсдэлийг урьдчилан хүлээн зөвшөөрөөгүй",st.notAcc,0],[`Эрсдэл ${S.settings.maxRiskPct}%-иас давсан`,st.overRisk,0],["Дүрэм зөрчөөд ашиг олсон",st.badWin,0],["Айснаасаа эрт гарсан",st.fearExit,0]];
+
+  h+=`<div class="grid">
+    <section class="panel c7"><div class="panel-h"><h2>Дансны өсөлт</h2><span class="muted" style="font-size:12px">арилжаа тус бүрээр</span></div>${equitySVG(list,w)}</section>
+    <section class="panel c5"><div class="panel-h"><h2>Ажиглалт</h2></div>
+      ${ins.length?ins.map(s=>`<div class="principle">${s}</div>`).join(""):`<div class="muted">10-аас дээш арилжааны дараа энд зан үйлийн хэв маяг гарч ирнэ.</div>`}
+      <div class="principle"><b class="lab">Санамж</b>${esc(PRINCIPLES[new Date().getDate()%PRINCIPLES.length][1])}</div>
+    </section>
+    <section class="panel c7"><div class="panel-h"><h2>${monthName} ${cy}</h2><span class="num ${cls(monthNet)}">${money(monthNet)}</span>
+      <button class="btn sm" data-act="calPrev" aria-label="Өмнөх сар">‹</button><button class="btn sm" data-act="calNext" aria-label="Дараах сар">›</button></div>
+      <div class="cal">${cal}</div></section>
+    <section class="panel c5"><div class="panel-h"><h2>Сахилгын алдаа</h2><span class="muted" style="font-size:12px">зорилт: бүгд 0</span></div>
+      <div class="tw"><table><tbody>${mist.map(m=>`<tr><td>${m[0]}</td><td class="r"><span class="pill ${m[1]?"bad":"good"}">${m[1]}</span></td></tr>`).join("")}
+      <tr><td>Ашигтай позицид нэмсэн (зөв нэмэлт)</td><td class="r"><span class="pill neutral">${st.addW}</span></td></tr>
+      <tr><td>Дундаж тайван байдал</td><td class="r num">${st.calm==null?"—":st.calm.toFixed(1)+" / 5"}</td></tr></tbody></table></div></section>
+    <section class="panel c12"><div class="panel-h"><h2>Хэрэгслээр</h2></div>
+      <div class="tw"><table><thead><tr><th>Хэрэгсэл</th><th class="r">Арилжаа</th><th class="r">Хожил %</th><th class="r">Цэвэр</th><th class="r">Нийт R</th><th class="r">Дундаж R</th><th class="r">Сахилга</th></tr></thead><tbody>
+      ${instRows.length?instRows.map(r=>`<tr><td>${esc(r.k)}</td><td class="r num">${r.s.n}</td><td class="r num">${pct(r.s.winRate)}</td><td class="r num ${cls(r.s.net)}">${money(r.s.net)}</td><td class="r num ${cls(r.s.sumR)}">${rfmt(r.s.sumR)}</td><td class="r num ${cls(r.s.exp)}">${rfmt(r.s.exp)}</td><td class="r num">${pct(r.s.disc)}</td></tr>`).join(""):`<tr><td colspan="7" class="muted">Хаагдсан арилжаа алга.</td></tr>`}
+      </tbody></table></div></section>
+    <section class="panel c6"><div class="panel-h"><h2>Мэдрэмжээр (нийт R)</h2></div>${barsHTML(emoRows,rfmt)}</section>
+    <section class="panel c6"><div class="panel-h"><h2>Setup-аар (нийт R)</h2></div>${barsHTML(setRows,rfmt)}</section>
+    <section class="panel c6"><div class="panel-h"><h2>Алтны сешнээр (нийт R)</h2></div>${barsHTML(sesRows,rfmt)}</section>
+    <section class="panel c6"><div class="panel-h"><h2>Орсон цагаар (нийт R)</h2><span class="muted" style="font-size:12px">таны цагийн бүсээр</span></div>${barsHTML(hourRows,rfmt)}</section>
+  </div>`;
+  return h;
 }
 
-/* ---------- events ---------- */
-document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
-  document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected", x===b));
-  ["today","trades","stats","set"].forEach(t=>$("s-"+t).hidden = t!==b.dataset.t);
-  window.scrollTo(0,0);
-  if(b.dataset.t==="stats") renderStats();
+function viewTrades(){
+  const demo=isDemo();const all=enriched(tradesForView());
+  const months=[...new Set(all.map(t=>t._.date.slice(0,7)).filter(Boolean))].sort().reverse();
+  const f=S.filter;
+  let list=all.filter(t=>(f.inst==="all"||t.inst===f.inst)&&(f.month==="all"||t._.date.slice(0,7)===f.month)&&
+    (f.res==="all"||(f.res==="win"&&t._.pnl>0)||(f.res==="loss"&&t._.pnl<0)||(f.res==="open"&&!t._.closed)||(f.res==="bad"&&t.followed==="n")));
+  const st=stats(list);list=list.slice().reverse();
+  const opt=(v,l,cur)=>`<option value="${esc(v)}"${v===cur?" selected":""}>${esc(l)}</option>`;
+  let h="";
+  if(demo)h+=`<div class="banner demo"><p><b>Жишээ арилжаанууд.</b> Эдгээрийг засах боломжгүй. Өөрийн эхний арилжааг нэмэхэд солигдоно.</p><button class="btn primary" data-act="add">+ Арилжаа нэмэх</button></div>`;
+  h+=`<section class="panel"><div class="panel-h"><h2>Арилжаанууд</h2>
+    <div class="filters">
+      <select id="fInst" aria-label="Хэрэгсэл">${opt("all","Бүх хэрэгсэл",f.inst)}${S.settings.instruments.map(i=>opt(i.name,i.name,f.inst)).join("")}</select>
+      <select id="fMonth" aria-label="Сар">${opt("all","Бүх сар",f.month)}${months.map(m=>opt(m,m,f.month)).join("")}</select>
+      <select id="fRes" aria-label="Үр дүн">${opt("all","Бүгд",f.res)}${opt("win","Ашигтай",f.res)}${opt("loss","Алдагдалтай",f.res)}${opt("open","Нээлттэй",f.res)}${opt("bad","Дүрэм зөрчсөн",f.res)}</select>
+    </div></div>
+    <div class="muted" style="font-size:13px">${list.length} арилжаа · цэвэр <span class="num ${cls(st.net)}">${money(st.net)}</span> · <span class="num ${cls(st.sumR)}">${rfmt(st.sumR)}</span> · хожил ${pct(st.winRate)} · сахилга ${pct(st.disc)}</div>
+    ${list.length?`<div class="tw"><table><thead><tr><th>Огноо</th><th>Хэрэгсэл</th><th>Чиглэл</th><th class="r">Лот</th><th class="r">Орох</th><th class="r">Гарах</th><th class="r">Эрсдэл</th><th class="r">P/L</th><th class="r">R</th><th>Мэдрэмж</th><th>Чанар</th><th>Setup</th></tr></thead><tbody>
+    ${list.map(t=>{const c=t._;const q=c.quality;const qc=q==="Сайн"||q==="Сайн алдагдал"?"good":q?"bad":"neutral";
+      return `<tr class="click" data-edit="${esc(t.id)}" tabindex="0"><td class="num">${esc((t.open||"").replace("T"," "))}</td><td>${esc(t.inst)}</td><td><span class="dir ${t.dir==="Sell"?"sell":"buy"}">${esc(t.dir||"")}</span></td>
+      <td class="r num">${fm(num(t.lots))}</td><td class="r num">${t.entry??"—"}</td><td class="r num">${t.exit===""||t.exit==null?"—":t.exit}</td>
+      <td class="r num">${c.riskPct==null?"—":`<span class="${c.riskPct>S.settings.maxRiskPct/100?"neg":""}">${(c.riskPct*100).toFixed(2)}%</span>`}</td>
+      <td class="r num ${cls(c.pnl)}">${c.closed?money(c.pnl):`<span class="pill warn">Нээлттэй</span>`}</td><td class="r num ${cls(c.R)}">${rfmt(c.R)}</td>
+      <td>${esc(t.emotion||"—")}</td><td>${q?`<span class="pill ${qc}">${q}</span>`:"—"}</td><td>${esc(t.setup||"")}</td></tr>`}).join("")}
+    </tbody></table></div>`:`<div class="empty">Шүүлтүүрт тохирох арилжаа алга.</div>`}
+  </section>`;
+  return h;
+}
+
+function viewDay(){
+  const today=ymd(new Date());const d=S.days[today]||{a:{}};const a=d.a||{};
+  const answered=DAY_Q.filter((q,i)=>a["q"+i]).length;const no=DAY_Q.filter((q,i)=>a["q"+i]==="n").length;
+  const verdict=!answered?null:no?"ЗОГС":answered===DAY_Q.length?"АРИЛЖ":null;
+  const list=enriched(S.trades);const tl=list.filter(t=>t._.date===today);const tst=stats(tl);
+  const bal=currentBalance(list);const lim=bal*S.settings.dailyLossPct/100;const used=tst.net<0?Math.min(1,Math.abs(tst.net)/(lim||1)):0;
+  const hist=Object.entries(S.days).filter(([k])=>k!==today).sort((x,y)=>x[0]<y[0]?1:-1).slice(0,14);
+  let h=`<div class="grid">
+  <section class="panel c7"><div class="panel-h"><h2>Өнөөдрийн бэлтгэл · ${today}</h2>
+    ${verdict?`<span class="pill ${verdict==="ЗОГС"?"bad":"good"}" style="font-size:13px;padding:4px 12px">${verdict}</span>`:`<span class="pill neutral">${answered}/${DAY_Q.length}</span>`}</div>
+    <p class="muted" style="margin:0;font-size:13px">Арилжаа эхлэхээс өмнө хариул. Нэг ч “Үгүй” байвал өнөөдөр арилжаа хийх эсэхээ дахин бод.</p>
+    <div>${DAY_Q.map((q,i)=>`<div class="qrow"><span>${esc(q)}</span><div class="seg yn" data-day="q${i}" role="group" aria-label="${esc(q)}">
+      <button type="button" data-v="y" aria-pressed="${a["q"+i]==="y"}">Тийм</button><button type="button" data-v="n" aria-pressed="${a["q"+i]==="n"}">Үгүй</button></div></div>`).join("")}</div>
+    <div class="f"><label for="dayNote">Өнөөдрийн төлөвлөгөө / тэмдэглэл</label><textarea id="dayNote" data-daynote="1" placeholder="Жишээ: Step Index дээр зөвхөн тренд үргэлжлэлийн setup, 3-аас ихгүй арилжаа.">${esc(d.note||"")}</textarea></div>
+  </section>
+  <section class="panel c5"><div class="panel-h"><h2>Өнөөдрийн хязгаар</h2></div>
+    <div><span class="eyebrow">Өдрийн P/L</span><div class="bigstat num ${cls(tst.net)}">${money(tst.net)}</div></div>
+    <div class="f"><span class="lbl">Алдагдлын хязгаар ашигласан: ${pct(used)} (хязгаар ${S.settings.currency}${fm(lim)})</span><div class="meter"><i style="width:${used*100}%;background:${used>=1?"var(--loss)":used>0.6?"var(--warn)":"var(--accent)"}"></i></div></div>
+    <div class="f"><span class="lbl">Арилжааны тоо: ${tl.length} / ${S.settings.maxTradesDay}</span><div class="meter"><i style="width:${Math.min(1,tl.length/(S.settings.maxTradesDay||1))*100}%;background:${tl.length>=S.settings.maxTradesDay?"var(--loss)":"var(--accent)"}"></i></div></div>
+    ${(used>=1||tl.length>=S.settings.maxTradesDay)?`<div class="banner stop"><p><b>Өнөөдөр болоо.</b> Хязгаартаа хүрсэн. Step Index 24/7 ажилладаг тул боломж маргааш ч байна.</p></div>`:""}
+    <h2 style="margin-top:6px">Зарчмууд</h2>
+    ${PRINCIPLES.map(p=>`<div class="principle"><b class="lab">${esc(p[0])}</b>${esc(p[1])}</div>`).join("")}
+  </section>
+  <section class="panel c12"><div class="panel-h"><h2>Өмнөх өдрүүд</h2></div>
+    ${hist.length?`<div class="tw"><table><thead><tr><th>Огноо</th><th>Шийдвэр</th><th class="r">Арилжаа</th><th class="r">P/L</th><th>Тэмдэглэл</th></tr></thead><tbody>
+    ${hist.map(([k,v])=>{const aa=v.a||{};const n=DAY_Q.filter((q,i)=>aa["q"+i]==="n").length;const ans=DAY_Q.filter((q,i)=>aa["q"+i]).length;const dl=list.filter(t=>t._.date===k);const ds=stats(dl);
+      return `<tr><td class="num">${k}</td><td>${n?`<span class="pill bad">ЗОГС</span>`:ans===DAY_Q.length?`<span class="pill good">АРИЛЖ</span>`:`<span class="pill neutral">${ans}/${DAY_Q.length}</span>`}${n&&dl.length?` <span class="pill warn">гэсэн ч арилжсан</span>`:""}</td><td class="r num">${dl.length}</td><td class="r num ${cls(ds.net)}">${money(ds.net)}</td><td style="white-space:normal;min-width:200px">${esc(v.note||"")}</td></tr>`}).join("")}</tbody></table></div>`:`<div class="muted">Өдрийн бэлтгэлээ бөглөхөд түүх энд хадгалагдана.</div>`}
+  </section></div>`;
+  return h;
+}
+
+function viewEx(){
+  const list=enriched(S.trades).filter(t=>t.exercise==="y"&&t.followed);
+  let lastBad=-1;list.forEach((t,i)=>{if(t.followed==="n")lastBad=i});
+  const run=list.slice(lastBad+1);const restarts=list.filter(t=>t.followed==="n").length;
+  const done=Math.min(run.length,20);const runR=run.slice(0,20).reduce((a,t)=>a+(t._.R||0),0);
+  const r=S.settings.rules;
+  const status=done>=20?"Механик шатыг давлаа":list.length?`${done} / 20 дараалан дүрмээрээ`:"Эхлээгүй";
+  let dots="";for(let i=0;i<20;i++){const t=run[i];dots+=t?`<div class="dot ${t._.R!=null&&t._.R<0?"okl":"ok"}" title="${esc(t.inst)} ${rfmt(t._.R)}">${i+1}</div>`:`<div class="dot">${i+1}</div>`}
+  const rf=(k,l,ph)=>`<div class="f w2"><label for="rule_${k}">${l}</label><textarea id="rule_${k}" data-rule="${k}" placeholder="${esc(ph)}">${esc(r[k]||"")}</textarea></div>`;
+  return `<div class="grid">
+  <section class="panel c7"><div class="panel-h"><h2>20 арилжааны дасгал</h2><span class="pill ${done>=20?"good":"neutral"}">${status}</span></div>
+    <p class="muted" style="margin:0;font-size:13px">Нэг системээр 20 арилжааг дүрмээс огт гажилгүй дараалан хий. Зорилго нь ашиг биш, сахилга бат. Дүрэм зөрчвөл тоолол 1-ээс эхэлнэ. Арилжаа нэмэхдээ “Дасгалд тооцох” гэж тэмдэглэ.</p>
+    <div class="dots">${dots}</div>
+    <div class="muted" style="font-size:12px">Ногоон = дүрмээрээ, ашигтай · Шар = дүрмээрээ, алдагдалтай (энэ ч сайн арилжаа)</div>
+    <div class="kpis" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+      ${kpi("Одоогийн цуваа",`${done}`,"дараалан дүрмээрээ")}${kpi("Цувааны R",`<span class="${cls(runR)}">${rfmt(runR)}</span>`,"эхний 20 хүртэл")}${kpi("Дахин эхэлсэн",`${restarts}`,"дүрэм зөрчсөн удаа")}
+    </div></section>
+  <section class="panel c5"><div class="panel-h"><h2>Миний системийн дүрэм</h2><button class="btn sm primary" data-act="saveRules">Хадгалах</button></div>
+    <div class="fg" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+    ${rf("entry","Орох нөхцөл","Жишээ: M5 дээр EMA50-аас дээш, pullback-ийн дараа bullish candle хаагдвал")}
+    ${rf("stop","Stop-loss хаана","Жишээ: сүүлийн swing low-оос 5 алхам доор")}
+    ${rf("target","Ашиг хаана авах","Жишээ: 2R дээр хагасыг, үлдсэнийг trailing")}
+    ${rf("size","Позицын хэмжээ / эрсдэл","Жишээ: арилжаа бүрт дансны 1%")}
+    ${rf("time","Арилжаа хийх цаг","Жишээ: алт зөвхөн Лондон, NY сешнд")}
+    ${rf("noTrade","Арилжаа хийхгүй нөхцөл","Жишээ: 2 дараалсан алдагдлын дараа, уурласан үед")}
+    </div></section>
+  <section class="panel c12"><div class="panel-h"><h2>Дасгалын арилжаанууд</h2></div>
+    ${list.length?`<div class="tw"><table><thead><tr><th>Огноо</th><th>Хэрэгсэл</th><th>Дүрмээрээ</th><th class="r">R</th><th>Тэмдэглэл</th></tr></thead><tbody>
+    ${list.slice().reverse().map(t=>`<tr class="click" data-edit="${esc(t.id)}" tabindex="0"><td class="num">${esc((t.open||"").replace("T"," "))}</td><td>${esc(t.inst)}</td><td>${t.followed==="y"?`<span class="pill good">Тийм</span>`:`<span class="pill bad">Үгүй · дахин эхэл</span>`}</td><td class="r num ${cls(t._.R)}">${rfmt(t._.R)}</td><td style="white-space:normal;min-width:200px">${esc(t.notes||"")}</td></tr>`).join("")}</tbody></table></div>`
+    :`<div class="empty">Дасгалд тооцсон арилжаа хараахан алга. Арилжаа нэмэхдээ “Дасгалд тооцох” дээр Тийм гэж дарна уу.<button class="btn primary" data-act="add">+ Арилжаа нэмэх</button></div>`}
+  </section></div>`;
+}
+
+function viewReview(){
+  const wk=S.week;const ws=weekStart(wk);const we=new Date(ws);we.setDate(we.getDate()+6);
+  const list=enriched(S.trades).filter(t=>{const d=t._.date;return d>=ymd(ws)&&d<=ymd(we)});const st=stats(list);
+  const rv=(S.reviews[wk]||{}).a||{};
+  const emo=groupBy(list.filter(t=>t._.R!=null),t=>t.emotion);let worst=null;emo.forEach((a,k)=>{const s=a.reduce((x,t)=>x+t._.R,0);if(!worst||s<worst.v)worst={k,v:s}});
+  const bm=S.month;const bv=(S.beliefs[bm]||{}).a||{};
+  return `<div class="grid">
+  <section class="panel c12"><div class="panel-h"><h2>Долоо хоногийн дүгнэлт · ${wk}</h2><span class="muted num" style="font-size:12px">${ymd(ws)} – ${ymd(we)}</span>
+    <button class="btn sm" data-act="wkPrev" aria-label="Өмнөх долоо хоног">‹</button><button class="btn sm" data-act="wkNext" aria-label="Дараах долоо хоног">›</button></div>
+    <div class="kpis">${kpi("Арилжаа",String(st.n),"хаагдсан")}${kpi("Цэвэр",`<span class="${cls(st.net)}">${money(st.net)}</span>`,"долоо хоногт")}${kpi("Нийт R",`<span class="${cls(st.sumR)}">${rfmt(st.sumR)}</span>`,"")}
+      ${kpi("Хожил",pct(st.winRate),"")}${kpi("Сахилга бат",pct(st.disc),"дүрмээ баримталсан")}${kpi("Хамгийн их зардал",worst&&worst.v<0?esc(worst.k):"—",worst&&worst.v<0?rfmt(worst.v):"мэдрэмжээр")}</div>
+    <div class="fg" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+    ${REVIEW_Q.map((q,i)=>`<div class="f${i===REVIEW_Q.length-1?" w4":""}"><label for="rv${i}">${esc(q)}</label><textarea id="rv${i}" data-review="${i}">${esc(rv["q"+i]||"")}</textarea></div>`).join("")}
+    </div><div class="muted" style="font-size:12px">Талбараас гарахад автоматаар хадгалагдана.</div></section>
+  <section class="panel c12"><div class="panel-h"><h2>Мөнгө ба өөрийгөө үнэлэх · ${bm}</h2>
+    <button class="btn sm" data-act="mPrev" aria-label="Өмнөх сар">‹</button><button class="btn sm" data-act="mNext" aria-label="Дараах сар">›</button></div>
+    <p class="muted" style="margin:0;font-size:13px">Сар бүр өгүүлбэрүүдийг бодолгүй, хурдан гүйцээ. Сөрөг, айдас, гэм буруутай хариултууд ашгаа буцааж өгөх зан үйлийн далд шалтгаан байж болно. Хариулт сараас сард хэрхэн өөрчлөгдөж байгааг хар.</p>
+    <div class="fg" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+    ${BELIEF_Q.map((q,i)=>`<div class="f"><label for="bf${i}">${esc(q)}</label><input type="text" id="bf${i}" data-belief="${i}" value="${esc(bv["q"+i]||"")}"></div>`).join("")}
+    </div></section></div>`;
+}
+
+function viewSettings(){
+  const s=S.settings;
+  const nf=(id,l,v,step="any",hint="")=>`<div class="f"><label for="${id}">${l}</label><input type="number" id="${id}" step="${step}" value="${esc(v)}">${hint?`<span class="muted" style="font-size:11px">${hint}</span>`:""}</div>`;
+  return `<div class="grid">
+  <section class="panel c6"><div class="panel-h"><h2>Данс ба эрсдэл</h2></div>
+    <div class="fg" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+      <div class="f"><label for="sCur">Валютын тэмдэг</label><input type="text" id="sCur" value="${esc(s.currency)}" maxlength="4"></div>
+      ${nf("sBal","Эхлэх үлдэгдэл",s.startBalance)}
+      ${nf("sRisk","Арилжаа тутмын эрсдэл %",s.riskPct,"0.1","Лотын зөвлөмжид ашиглана")}
+      ${nf("sMaxRisk","Сэрэмжлүүлэх дээд эрсдэл %",s.maxRiskPct,"0.1")}
+      ${nf("sDaily","Өдрийн алдагдлын хязгаар %",s.dailyLossPct,"0.1")}
+      ${nf("sMaxT","Өдрийн арилжааны дээд тоо",s.maxTradesDay,"1","Step Index 24/7 тул заавал тогтоо")}
+    </div></section>
+  <section class="panel c6"><div class="panel-h"><h2>Setup-ууд</h2></div>
+    <div class="f"><label for="sSetups">Мөр бүрт нэг setup</label><textarea id="sSetups" style="min-height:150px">${esc(s.setups.join("\n"))}</textarea></div></section>
+  <section class="panel c12"><div class="panel-h"><h2>Хэрэгслүүд</h2><button class="btn sm" data-act="addInst">+ Хэрэгсэл</button></div>
+    <p class="muted" style="margin:0;font-size:13px">Анхны утгууд. MT5 дээр хэрэгсэл дээр баруун товшоод <b>Specification</b>-ийг нээж гэрээний хэмжээ, хамгийн бага лотыг шалгаж засна уу. P/L = (Гарах − Орох) × Лот × Гэрээний хэмжээ. MT5-ийн бодит P/L-ийг арилжаа бүрт оруулж болно.</p>
+    <div id="instList" style="display:flex;flex-direction:column;gap:8px">
+    ${s.instruments.map((i,k)=>`<div class="inst-row" data-inst="${k}">
+      <div class="f"><label>Нэр (MT5)</label><input type="text" data-k="name" value="${esc(i.name)}"></div>
+      <div class="f"><label>Гэрээний хэмжээ</label><input type="number" step="any" data-k="cs" value="${esc(i.cs)}"></div>
+      <div class="f"><label>Хамгийн бага лот</label><input type="number" step="any" data-k="minLot" value="${esc(i.minLot)}"></div>
+      <div class="f"><label>Лотын алхам</label><input type="number" step="any" data-k="lotStep" value="${esc(i.lotStep)}"></div>
+      <div class="f"><label>Үнийн алхам</label><input type="number" step="any" data-k="tick" value="${esc(i.tick)}"></div>
+      <button class="btn sm ghost" data-act="rmInst" data-k="${k}" aria-label="${esc(i.name)} устгах">✕</button></div>`).join("")}
+    </div>
+    <div><button class="btn primary" data-act="saveSettings">Тохиргоо хадгалах</button></div></section>
+  <section class="panel c12"><div class="panel-h"><h2>Өгөгдөл</h2></div>
+    <p class="muted" style="margin:0;font-size:13px">${S.mode==="cloud"?"Өгөгдөл таны хувийн санд хадгалагдаж байна. Зөвхөн та харна.":"Өгөгдөл зөвхөн энэ хөтөчид хадгалагдаж байна. Хөтчийн өгөгдөл цэвэрлэвэл устана, тул тогтмол экспортолж нөөцлөөрэй."} Нийт ${Object.keys(S.trades).length} арилжаа.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" data-act="expJson">JSON нөөц татах</button><button class="btn" data-act="expCsv">CSV татах (Excel)</button><button class="btn" data-act="impJson">JSON нөөцөөс сэргээх</button>
+      ${S.mode==="cloud"&&S.localCache&&S.localCache.trades&&Object.keys(S.localCache.trades).length&&!Object.keys(S.trades).length?`<button class="btn primary" data-act="migrate">Хөтчид хадгалсан ${Object.keys(S.localCache.trades).length} арилжааг шилжүүлэх</button>`:""}
+    </div></section></div>`;
+}
+
+/* ---------------- render ---------------- */
+let rafPending=false;
+function render(){if(rafPending)return;rafPending=true;requestAnimationFrame(()=>{rafPending=false;doRender()})}
+function doRender(){
+  $$(".tab").forEach(t=>t.setAttribute("aria-selected",String(t.dataset.v===S.view)));
+  const app=$("#app");const active=document.activeElement;const keepId=active&&app.contains(active)&&active.id&&(active.tagName==="TEXTAREA"||active.tagName==="INPUT")?active.id:null;
+  if(keepId)return; // хэрэглэгч бичиж байхад дахин зурахгүй
+  const v={dash:viewDash,trades:viewTrades,day:viewDay,ex:viewEx,review:viewReview,settings:viewSettings}[S.view]||viewDash;
+  app.innerHTML=v();
+}
+
+/* ---------------- trade form ---------------- */
+let editing=null;
+function segHTML(name,val,opts,kind){return `<div class="seg ${kind||""}" data-seg="${name}" role="group">${opts.map(([v,l])=>`<button type="button" data-v="${esc(v)}" aria-pressed="${val===v}">${esc(l)}</button>`).join("")}</div>`}
+function openForm(id){
+  if(id&&String(id).startsWith("demo")){toast("Жишээ арилжааг засах боломжгүй.");return}
+  const list=enriched(S.trades);const bal=currentBalance(list);
+  const lastInst=list.length?list[list.length-1].inst:S.settings.instruments[0].name;
+  const t=id&&S.trades[id]?clone(S.trades[id]):{inst:lastInst,dir:"Buy",open:nowLocal(),close:"",entry:"",sl:"",tp:"",exit:"",lots:"",fees:"",actual:"",balance:+bal.toFixed(2),
+    setup:"",emotion:"Тайван",exitReason:"",accepted:"",movedStop:"n",addedLoser:"n",addedWinner:"n",followed:"",exercise:"",calm:"",notes:"",chart:""};
+  editing={id:id||null,t};
+  const today=ymd(new Date());const day=S.days[today];const aa=(day&&day.a)||{};const stop=DAY_Q.some((q,i)=>aa["q"+i]==="n");
+  const tl=list.filter(x=>x._.date===today);const tst=stats(tl);const lim=bal*S.settings.dailyLossPct/100;
+  const pre=[];if(!id){if(stop)pre.push("Өнөөдрийн бэлтгэл “ЗОГС” гэж гарсан. Энэ арилжааг үнэхээр хийх үү?");
+    if(tst.net<0&&Math.abs(tst.net)>=lim)pre.push("Өдрийн алдагдлын хязгаарт хүрсэн байна.");
+    if(tl.length>=S.settings.maxTradesDay)pre.push(`Өдрийн арилжааны дээд тоо (${S.settings.maxTradesDay}) хүрсэн байна.`)}
+  const f=$("#tradeForm");
+  const opt=(arr,cur,empty)=>(empty?`<option value="">${empty}</option>`:"")+arr.map(x=>`<option${x===cur?" selected":""}>${esc(x)}</option>`).join("");
+  const setups=S.settings.setups.slice();if(t.setup&&!setups.includes(t.setup))setups.push(t.setup);
+  const insts=S.settings.instruments.map(i=>i.name);if(t.inst&&!insts.includes(t.inst))insts.push(t.inst);
+  f.innerHTML=`<div class="dlg-h"><h2>${id?"Арилжаа засах":"Шинэ арилжаа"}</h2><button type="button" class="btn sm ghost" data-act="close" aria-label="Хаах">✕</button></div>
+  <div class="dlg-b">
+    ${pre.length?`<div class="warns">${pre.map(p=>`<div class="bad">${esc(p)}</div>`).join("")}</div>`:""}
+    <fieldset><legend class="eyebrow">Төлөвлөгөө — орохоос өмнө</legend>
+    <div class="fg">
+      <div class="f"><label for="tInst">Хэрэгсэл</label><select id="tInst" name="inst">${opt(insts,t.inst)}</select></div>
+      <div class="f"><span class="lbl">Чиглэл</span>${segHTML("dir",t.dir,[["Buy","Buy"],["Sell","Sell"]],"bs")}</div>
+      <div class="f w2"><label for="tSetup">Setup</label><select id="tSetup" name="setup">${opt(setups,t.setup,"— сонгох —")}</select></div>
+      <div class="f"><label for="tOpen">Орсон цаг</label><input type="datetime-local" id="tOpen" name="open" value="${esc(t.open)}"></div>
+      <div class="f"><label for="tEntry">Орох үнэ</label><input type="number" step="any" id="tEntry" name="entry" value="${esc(t.entry)}"></div>
+      <div class="f"><label for="tSl">Stop-loss</label><input type="number" step="any" id="tSl" name="sl" value="${esc(t.sl)}"></div>
+      <div class="f"><label for="tTp">Зорилтот үнэ</label><input type="number" step="any" id="tTp" name="tp" value="${esc(t.tp)}"></div>
+      <div class="f"><label for="tBal">Дансны үлдэгдэл</label><input type="number" step="any" id="tBal" name="balance" value="${esc(t.balance)}"></div>
+      <div class="f"><label for="tLots">Лот</label><input type="number" step="any" id="tLots" name="lots" value="${esc(t.lots)}"><button type="button" class="btn sm" data-act="useLot" id="lotHint" style="margin-top:4px">Зөвлөмж: —</button></div>
+      <div class="f"><label for="tEmo">Орохын өмнөх мэдрэмж</label><select id="tEmo" name="emotion">${opt(EMOTIONS,t.emotion)}</select></div>
+      <div class="f"><span class="lbl">Эрсдэлийг урьдчилан хүлээн зөвшөөрсөн үү?</span>${segHTML("accepted",t.accepted,[["y","Тийм"],["n","Үгүй"]],"yn")}</div>
+    </div>
+    <div class="preview" id="pv"></div><div class="warns" id="pvw"></div>
+    </fieldset>
+    <fieldset><legend class="eyebrow">Үр дүн — гарсны дараа</legend>
+    <div class="fg">
+      <div class="f"><label for="tClose">Гарсан цаг</label><input type="datetime-local" id="tClose" name="close" value="${esc(t.close)}"></div>
+      <div class="f"><label for="tExit">Гарах үнэ</label><input type="number" step="any" id="tExit" name="exit" value="${esc(t.exit)}"></div>
+      <div class="f"><label for="tFees">Шимтгэл / своп (+/−)</label><input type="number" step="any" id="tFees" name="fees" value="${esc(t.fees)}"></div>
+      <div class="f"><label for="tAct">Бодит P/L (MT5-аас)</label><input type="number" step="any" id="tAct" name="actual" value="${esc(t.actual)}" placeholder="заавал биш"></div>
+      <div class="f w2"><label for="tExitR">Гарсан шалтгаан</label><select id="tExitR" name="exitReason">${opt(EXITS,t.exitReason,"— сонгох —")}</select></div>
+      <div class="f w2"><label for="tCalm">Сэтгэлийн тайван байдал</label><select id="tCalm" name="calm">${opt(["1","2","3","4","5"],String(t.calm||""),"—")}</select></div>
+    </div>
+    <div>
+      <div class="qrow"><span>Дүрмээ бүрэн баримталсан уу?</span>${segHTML("followed",t.followed,[["y","Тийм"],["n","Үгүй"]],"yn")}</div>
+      <div class="qrow"><span>Stop-ийг алдагдал руу хөдөлгөсөн үү?</span>${segHTML("movedStop",t.movedStop,[["n","Үгүй"],["y","Тийм"]],"yn rev")}</div>
+      <div class="qrow"><span>Алдагдалтай позицид нэмсэн үү?</span>${segHTML("addedLoser",t.addedLoser,[["n","Үгүй"],["y","Тийм"]],"yn rev")}</div>
+      <div class="qrow"><span>Ашигтай позицид нэмсэн үү? (зөв нэмэлт)</span>${segHTML("addedWinner",t.addedWinner,[["n","Үгүй"],["y","Тийм"]])}</div>
+      <div class="qrow"><span>20 арилжааны дасгалд тооцох уу?</span>${segHTML("exercise",t.exercise,[["","Үгүй"],["y","Тийм"]])}</div>
+    </div>
+    <div class="fg">
+      <div class="f w4"><label for="tNotes">Сургамж / тэмдэглэл</label><textarea id="tNotes" name="notes">${esc(t.notes)}</textarea></div>
+      <div class="f w4"><label for="tChart">Графикийн холбоос (TradingView г.м.)</label><input type="url" id="tChart" name="chart" value="${esc(t.chart)}" placeholder="https://"></div>
+    </div></fieldset>
+  </div>
+  <div class="dlg-f">${id?`<span class="sp" id="delWrap"><button type="button" class="btn danger" data-act="askDel">Устгах</button></span>`:`<span class="sp"></span>`}
+    <button type="button" class="btn" data-act="close">Болих</button><button type="submit" class="btn primary">Хадгалах</button></div>`;
+  // fix rev seg colors: "Тийм" on violations = red
+  const dlg=$("#dlg");if(!dlg.open)dlg.showModal();updatePreview();
+}
+function readForm(){
+  const f=$("#tradeForm");const t=editing.t;
+  $$("[name]",f).forEach(el=>{t[el.name]=el.value});
+  $$("[data-seg]",f).forEach(s=>{const b=$("button[aria-pressed='true']",s);t[s.dataset.seg]=b?b.dataset.v:""});
+  ["entry","sl","tp","exit","lots","fees","actual","balance"].forEach(k=>{const n=num(t[k]);t[k]=n==null?"":n});
+  return t;
+}
+function updatePreview(){
+  if(!editing)return;const t=readForm();const c=calc(t);const ins=c.ins;
+  const bal=num(t.balance);const e=num(t.entry),sl=num(t.sl);
+  let sug=null;if(bal&&e!=null&&sl!=null&&e!==sl){const raw=bal*(S.settings.riskPct/100)/(Math.abs(e-sl)*(+ins.cs||1));const st=+ins.lotStep||0.01;sug=Math.floor(raw/st+1e-9)*st;sug=+sug.toFixed(4)}
+  const lh=$("#lotHint");if(lh){lh.textContent=sug==null?"Зөвлөмж: —":`Зөвлөмж ${S.settings.riskPct}%: ${sug} лот`;lh.dataset.lot=sug==null?"":sug}
+  $("#pv").innerHTML=`<div><span class="lbl">Эрсдэл</span><b class="${c.riskPct!=null&&c.riskPct>S.settings.maxRiskPct/100?"neg":""}">${c.risk==null?"—":S.settings.currency+fm(c.risk)}${c.riskPct==null?"":` · ${(c.riskPct*100).toFixed(2)}%`}</b></div>
+    <div><span class="lbl">Төлөвлөсөн R:R</span><b>${c.rr==null?"—":"1 : "+c.rr.toFixed(2)}</b></div>
+    <div><span class="lbl">${ins.kind==="step"?"Stop хүртэлх алхам":"Stop зай (tick)"}</span><b>${c.steps==null?"—":c.steps.toLocaleString("en-US")}</b></div>
+    <div><span class="lbl">${c.closed?"P/L · R":"Сешн"}</span><b class="${cls(c.pnl)}">${c.closed?money(c.pnl)+" · "+rfmt(c.R):esc(c.session)}</b></div>`;
+  const w=[];const lots=num(t.lots);
+  if(e!=null&&sl==null)w.push(["bad","Stop-loss алга. Сайн ялагдагч орохоосоо өмнө гарах цэгээ мэддэг."]);
+  if(c.riskPct!=null&&c.riskPct>S.settings.maxRiskPct/100)w.push(["bad",`Эрсдэл ${(c.riskPct*100).toFixed(2)}% нь таны дээд хязгаар ${S.settings.maxRiskPct}%-иас их байна.`]);
+  if(lots!=null&&+ins.minLot&&lots<+ins.minLot)w.push(["",`${ins.name}-ийн хамгийн бага лот ${ins.minLot}.`]);
+  if(e!=null&&sl!=null&&num(t.tp)!=null){const d=t.dir==="Sell"?-1:1;if((sl-e)*d>0)w.push(["bad",`${t.dir} арилжаанд stop орох үнийн ${d>0?"доор":"дээр"} байх ёстой.`]);if((num(t.tp)-e)*d<0)w.push(["bad",`${t.dir} арилжаанд зорилт орох үнийн ${d>0?"дээр":"доор"} байх ёстой.`])}
+  if(t.accepted==="n")w.push(["","Эрсдэлээ хүлээн зөвшөөрөөгүй бол орохгүй байх нь дээр. Хүлээн зөвшөөрөөгүй эрсдэл айдас болж хувирдаг."]);
+  if(t.emotion&&t.emotion!=="Тайван")w.push(["",`Мэдрэмж: ${t.emotion}. Энэ үед хийсэн арилжаанууд таны статистикт тусад нь харагдана.`]);
+  if(t.movedStop==="y"||t.addedLoser==="y")w.push(["bad","Энэ арилжаа дүрэм зөрчсөн гэж тэмдэглэгдэнэ."]);
+  $("#pvw").innerHTML=w.map(([k,m])=>`<div class="${k}">${esc(m)}</div>`).join("");
+}
+async function submitForm(){
+  const t=readForm();
+  if(!t.inst||t.entry===""){toast("Хэрэгсэл болон орох үнийг оруулна уу.");return}
+  if(!S.canSave){toast("Энэ хуудсанд хадгалах эрх алга.");return}
+  const id=editing.id||uid();const clean={};Object.keys(t).forEach(k=>{if(t[k]!==undefined)clean[k]=t[k]});
+  $("#dlg").close();editing=null;
+  if(S.view==="dash"&&!Object.keys(S.trades).length)DEMO=null;
+  await put("trades",id,clean);toast("Хадгаллаа");
+}
+
+/* ---------------- export / import ---------------- */
+async function offer(filename,data){
+  let dl=null;try{dl=window.claude&&typeof claude.use==="function"?await claude.use("downloads"):null}catch(e){}
+  if(!dl){try{const type=filename.endsWith(".csv")?"text/csv;charset=utf-8":"application/json";const url=URL.createObjectURL(new Blob([data],{type}));
+    const a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000)}
+    catch(e){toast("Файл татаж чадсангүй.")}return}
+  try{await dl.save({filename,data})}catch(e){if(e&&e.code==="declined")return;toast("Файл татаж чадсангүй.")}
+}
+function csv(){
+  const cols=["open","close","inst","dir","setup","entry","sl","tp","exit","lots","fees","actual","balance","emotion","accepted","exitReason","movedStop","addedLoser","addedWinner","followed","exercise","calm","notes","chart"];
+  const extra=["risk","riskPct","pnl","R","quality","session"];
+  const q=v=>{const s=String(v??"");return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s};
+  const rows=enriched(S.trades).map(t=>cols.map(c=>q(t[c])).concat([t._.risk,t._.riskPct==null?"":(t._.riskPct*100).toFixed(2),t._.pnl,t._.R==null?"":t._.R.toFixed(3),t._.quality||"",t._.session].map(q)).join(","));
+  return "﻿"+cols.concat(extra).join(",")+"\n"+rows.join("\n");
+}
+async function importJson(file){
+  try{const o=JSON.parse(await file.text());if(!o||typeof o!=="object"||!o.trades)throw 0;
+    if(o.settings)await saveSettings(o.settings);
+    for(const coll of ["trades","days","reviews","beliefs"]){const m=o[coll]||{};for(const [k,v] of Object.entries(m)){await put(coll,k,v)}}
+    toast(`${Object.keys(o.trades).length} арилжаа сэргээлээ.`)}catch(e){toast("Файлыг уншиж чадсангүй. Алхам-аас татсан JSON нөөц эсэхийг шалгана уу.")}
+}
+
+/* ---------------- events ---------------- */
+$("#tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(!b)return;S.view=b.dataset.v;try{localStorage.setItem("alkham-view",S.view)}catch(x){}doRender();window.scrollTo(0,0)});
+$("#addBtn").addEventListener("click",()=>openForm());
+document.addEventListener("click",async e=>{
+  const segBtn=e.target.closest(".seg button");
+  if(segBtn){const seg=segBtn.parentElement;const was=segBtn.getAttribute("aria-pressed")==="true";
+    const toggleOff=!!seg.dataset.day&&was;
+    $$("button",seg).forEach(b=>b.setAttribute("aria-pressed","false"));
+    if(!toggleOff)segBtn.setAttribute("aria-pressed","true");
+    const nv=toggleOff?"":segBtn.dataset.v;
+    if(seg.dataset.day){const today=ymd(new Date());const d=clone(S.days[today]||{a:{}});d.a=d.a||{};d.a[seg.dataset.day]=nv;await put("days",today,d);return}
+    if(seg.closest("#tradeForm"))updatePreview();return}
+  const row=e.target.closest("tr[data-edit]");if(row){openForm(row.dataset.edit);return}
+  const a=e.target.closest("[data-act]");if(!a)return;const act=a.dataset.act;
+  if(act==="add")openForm();
+  else if(act==="close"){$("#dlg").close();editing=null}
+  else if(act==="useLot"){const v=a.dataset.lot;if(v){$("#tLots").value=v;updatePreview()}}
+  else if(act==="askDel"){$("#delWrap").innerHTML=`<span class="confirm">Устгах уу? <button type="button" class="btn sm danger" data-act="doDel">Тийм, устгах</button><button type="button" class="btn sm" data-act="noDel">Үгүй</button></span>`}
+  else if(act==="noDel"){$("#delWrap").innerHTML=`<button type="button" class="btn danger" data-act="askDel">Устгах</button>`}
+  else if(act==="doDel"){const id=editing&&editing.id;$("#dlg").close();editing=null;if(id){await del("trades",id);toast("Устгалаа")}}
+  else if(act==="calPrev"||act==="calNext"){const [y,m]=S.cal.split("-").map(Number);const d=new Date(y,m-1+(act==="calNext"?1:-1),1);S.cal=`${d.getFullYear()}-${pad(d.getMonth()+1)}`;doRender()}
+  else if(act==="wkPrev"||act==="wkNext"){const d=weekStart(S.week);d.setDate(d.getDate()+(act==="wkNext"?7:-7));S.week=isoWeek(d);doRender()}
+  else if(act==="mPrev"||act==="mNext"){const [y,m]=S.month.split("-").map(Number);const d=new Date(y,m-1+(act==="mNext"?1:-1),1);S.month=`${d.getFullYear()}-${pad(d.getMonth()+1)}`;doRender()}
+  else if(act==="saveRules"){const s=clone(S.settings);$$("[data-rule]").forEach(el=>s.rules[el.dataset.rule]=el.value);document.activeElement&&document.activeElement.blur();await saveSettings(s);toast("Дүрмээ хадгаллаа")}
+  else if(act==="addInst"){const s=collectSettings();s.instruments.push({name:"Шинэ хэрэгсэл",cs:1,minLot:0.01,lotStep:0.01,tick:0.01,kind:"other"});S.settings=mergeSettings(s);doRender()}
+  else if(act==="rmInst"){const s=collectSettings();s.instruments.splice(+a.dataset.k,1);if(!s.instruments.length){toast("Дор хаяж нэг хэрэгсэл үлдэх ёстой.");return}S.settings=mergeSettings(s);doRender()}
+  else if(act==="saveSettings"){document.activeElement&&document.activeElement.blur();await saveSettings(collectSettings());toast("Тохиргоо хадгаллаа")}
+  else if(act==="expJson")offer(`alkham-noots-${ymd(new Date())}.json`,JSON.stringify({app:"alkham",v:1,settings:S.settings,trades:S.trades,days:S.days,reviews:S.reviews,beliefs:S.beliefs},null,1));
+  else if(act==="expCsv")offer(`alkham-ariljaa-${ymd(new Date())}.csv`,csv());
+  else if(act==="impJson")$("#importFile").click();
+  else if(act==="migrate"){const lc=S.localCache;for(const coll of ["trades","days","reviews","beliefs"]){for(const [k,v] of Object.entries(lc[coll]||{}))await put(coll,k,v)}if(lc.settings)await saveSettings(lc.settings);toast("Шилжүүллээ")}
 });
-
-["pair","entry","sl","tp"].forEach(id=>{
-  $(id).addEventListener("input", renderToday);
+document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.matches("tr[data-edit]")){e.preventDefault();openForm(e.target.dataset.edit)}});
+function collectSettings(){const s=clone(S.settings);const g=id=>{const el=$("#"+id);return el?el.value:null};
+  if(g("sCur")!=null){s.currency=g("sCur")||"$";s.startBalance=num(g("sBal"))??0;s.riskPct=num(g("sRisk"))??1;s.maxRiskPct=num(g("sMaxRisk"))??2;s.dailyLossPct=num(g("sDaily"))??3;s.maxTradesDay=num(g("sMaxT"))??5;
+    s.setups=g("sSetups").split("\n").map(x=>x.trim()).filter(Boolean);
+    s.instruments=$$("[data-inst]").map(row=>{const o={};$$("[data-k]",row).forEach(el=>{if(el.tagName==="INPUT")o[el.dataset.k]=el.type==="number"?(num(el.value)??0):el.value.trim()});o.kind=/step/i.test(o.name)?"step":/xau|gold|алт/i.test(o.name)?"gold":"other";return o}).filter(i=>i.name)}
+  return s}
+$("#importFile").addEventListener("change",e=>{const f=e.target.files[0];if(f)importJson(f);e.target.value=""});
+$("#tradeForm").addEventListener("input",updatePreview);
+$("#tradeForm").addEventListener("change",updatePreview);
+$("#tradeForm").addEventListener("submit",e=>{e.preventDefault();submitForm()});
+$("#dlg").addEventListener("close",()=>{editing=null});
+document.addEventListener("change",async e=>{const el=e.target;
+  if(el.id==="fInst"){S.filter.inst=el.value;doRender()}else if(el.id==="fMonth"){S.filter.month=el.value;doRender()}else if(el.id==="fRes"){S.filter.res=el.value;doRender()}
+  else if(el.dataset.daynote){const today=ymd(new Date());const d=clone(S.days[today]||{a:{}});d.note=el.value;await put("days",today,d)}
+  else if(el.dataset.review!=null){const k=S.week;const r=clone(S.reviews[k]||{a:{}});r.a=r.a||{};r.a["q"+el.dataset.review]=el.value;await put("reviews",k,r)}
+  else if(el.dataset.belief!=null){const k=S.month;const r=clone(S.beliefs[k]||{a:{}});r.a=r.a||{};r.a["q"+el.dataset.belief]=el.value;await put("beliefs",k,r)}
 });
+document.addEventListener("focusout",()=>{setTimeout(()=>{const a=document.activeElement;if(!a||!$("#app").contains(a)||!(a.tagName==="TEXTAREA"||a.tagName==="INPUT"))render()},0)});
+let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{if(S.view==="dash")render()},200)});
 
-$("logBtn").onclick=async()=>{
-  const t={
-    id:Date.now().toString(36),
-    date:todayKey(), time:new Date().toTimeString().slice(0,5),
-    pair:$("pair").value.trim().toUpperCase(), dir:$("dir").value,
-    setup:$("setup").value, sess:$("sess").value,
-    entry:$("entry").value, sl:$("sl").value, tp:$("tp").value,
-    reasons:(D.settings.conditions||[]).slice(),
-    note:$("cNote").value.trim(),
-    result:"open", r:0, movedSL:false
-  };
-  D.trades.push(t); await save();
-  condState = (D.settings.conditions||[]).map(()=>false);
-  ["entry","sl","tp","cNote"].forEach(i=>$(i).value="");
-  renderAll(); toast("Бүртгэгдлээ. Одоо графикаас хол бай.");
-};
-
-$("saveDay").onclick=async()=>{
-  const k=todayKey(); const rec=D.days[k];
-  rec.note=$("dayNote").value; rec.closed=true; D.days[k]=rec;
-  await save(); renderAll();
-  const s=rec.checks.filter(Boolean).length;
-  toast(s===5 ? "5/5 — гинж үргэлжиллээ." : s+"/5 — гинж тасарлаа. Маргааш завсарлага.");
-};
-
-["fSetup","fRes"].forEach(i=>$(i).onchange=renderTrades);
-
-$("saveSet").onclick=async()=>{
-  D.settings.balance=parseFloat($("sBal").value)||2500;
-  D.settings.riskPct=parseFloat($("sRisk").value)||0.25;
-  D.settings.maxTrades=parseInt($("sMax").value)||3;
-  D.settings.stopLosses=parseInt($("sStop").value)||2;
-  D.settings.pipValue=parseFloat($("sPip").value)||10;
-  await save(); renderAll(); toast("Хадгаллаа");
-};
-
-$("expBtn").onclick=()=>{
-  const blob=new Blob([JSON.stringify(D,null,2)],{type:"application/json"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob); a.download="ginj-"+todayKey()+".json"; a.click();
-  URL.revokeObjectURL(a.href);
-};
-$("impBtn").onclick=()=>$("impFile").click();
-$("impFile").onchange=e=>{
-  const f=e.target.files[0]; if(!f) return;
-  const r=new FileReader();
-  r.onload=async()=>{
-    try{
-      const o=JSON.parse(r.result);
-      if(!o.trades||!o.days) throw 0;
-      D=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),o);
-      await save(); fillSettings(); renderAll(); toast("Сэргээлээ");
-    }catch(_){ toast("Файл уншигдсангүй"); }
-  };
-  r.readAsText(f); e.target.value="";
-};
-$("wipeBtn").onclick=async()=>{
-  if(!confirm("Бүх өгөгдөл устана. Итгэлтэй байна уу?")) return;
-  if(!confirm("Сүүлийн баталгаа: буцаах боломжгүй.")) return;
-  D=JSON.parse(JSON.stringify(DEFAULTS)); await save(); fillSettings(); renderAll(); toast("Устгалаа");
-};
-
-function renderCondEdit(){
-  const el=$("condEdit"); el.innerHTML="";
-  (D.settings.conditions||[]).forEach((txt,i)=>{
-    const row=document.createElement("div");
-    row.style.cssText="display:flex;gap:8px;align-items:center;margin-bottom:8px";
-    row.innerHTML='<span class="n" style="font-family:IBM Plex Mono,monospace;font-size:12px;color:var(--faint);flex:0 0 14px">'+(i+1)+'</span>'+
-      '<input value="'+esc(txt).replace(/"/g,"&quot;")+'">'+
-      '<button style="flex:0 0 auto;padding:9px 11px;border:1px solid rgba(156,63,53,.3);background:#fff;border-radius:8px;color:var(--broken);cursor:pointer;font-size:13px">×</button>';
-    row.querySelector("input").oninput=e=>{ D.settings.conditions[i]=e.target.value; };
-    row.querySelector("button").onclick=()=>{
-      D.settings.conditions.splice(i,1); condState=[]; renderCondEdit();
-    };
-    el.appendChild(row);
-  });
-  if(!(D.settings.conditions||[]).length){
-    el.innerHTML='<div class="hint">Нөхцөл алга. Дор хаяж нэгийг нэмэхгүй бол арилжаа бүртгэх боломжгүй.</div>';
-  }
-}
-$("addCond").onclick=()=>{
-  if(!D.settings.conditions) D.settings.conditions=[];
-  if(D.settings.conditions.length>=8){ toast("8-аас олон нөхцөл нь шийдвэрийг сааруулна"); return; }
-  D.settings.conditions.push(""); condState=[]; renderCondEdit();
-};
-$("saveConds").onclick=async()=>{
-  D.settings.conditions=(D.settings.conditions||[]).map(s=>s.trim()).filter(Boolean);
-  condState=D.settings.conditions.map(()=>false);
-  await save(); renderCondEdit(); renderAll(); toast("Нөхцөлүүд хадгалагдлаа");
-};
-
-function fillSettings(){
-  renderCondEdit();
-  $("sBal").value=D.settings.balance; $("sRisk").value=D.settings.riskPct;
-  $("sMax").value=D.settings.maxTrades; $("sStop").value=D.settings.stopLosses;
-  $("sPip").value=D.settings.pipValue;
-}
-
-/* ---------- boot ---------- */
-(async()=>{
-  await load();
-  fillSettings();
-  renderAll();
-  if(memoryOnly) toast("Санах ой түр горим — өгөгдлөө татаж ав");
+setMode();doRender();connect();
 })();
 </script>
+
 </body>
 </html>
