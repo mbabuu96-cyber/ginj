@@ -321,7 +321,11 @@ function saveSettings(o){S.settings=mergeSettings(o);render();if(S.mode==="cloud
 const SUPA_DEFAULT={url:"",key:""};
 const SUPA_LIB="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js";
 const SUPA_CFG_KEY="alkham-supabase",SUPA_PENDING="alkham-pending";
-const SB={client:null,user:null,status:"off",cfg:null,loading:false,lastSync:null,err:"",busy:false};
+const SB={client:null,user:null,status:"off",cfg:null,loading:false,lastSync:null,err:"",busy:false,
+  draft:{url:"https://qnaxqushnfozblufimei.supabase.co",key:"",email:""}};
+function normUrl(v){v=String(v||"").trim();const m=v.match(/([a-z0-9]{20})(?:\.supabase\.(?:co|in))?/i);
+  if(/^[a-z0-9]{20}$/i.test(v)||(m&&/supabase\.(co|in)/i.test(v)))return `https://${m[1].toLowerCase()}.supabase.co`;return null}
+function normKey(v){return String(v||"").replace(/\s+/g,"").replace(/^["']|["']$/g,"")}
 function supaCfg(){try{const o=JSON.parse(localStorage.getItem(SUPA_CFG_KEY)||"null");if(o&&o.url&&o.key)return o}catch(e){}return SUPA_DEFAULT.url&&SUPA_DEFAULT.key?SUPA_DEFAULT:null}
 function loadScript(src){return new Promise((res,rej)=>{if(window.supabase&&window.supabase.createClient)return res();const el=document.createElement("script");el.src=src;el.onload=()=>res();el.onerror=()=>rej(new Error("Failed to fetch library"));document.head.appendChild(el)})}
 function pendingGet(){try{return JSON.parse(localStorage.getItem(SUPA_PENDING)||"[]")}catch(e){return []}}
@@ -721,11 +725,11 @@ function viewReview(){
 function supaPanel(){
   const head=`<div class="panel-h"><h2>Сервер (Supabase)</h2>${SB.status==="ok"?`<span class="pill good">Холбогдсон</span>`:SB.status==="offline"?`<span class="pill warn">Офлайн</span>`:SB.status==="error"?`<span class="pill bad">Алдаа</span>`:SB.cfg?`<span class="pill neutral">Нэвтрээгүй</span>`:`<span class="pill neutral">Тохируулаагүй</span>`}</div>`;
   const err=SB.err?`<div class="warns"><div class="bad">${esc(SB.err)}</div></div>`:"";
-  if(!SB.cfg)return `<section class="panel c12">${head}
+  if(!SB.cfg)return `<section class="panel c12">${head}${err}
     <p class="muted" style="margin:0;font-size:13px">Серверт холбогдсоноор арилжаанууд утас, компьютер бүх төхөөрөмж дээр ижил харагдаж, хөтчөө цэвэрлэсэн ч устахгүй. Supabase дээр төсөл үүсгээд, <b>Project Settings → API Keys</b> (эсвэл <b>Connect</b>) хэсгээс доорх хоёр утгыг хуулж оруулна.</p>
     <div class="fg" style="grid-template-columns:repeat(2,minmax(0,1fr))">
-      <div class="f"><label for="sbUrl">Project URL</label><input type="url" id="sbUrl" placeholder="https://xxxxxxxx.supabase.co" autocomplete="off"></div>
-      <div class="f"><label for="sbKey">anon / publishable түлхүүр</label><input type="text" id="sbKey" placeholder="eyJhbGciOi… эсвэл sb_publishable_…" autocomplete="off"></div>
+      <div class="f"><label for="sbUrl">Project URL</label><input type="url" id="sbUrl" data-draft="url" value="${esc(SB.draft.url)}" placeholder="https://xxxxxxxx.supabase.co" autocomplete="off"></div>
+      <div class="f"><label for="sbKey">anon / publishable түлхүүр</label><input type="text" id="sbKey" data-draft="key" value="${esc(SB.draft.key)}" placeholder="sb_publishable_…" autocomplete="off" spellcheck="false"></div>
     </div>
     <div class="muted" style="font-size:12px">Зөвхөн <b>anon</b> эсвэл <b>publishable</b> түлхүүрийг оруулна. <b>service_role</b> эсвэл <b>secret</b> түлхүүрийг хэзээ ч бүү оруул.</div>
     <div><button class="btn primary" data-act="sbSave">Холбох</button></div></section>`;
@@ -733,10 +737,10 @@ function supaPanel(){
   if(!SB.user)return `<section class="panel c12">${head}${err}
     <p class="muted" style="margin:0;font-size:13px">Анх удаа бол <b>Бүртгүүлэх</b> дарна. Supabase-ээс ирсэн баталгаажуулах имэйлийн холбоос дээр дарсны дараа <b>Нэвтрэх</b> товчоор орно. Бусад төхөөрөмж дээр ижил имэйл, нууц үгээр нэвтэрнэ.</p>
     <div class="fg" style="grid-template-columns:repeat(2,minmax(0,1fr))">
-      <div class="f"><label for="sbEmail">Имэйл</label><input type="email" id="sbEmail" autocomplete="email" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)"></div>
+      <div class="f"><label for="sbEmail">Имэйл</label><input type="email" id="sbEmail" data-draft="email" value="${esc(SB.draft.email)}" autocomplete="email" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)"></div>
       <div class="f"><label for="sbPass">Нууц үг (6+ тэмдэгт)</label><input type="password" id="sbPass" autocomplete="current-password" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)"></div>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="sbIn"${SB.busy?" disabled":""}>Нэвтрэх</button><button class="btn" data-act="sbUp"${SB.busy?" disabled":""}>Бүртгүүлэх</button><button class="btn ghost" data-act="sbForget">Холболтыг салгах</button></div></section>`;
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="sbIn"${SB.busy?" disabled":""}>Нэвтрэх</button><button class="btn" data-act="sbUp"${SB.busy?" disabled":""}>Бүртгүүлэх</button><button class="btn ghost" data-act="sbForget">Холболтыг засах</button></div></section>`;
   const local=lsLoad();const ln=local&&local.trades?Object.keys(local.trades).length:0;const n=pendingGet().length;
   return `<section class="panel c12">${head}${err}
     <div class="muted" style="font-size:13px">Нэвтэрсэн: <b>${esc(SB.user.email||"")}</b> · ${Object.keys(S.trades).length} арилжаа серверт${SB.lastSync?` · сүүлд синк ${pad(SB.lastSync.getHours())}:${pad(SB.lastSync.getMinutes())}`:""}${n?` · <span class="neg">${n} өөрчлөлт илгээгдэхийг хүлээж байна</span>`:""}</div>
@@ -945,14 +949,18 @@ document.addEventListener("click",async e=>{
   else if(act==="expJson")offer(`alkham-noots-${ymd(new Date())}.json`,JSON.stringify({app:"alkham",v:1,settings:S.settings,trades:S.trades,days:S.days,reviews:S.reviews,beliefs:S.beliefs},null,1));
   else if(act==="expCsv")offer(`alkham-ariljaa-${ymd(new Date())}.csv`,csv());
   else if(act==="impJson")$("#importFile").click();
-  else if(act==="sbSave"){let url=($("#sbUrl").value||"").trim().replace(/\/+$/,"");const key=($("#sbKey").value||"").trim();
-    if(!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(url)){toast("Project URL нь https://xxxx.supabase.co хэлбэртэй байх ёстой.");return}
-    if(/service_role|sb_secret_/i.test(key)||(key.startsWith("eyJ")&&(()=>{try{return JSON.parse(atob(key.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"))).role==="service_role"}catch(e){return false}})())){toast("Энэ бол нууц service_role түлхүүр байна. anon / publishable түлхүүрийг оруулна уу.");return}
-    if(key.length<20){toast("Түлхүүрээ бүтнээр нь хуулж оруулна уу.");return}
+  else if(act==="sbSave"){const url=normUrl($("#sbUrl").value);const key=normKey($("#sbKey").value);SB.draft.url=$("#sbUrl").value;SB.draft.key=$("#sbKey").value;SB.err="";
+    let role="";if(key.startsWith("eyJ")){try{role=JSON.parse(atob(key.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"))).role||""}catch(e){}}
+    if(!url)SB.err="Project URL буруу байна. https://qnaxqushnfozblufimei.supabase.co хэлбэртэй байх ёстой.";
+    else if(!key)SB.err="Түлхүүрээ оруулна уу. Supabase → Project Settings → API Keys → Publishable key-ийн хуулах товчийг дарж хуулна.";
+    else if(/^sb_secret_/i.test(key)||role==="service_role")SB.err="Энэ бол нууц (secret / service_role) түлхүүр байна. Үүнийг бүү ашигла. Publishable key-ийг оруулна уу.";
+    else if(!/^sb_publishable_/i.test(key)&&role!=="anon")SB.err="Түлхүүр танигдсангүй. sb_publishable_ гэж эхэлсэн түлхүүрийг хуулах товчоор бүтнээр нь хуулж оруулна уу.";
+    else if(/^sb_publishable_/i.test(key)&&key.length<40)SB.err="Түлхүүр дутуу хуулагдсан бололтой. Дэлгэц дээрээс гараар биш, хуулах товчоор хуулна уу.";
+    if(SB.err){a.blur();render();return}
     try{localStorage.setItem(SUPA_CFG_KEY,JSON.stringify({url,key}))}catch(e){}a.blur();initSupa()}
   else if(act==="sbIn"||act==="sbUp"){const email=($("#sbEmail").value||"").trim(),password=$("#sbPass").value||"";
     if(!email||!password){toast("Имэйл, нууц үгээ оруулна уу.");return}
-    SB.busy=true;SB.err="";a.blur();render();
+    SB.draft.email=email;SB.busy=true;SB.err="";a.blur();render();
     try{if(act==="sbIn"){const {error}=await SB.client.auth.signInWithPassword({email,password});if(error)throw error;toast("Нэвтэрлээ")}
       else{const {data,error}=await SB.client.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname}});if(error)throw error;
         if(!data.session)toast("Бүртгэл үүслээ. Имэйлээ шалгаж баталгаажуулаад Нэвтрэх дарна уу.");else toast("Бүртгэл үүсч, нэвтэрлээ")}}
@@ -961,7 +969,7 @@ document.addEventListener("click",async e=>{
   else if(act==="sbOut"){await SB.client.auth.signOut();toast("Гарлаа")}
   else if(act==="sbSync"){await flushPending();await pullAll();toast(SB.status==="ok"?"Синк хийлээ":SB.err||"Синк хийж чадсангүй")}
   else if(act==="sbMigrate")supaMigrateLocal();
-  else if(act==="sbForget"){try{localStorage.removeItem(SUPA_CFG_KEY)}catch(e){}SB.cfg=null;SB.client=null;SB.status="off";SB.err="";setMode();render()}
+  else if(act==="sbForget"){try{localStorage.removeItem(SUPA_CFG_KEY)}catch(e){}if(SB.cfg){SB.draft.url=SB.cfg.url;SB.draft.key=SB.cfg.key}SB.cfg=null;SB.client=null;SB.status="off";SB.err="";setMode();render()}
   else if(act==="migrate"){const lc=S.localCache;for(const coll of ["trades","days","reviews","beliefs"]){for(const [k,v] of Object.entries(lc[coll]||{}))await put(coll,k,v)}if(lc.settings)await saveSettings(lc.settings);toast("Шилжүүллээ")}
 });
 document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.matches("tr[data-edit]")){e.preventDefault();openForm(e.target.dataset.edit)}});
@@ -970,6 +978,7 @@ function collectSettings(){const s=clone(S.settings);const g=id=>{const el=$("#"
     s.setups=g("sSetups").split("\n").map(x=>x.trim()).filter(Boolean);
     s.instruments=$$("[data-inst]").map(row=>{const o={};$$("[data-k]",row).forEach(el=>{if(el.tagName==="INPUT")o[el.dataset.k]=el.type==="number"?(num(el.value)??0):el.value.trim()});o.kind=/step/i.test(o.name)?"step":/xau|gold|алт/i.test(o.name)?"gold":"other";return o}).filter(i=>i.name)}
   return s}
+document.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.draft;if(k)SB.draft[k]=e.target.value});
 $("#importFile").addEventListener("change",e=>{const f=e.target.files[0];if(f)importJson(f);e.target.value=""});
 $("#tradeForm").addEventListener("input",updatePreview);
 $("#tradeForm").addEventListener("change",updatePreview);
