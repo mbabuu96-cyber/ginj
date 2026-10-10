@@ -1166,14 +1166,14 @@ async function chCreateChart(){
   if(CH.chart)return true;
   try{await loadScriptOnce(LWC_LIB,"LightweightCharts")}catch(e){chEmpty("График зурах санг ачаалж чадсангүй. Интернэтээ шалгаад хуудсаа дахин ачаална уу.");return false}
   const LW=window.LightweightCharts;
-  let bs=12;try{bs=+localStorage.getItem("alkham-chart-bs")||12}catch(e){}CH.bs=Math.max(3,Math.min(60,bs));
-  CH.chart=LW.createChart($("#chChart"),{autoSize:true,timeScale:{timeVisible:true,secondsVisible:false,rightOffset:8,barSpacing:CH.bs,minBarSpacing:2},crosshair:{mode:0},localization:{locale:"en-US"}});
+  let bs=6;try{bs=+localStorage.getItem("alkham-chart-bs")||6}catch(e){}CH.bs=Math.max(1,Math.min(60,bs));
+  CH.chart=LW.createChart($("#chChart"),{autoSize:true,timeScale:{timeVisible:true,secondsVisible:false,rightOffset:8,barSpacing:CH.bs,minBarSpacing:0.5},crosshair:{mode:0},localization:{locale:"en-US"}});
   CH.series=CH.chart.addCandlestickSeries({priceLineVisible:true});
   if(CH.inst){const d=decOf(CH.inst);CH.series.applyOptions({priceFormat:{type:"price",precision:d,minMove:+(10**-d).toFixed(d)}})}
   chTheme();
   CH.chart.subscribeClick(p=>{if(!CH.pick||!p.point)return;const price=CH.series.coordinateToPrice(p.point.y);if(price==null)return;
     $(CH.pick==="sl"?"#opSl":"#opTp").value=fmtP(price);CH.pick=null;$("#chHint").hidden=true;$("#chWrap").classList.remove("picking");chUpdate()});
-  CH.chart.timeScale().subscribeVisibleLogicalRangeChange(()=>chZones());
+  CH.chart.timeScale().subscribeVisibleLogicalRangeChange(r=>{chZones();if(r&&r.from<60)chOlder()});
   new ResizeObserver(()=>chZones()).observe($("#chWrap"));
   try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>setTimeout(chTheme,50))}catch(e){}
   new MutationObserver(()=>setTimeout(chTheme,50)).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
@@ -1204,6 +1204,23 @@ function chLeave(){if(!CH.active)return;CH.active=false;rpPause();chForget()}
 function chReload(){if(CH.mode==="live")chLoadLive();else if(CH.rp.all.length)rpLoad()}
 async function chForget(){const id=CH.subId;CH.subId=null;DV.stream.clear();if(id&&DV.ws&&DV.ws.readyState===1){try{await dvSend({forget:id})}catch(e){}}}
 
+/* --- хуучин түүхийг зүүн тийш гүйлгэхэд ачаалах --- */
+const MAX_BARS=60000;
+async function chOlder(){
+  if(CH.olderBusy||!CH.sym||!CH.series)return;const replay=CH.mode==="replay";
+  const data=replay?CH.rp.all:CH.series.data();if(!data.length||data.length>=MAX_BARS)return;
+  const key=(replay?"r":"l")+CH.sym+CH.gran+data[0].time;if(CH.olderDone===key)return;
+  CH.olderBusy=true;const seq=CH.loadSeq;const firstEp=data[0].time-TZ;chStatus("Хуучин лаа ачаалж байна…");
+  try{const r=await dvSend({ticks_history:replay?CH.rp.sym:CH.sym,style:"candles",granularity:CH.gran,end:firstEp-1,count:5000,adjust_start_time:1});
+    if(seq!==CH.loadSeq)return;
+    const add=(r.candles||[]).map(toBar).filter(b=>b.time<data[0].time);
+    if(!add.length){CH.olderDone=key;chStatus("Энэ хэрэгслийн хамгийн эхний өгөгдөлд хүрлээ.");return}
+    const ts=CH.chart.timeScale(),vr=ts.getVisibleLogicalRange();
+    if(replay){CH.rp.all=add.concat(CH.rp.all);CH.rp.idx+=add.length;CH.series.setData(CH.rp.all.slice(0,CH.rp.idx))}
+    else CH.series.setData(add.concat(CH.series.data()));
+    if(vr)ts.setVisibleLogicalRange({from:vr.from+add.length,to:vr.to+add.length});
+    chStatus(`${replay?"Давтан тоглуулах":"Шууд"} · ${CH.sym} · ${(replay?CH.rp.idx:CH.series.data().length).toLocaleString("en-US")} лаа`);drDirty();
+  }catch(e){chStatus(dvErrMsg(e),true)}finally{CH.olderBusy=false}}
 /* --- live --- */
 async function chLoadLive(){
   const seq=++CH.loadSeq;rpPause();await chForget();if(seq!==CH.loadSeq||!CH.active)return;
@@ -1217,7 +1234,7 @@ async function chLoadLive(){
         bar=lb&&lb.time===t?{time:t,open:lb.open,high:Math.max(lb.high,q),low:Math.min(lb.low,q),close:q}:{time:t,open:q,high:q,low:q,close:q}}
       if(!bar||!isFinite(bar.close))return;
       try{CH.series.update(bar)}catch(e){}CH.last=bar.close;CH.lastTime=bar.time;chUpdate(true)};
-    const req={ticks_history:sym,style:"candles",granularity:CH.gran,count:1000,end:"latest",adjust_start_time:1};
+    const req={ticks_history:sym,style:"candles",granularity:CH.gran,count:5000,end:"latest",adjust_start_time:1};
     let r,closed=false;
     try{r=await dvSend(Object.assign({subscribe:1},req),onBar)}catch(e){if(e&&e.code==="MarketIsClosed"){closed=true;r=await dvSend(req)}else throw e}
     if(seq!==CH.loadSeq)return;
@@ -1225,7 +1242,7 @@ async function chLoadLive(){
     const bars=(r.candles||[]).map(toBar);CH.series.setData(bars);CH.series.setMarkers([]);
     CH.last=bars.length?bars[bars.length-1].close:null;CH.lastTime=bars.length?bars[bars.length-1].time:null;
     CH.chart.timeScale().scrollToRealTime();chEmpty(bars.length?"":"Энэ хэрэгсэлд өгөгдөл ирсэнгүй.");
-    chStatus(closed?"Зах зээл хаалттай · сүүлийн өгөгдөл":`Шууд · ${sym}${DV.url&&!/options\/ws\/public/.test(DV.url)?" · нөөц сервер":""}`,closed);chUpdate(true);
+    chStatus(closed?"Зах зээл хаалттай · сүүлийн өгөгдөл":`Шууд · ${sym} · ${bars.length.toLocaleString("en-US")} лаа${DV.url&&!/options\/ws\/public/.test(DV.url)?" · нөөц сервер":""}`,closed);chUpdate(true);
   }catch(e){if(seq!==CH.loadSeq)return;chStatus(dvErrMsg(e),true);if(!CH.series.data().length)chEmpty(esc(dvErrMsg(e)))}
 }
 
@@ -1298,7 +1315,7 @@ async function rpLoad(){
   if(start>Date.now()/1000-g*5){chStatus("Эхлэх цаг өнгөрсөн хугацаанд байх ёстой.",true);return}
   chStatus("Түүхэн өгөгдөл ачаалж байна…");chEmpty("Түүхэн өгөгдөл ачаалж байна…");
   try{const sym=await derivSymbol(ins);if(!sym)throw {code:"InvalidSymbol"};
-    const past=await dvSend({ticks_history:sym,style:"candles",granularity:g,end:start,count:300,adjust_start_time:1});
+    const past=await dvSend({ticks_history:sym,style:"candles",granularity:g,end:start,count:2000,adjust_start_time:1});
     const fut=await dvSend({ticks_history:sym,style:"candles",granularity:g,start:start,end:Math.min(Math.floor(Date.now()/1000),start+4999*g),count:5000});
     if(seq!==CH.loadSeq)return;
     const pb=(past.candles||[]).filter(c=>+c.epoch<start).map(toBar),fb=(fut.candles||[]).filter(c=>+c.epoch>=start).map(toBar);
@@ -1519,7 +1536,7 @@ async function chClick(e){
   else if(act==="rr"){const o=chCalc();if(o.entry==null||o.sl==null){toast("Эхлээд Stop-loss тавина уу.");return}const d=(CH.rp.pos?CH.rp.pos.dir:CH.dir)==="Sell"?-1:1;$("#opTp").value=fmtP(o.entry+d*Math.abs(o.entry-o.sl)*+b.dataset.v);chUpdate()}
   else if(act==="go"){const o=chCalc();if(o.entry==null){toast("Орох үнэ алга.");return}
     openForm(null,{inst:CH.inst.name,dir:CH.dir,entry:+fmtP(o.entry),sl:o.sl??"",tp:o.tp??"",lots:o.lots??"",open:nowLocal(),balance:+o.bal.toFixed(2)})}
-  else if(act==="zoom"){const ts=CH.chart.timeScale();const cur=ts.options().barSpacing||CH.bs;const nx=Math.max(3,Math.min(60,Math.round(cur*(+b.dataset.v>0?1.35:1/1.35))));
+  else if(act==="zoom"){const ts=CH.chart.timeScale();const cur=ts.options().barSpacing||CH.bs;const nx=Math.max(1,Math.min(60,+(cur*(+b.dataset.v>0?1.35:1/1.35)).toFixed(2)));
     ts.applyOptions({barSpacing:nx});CH.bs=nx;try{localStorage.setItem("alkham-chart-bs",String(nx))}catch(e){}ts.scrollToRealTime();drDirty();chZones()}
   else if(act==="wide")chWide(!$("#chartRoot").classList.contains("wide"));
   else if(act==="full"){const el=$("#chPanel");try{if(document.fullscreenElement)await document.exitFullscreen();else if(el.requestFullscreen)await el.requestFullscreen();else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();else toast("Энэ хөтөч бүтэн дэлгэцийг дэмжихгүй байна.")}catch(e){toast("Бүтэн дэлгэц нээгдсэнгүй.")}}
