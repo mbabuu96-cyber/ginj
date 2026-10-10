@@ -321,7 +321,7 @@ function saveSettings(o){S.settings=mergeSettings(o);render();if(S.mode==="cloud
 const SUPA_DEFAULT={url:"",key:""};
 const SUPA_LIB="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js";
 const SUPA_CFG_KEY="alkham-supabase",SUPA_PENDING="alkham-pending";
-const SB={client:null,user:null,status:"off",cfg:null,loading:false,lastSync:null,err:"",busy:false,
+const SB={client:null,user:null,status:"off",cfg:null,loading:false,lastSync:null,err:"",busy:false,info:"",raw:"",
   draft:{url:"https://qnaxqushnfozblufimei.supabase.co",key:"",email:""}};
 function normUrl(v){v=String(v||"").trim();const m=v.match(/([a-z0-9]{20})(?:\.supabase\.(?:co|in))?/i);
   if(/^[a-z0-9]{20}$/i.test(v)||(m&&/supabase\.(co|in)/i.test(v)))return `https://${m[1].toLowerCase()}.supabase.co`;return null}
@@ -333,7 +333,10 @@ function pendingSet(a){try{localStorage.setItem(SUPA_PENDING,JSON.stringify(a))}
 function cacheKey(){return "alkham-cache-"+(SB.user?SB.user.id:"none")}
 function cacheSave(){if(S.mode!=="supa")return;try{localStorage.setItem(cacheKey(),JSON.stringify({settings:S.settings,trades:S.trades,days:S.days,reviews:S.reviews,beliefs:S.beliefs}))}catch(e){}}
 function cacheLoad(){try{return JSON.parse(localStorage.getItem(cacheKey())||"null")}catch(e){return null}}
-function supaMsg(e){const m=String((e&&(e.message||e.error_description))||e||"");
+function withTimeout(p,ms){return Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),ms))])}
+function supaMsg(e){const m=String((e&&(e.message||e.error_description||e.msg))||e||"");SB.raw=m+(e&&e.status?` (HTTP ${e.status})`:"")+(e&&e.code?` [${e.code}]`:"");
+  if(m==="timeout")return "Сервер 20 секундэд хариу өгсөнгүй. Төсөл зогссон (paused) эсэхийг Supabase dashboard дээр шалгаад Restore дарна уу.";
+  if(/User already registered|already been registered|user_already_exists/i.test(m))return "Энэ имэйлээр бүртгэл аль хэдийн үүссэн байна. Нууц үгээ бичээд Нэвтрэх дарна уу.";
   if(/journal_docs|relation|does not exist|schema cache/i.test(m))return "journal_docs хүснэгт олдсонгүй. supabase/schema.sql-ийг SQL Editor дээр ажиллуулна уу.";
   if(/Invalid login credentials/i.test(m))return "Имэйл эсвэл нууц үг буруу байна.";
   if(/Email not confirmed/i.test(m))return "Имэйлээ баталгаажуулаагүй байна. Ирсэн захидлын холбоос дээр дарна уу.";
@@ -727,7 +730,8 @@ function viewReview(){
 
 function supaPanel(){
   const head=`<div class="panel-h"><h2>Сервер (Supabase)</h2>${SB.status==="ok"?`<span class="pill good">Холбогдсон</span>`:SB.status==="offline"?`<span class="pill warn">Офлайн</span>`:SB.status==="error"?`<span class="pill bad">Алдаа</span>`:SB.cfg?`<span class="pill neutral">Нэвтрээгүй</span>`:`<span class="pill neutral">Тохируулаагүй</span>`}</div>`;
-  const err=SB.err?`<div class="warns"><div class="bad">${esc(SB.err)}</div></div>`:"";
+  const err=(SB.err?`<div class="warns"><div class="bad">${esc(SB.err)}${SB.raw?`<br><span style="font-size:11px;opacity:.8">Серверийн хариу: ${esc(SB.raw)}</span>`:""}</div></div>`:"")
+    +(SB.info?`<div class="banner info"><p style="font-size:13px">${SB.info}</p></div>`:"");
   if(!SB.cfg)return `<section class="panel c12">${head}${err}
     <p class="muted" style="margin:0;font-size:13px">Серверт холбогдсоноор арилжаанууд утас, компьютер бүх төхөөрөмж дээр ижил харагдаж, хөтчөө цэвэрлэсэн ч устахгүй. Supabase дээр төсөл үүсгээд, <b>Project Settings → API Keys</b> (эсвэл <b>Connect</b>) хэсгээс доорх хоёр утгыг хуулж оруулна.</p>
     <div class="fg" style="grid-template-columns:repeat(2,minmax(0,1fr))">
@@ -743,7 +747,7 @@ function supaPanel(){
       <div class="f"><label for="sbEmail">Имэйл</label><input type="email" id="sbEmail" data-draft="email" value="${esc(SB.draft.email)}" autocomplete="email" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)"></div>
       <div class="f"><label for="sbPass">Нууц үг (6+ тэмдэгт)</label><div style="display:flex;gap:6px"><input type="password" id="sbPass" autocomplete="current-password" placeholder="жишээ нь: alkham2026" style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)"><button type="button" class="btn sm" data-act="sbShow" aria-label="Нууц үг харуулах">Харах</button></div></div>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="sbIn"${SB.busy?" disabled":""}>Нэвтрэх</button><button class="btn" data-act="sbUp"${SB.busy?" disabled":""}>Бүртгүүлэх</button><button class="btn ghost" data-act="sbForget">Холболтыг засах</button></div></section>`;
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="sbIn"${SB.busy?" disabled":""}>Нэвтрэх</button><button class="btn" data-act="sbUp"${SB.busy?" disabled":""}>Бүртгүүлэх</button><button class="btn" data-act="sbDiag"${SB.busy?" disabled":""}>Холболт шалгах</button><button class="btn ghost" data-act="sbForget">Холболтыг засах</button></div></section>`;
   const local=lsLoad();const ln=local&&local.trades?Object.keys(local.trades).length:0;const n=pendingGet().length;
   return `<section class="panel c12">${head}${err}
     <div class="muted" style="font-size:13px">Нэвтэрсэн: <b>${esc(SB.user.email||"")}</b> · ${Object.keys(S.trades).length} арилжаа серверт${SB.lastSync?` · сүүлд синк ${pad(SB.lastSync.getHours())}:${pad(SB.lastSync.getMinutes())}`:""}${n?` · <span class="neg">${n} өөрчлөлт илгээгдэхийг хүлээж байна</span>`:""}</div>
@@ -961,15 +965,37 @@ document.addEventListener("click",async e=>{
     else if(/^sb_publishable_/i.test(key)&&key.length<40)SB.err="Түлхүүр дутуу хуулагдсан бололтой. Дэлгэц дээрээс гараар биш, хуулах товчоор хуулна уу.";
     if(SB.err){a.blur();render();return}
     try{localStorage.setItem(SUPA_CFG_KEY,JSON.stringify({url,key}))}catch(e){}a.blur();initSupa()}
-  else if(act==="sbIn"||act==="sbUp"){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();const email=($("#sbEmail").value||"").trim(),password=$("#sbPass").value||"";
-    SB.draft.email=email;
+  else if(act==="sbIn"||act==="sbUp"){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+    const email=($("#sbEmail").value||"").trim(),password=$("#sbPass").value||"";
+    SB.draft.email=email;SB.err="";SB.raw="";SB.info="";
     if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){SB.err="Имэйлээ зөв оруулна уу.";render();return}
     if(password.length<6){SB.err=password?"Нууц үг хамгийн багадаа 6 тэмдэгт байх ёстой.":"Нууц үгээ баруун талын талбарт бичнэ үү (6-аас дээш тэмдэгт).";render();setTimeout(()=>{const el=$("#sbPass");if(el)el.focus()},50);return}
-    SB.draft.email=email;SB.busy=true;SB.err="";a.blur();render();
-    try{if(act==="sbIn"){const {error}=await SB.client.auth.signInWithPassword({email,password});if(error)throw error;toast("Нэвтэрлээ")}
-      else{const {data,error}=await SB.client.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname}});if(error)throw error;
-        if(!data.session)toast("Бүртгэл үүслээ. Имэйлээ шалгаж баталгаажуулаад Нэвтрэх дарна уу.");else toast("Бүртгэл үүсч, нэвтэрлээ")}}
-    catch(e){SB.err=supaMsg(e)}
+    SB.busy=true;SB.info=act==="sbUp"?"Бүртгэл үүсгэж байна…":"Нэвтэрч байна…";render();
+    let session=null;
+    try{
+      if(act==="sbUp"){
+        const {data,error}=await withTimeout(SB.client.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname}}),20000);
+        if(error)throw error;
+        session=data&&data.session;
+        if(!session&&data&&data.user&&Array.isArray(data.user.identities)&&data.user.identities.length===0)
+          throw {message:"User already registered"};
+        if(!session){const r=await withTimeout(SB.client.auth.signInWithPassword({email,password}),20000);
+          if(r.error){if(/Email not confirmed/i.test(r.error.message)){SB.info=`Бүртгэл үүслээ. <b>${esc(email)}</b> хаягт ирсэн баталгаажуулах имэйлийн холбоос дээр дараад (Spam хавтсаа ч шалгаарай) энд <b>Нэвтрэх</b> дарна уу. Эсвэл Supabase дээр Confirm email-ийг унтраана.`;session=null}else throw r.error}
+          else session=r.data&&r.data.session}
+      }else{
+        const {data,error}=await withTimeout(SB.client.auth.signInWithPassword({email,password}),20000);if(error)throw error;session=data&&data.session}
+      if(session){SB.info="";toast(act==="sbUp"?"Бүртгэл үүсч, нэвтэрлээ":"Нэвтэрлээ");
+        setTimeout(()=>{if(S.mode!=="supa"&&session.user){SB.user=session.user;enterSupa()}},800)}
+    }catch(e){SB.info="";SB.err=supaMsg(e)}
+    SB.busy=false;render()}
+  else if(act==="sbDiag"){SB.busy=true;SB.err="";SB.raw="";SB.info="Сервер шалгаж байна…";render();
+    try{const cfg=SB.cfg;const r=await withTimeout(fetch(cfg.url+"/auth/v1/settings",{headers:{apikey:cfg.key}}),20000);const txt=await r.text();
+      if(r.status===401||r.status===403){SB.err="Сервер түлхүүрийг хүлээж авсангүй. Холболтыг засах дарж publishable key-ээ дахин хуулж оруулна уу.";SB.raw=`HTTP ${r.status}: ${txt.slice(0,160)}`;SB.info=""}
+      else if(!r.ok){SB.err="Серверээс алдаа ирлээ. Төсөл зогссон эсэхийг Supabase dashboard дээр шалгана уу.";SB.raw=`HTTP ${r.status}: ${txt.slice(0,160)}`;SB.info=""}
+      else{const j=JSON.parse(txt);const rows=[["Сервертэй холболт","✓ Хэвийн"],["Шинэ бүртгэл",j.disable_signup?"✗ Хаалттай — Allow new users to sign up-ийг асаана уу":"✓ Нээлттэй"],
+          ["Имэйл баталгаажуулалт",j.mailer_autoconfirm?"✓ Шаардлагагүй (шууд нэвтэрнэ)":"Шаардлагатай — бүртгүүлсний дараа имэйлээ баталгаажуулна"],["Имэйлээр нэвтрэх",j.external&&j.external.email===false?"✗ Унтраалттай":"✓ Идэвхтэй"]];
+        SB.info=rows.map(([k,v])=>`<b>${k}:</b> ${esc(v)}`).join("<br>")}}
+    catch(e){SB.info="";SB.err=supaMsg(e)}
     SB.busy=false;render()}
   else if(act==="sbShow"){const el=$("#sbPass");if(el){el.type=el.type==="password"?"text":"password";a.textContent=el.type==="password"?"Харах":"Нуух"}}
   else if(act==="sbOut"){await SB.client.auth.signOut();toast("Гарлаа")}
