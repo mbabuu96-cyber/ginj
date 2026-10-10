@@ -745,7 +745,7 @@ function supaPanel(){
     <p class="muted" style="margin:0;font-size:13px">Анх удаа бол <b>Бүртгүүлэх</b> дарна. Supabase-ээс ирсэн баталгаажуулах имэйлийн холбоос дээр дарсны дараа <b>Нэвтрэх</b> товчоор орно. Бусад төхөөрөмж дээр ижил имэйл, нууц үгээр нэвтэрнэ.</p>
     <div class="fg" style="grid-template-columns:repeat(2,minmax(0,1fr))">
       <div class="f"><label for="sbEmail">Имэйл</label><input type="email" id="sbEmail" data-draft="email" value="${esc(SB.draft.email)}" autocomplete="email" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)"></div>
-      <div class="f"><label for="sbPass">Нууц үг (6+ тэмдэгт)</label><div style="display:flex;gap:6px"><input type="password" id="sbPass" autocomplete="current-password" placeholder="жишээ нь: alkham2026" style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)"><button type="button" class="btn sm" data-act="sbShow" aria-label="Нууц үг харуулах">Харах</button></div></div>
+      <div class="f"><label for="sbPass">Нууц үг (6+ тэмдэгт)</label><div style="display:flex;gap:6px"><input type="password" id="sbPass" data-draft="pass" value="${esc(SB.draft.pass||"")}" autocomplete="current-password" placeholder="жишээ нь: alkham2026" style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)"><button type="button" class="btn sm" data-act="sbShow" aria-label="Нууц үг харуулах">Харах</button></div></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="sbIn"${SB.busy?" disabled":""}>Нэвтрэх</button><button class="btn" data-act="sbUp"${SB.busy?" disabled":""}>Бүртгүүлэх</button><button class="btn" data-act="sbDiag"${SB.busy?" disabled":""}>Холболт шалгах</button><button class="btn ghost" data-act="sbForget">Холболтыг засах</button></div></section>`;
   const local=lsLoad();const ln=local&&local.trades?Object.keys(local.trades).length:0;const n=pendingGet().length;
@@ -798,7 +798,8 @@ function render(){if(rafPending)return;rafPending=true;requestAnimationFrame(()=
 function doRender(){
   $$(".tab").forEach(t=>t.setAttribute("aria-selected",String(t.dataset.v===S.view)));
   const app=$("#app");const active=document.activeElement;const keepId=active&&app.contains(active)&&active.id&&(active.tagName==="TEXTAREA"||active.tagName==="INPUT")?active.id:null;
-  if(keepId)return; // хэрэглэгч бичиж байхад дахин зурахгүй
+  if(keepId){S.renderSkipped=true;return} // хэрэглэгч бичиж байхад дахин зурахгүй
+  S.renderSkipped=false;
   const v={dash:viewDash,trades:viewTrades,day:viewDay,ex:viewEx,review:viewReview,settings:viewSettings}[S.view]||viewDash;
   app.innerHTML=v();
 }
@@ -984,7 +985,7 @@ document.addEventListener("click",async e=>{
           else session=r.data&&r.data.session}
       }else{
         const {data,error}=await withTimeout(SB.client.auth.signInWithPassword({email,password}),20000);if(error)throw error;session=data&&data.session}
-      if(session){SB.info="";toast(act==="sbUp"?"Бүртгэл үүсч, нэвтэрлээ":"Нэвтэрлээ");
+      if(session){SB.info="";SB.draft.pass="";toast(act==="sbUp"?"Бүртгэл үүсч, нэвтэрлээ":"Нэвтэрлээ");
         setTimeout(()=>{if(S.mode!=="supa"&&session.user){SB.user=session.user;enterSupa()}},800)}
     }catch(e){SB.info="";SB.err=supaMsg(e)}
     SB.busy=false;render()}
@@ -1022,7 +1023,15 @@ document.addEventListener("change",async e=>{const el=e.target;
   else if(el.dataset.review!=null){const k=S.week;const r=clone(S.reviews[k]||{a:{}});r.a=r.a||{};r.a["q"+el.dataset.review]=el.value;await put("reviews",k,r)}
   else if(el.dataset.belief!=null){const k=S.month;const r=clone(S.beliefs[k]||{a:{}});r.a=r.a||{};r.a["q"+el.dataset.belief]=el.value;await put("beliefs",k,r)}
 });
-document.addEventListener("focusout",()=>{setTimeout(()=>{const a=document.activeElement;if(!a||!$("#app").contains(a)||!(a.tagName==="TEXTAREA"||a.tagName==="INPUT"))render()},0)});
+let pressing=false;
+document.addEventListener("pointerdown",e=>{if(e.target.closest("button,a,[data-act],[data-edit],select,label"))pressing=true},true);
+document.addEventListener("pointerup",()=>{setTimeout(()=>{pressing=false;if(S.renderSkipped)afterBlur()},0)},true);
+document.addEventListener("pointercancel",()=>{pressing=false},true);
+function afterBlur(){const a=document.activeElement;if(pressing)return;if(!a||!$("#app").contains(a)||!(a.tagName==="TEXTAREA"||a.tagName==="INPUT"))render()}
+document.addEventListener("focusout",e=>{
+  // Товч, холбоос руу шилжиж байгаа бол товшилт дуусахаас өмнө хуудсыг дахин зурахгүй (эс тэгвээс товшилт алга болно)
+  const to=e.relatedTarget;if(pressing||(to&&to.closest&&to.closest("button,a,[data-act]")))return;
+  if(!S.renderSkipped)return;setTimeout(afterBlur,0)});
 let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{if(S.view==="dash")render()},200)});
 
 setMode();doRender();connect();
