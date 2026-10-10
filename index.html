@@ -184,15 +184,23 @@ svg text{font-family:var(--f-mono)}
 .inst-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:6px;align-items:end}
 @media (max-width:700px){.inst-row{grid-template-columns:1fr 1fr 1fr}}
 /* chart */
-#chartRoot{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:18px 60px}
+#chartRoot{max-width:1800px;margin:0 auto;padding-inline:16px;padding-block:18px 60px}
 .ch-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .ch-bar select{width:auto}
 .ch-status{font-size:12px;color:var(--muted);margin-left:auto}
 .ch-status.bad{color:var(--loss)}
 .ch-replay{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--surface-2);border-radius:8px}
 .ch-replay input,.ch-replay select{width:auto}
-.ch-wrap{position:relative;height:520px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
-@media (max-width:700px){.ch-wrap{height:380px}}
+.ch-wrap{position:relative;height:clamp(440px,calc(100vh - 300px),1600px);border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+@media (max-width:700px){.ch-wrap{height:clamp(360px,72vh,900px)}}
+#chartRoot.wide #chPanel{grid-column:span 12}
+#chartRoot.wide #opPanel{display:none}
+#chPanel:fullscreen{background:var(--bg);padding:12px;border-radius:0;overflow:auto;display:flex;flex-direction:column;gap:8px}
+#chPanel:fullscreen .ch-wrap{flex:1;height:auto;min-height:300px}
+#chPanel:-webkit-full-screen{background:var(--bg);padding:12px;display:flex;flex-direction:column;gap:8px}
+#chPanel:-webkit-full-screen .ch-wrap{flex:1;height:auto}
+.ch-view{display:flex;gap:6px;margin-left:auto}
+.ch-view+.ch-status{margin-left:0;flex-basis:100%;text-align:right}
 .ch-wrap.picking,.ch-wrap.drawing{cursor:crosshair}
 .ch-wrap.drawing{touch-action:none}
 #chDraw{position:absolute;inset:0;z-index:3;pointer-events:none}
@@ -1088,11 +1096,12 @@ function chBuild(){
   if(CH.built)return;CH.built=true;
   const root=$("#chartRoot");
   root.innerHTML=`<div class="grid">
-  <section class="panel c8" style="gap:10px">
+  <section class="panel c8" id="chPanel" style="gap:10px">
     <div class="ch-bar">
       <select id="chInst" aria-label="Хэрэгсэл"></select>
       <div class="seg" id="chGran" role="group" aria-label="Хугацааны интервал">${GRANS.map(([g,l])=>`<button type="button" data-v="${g}" aria-pressed="${g===CH.gran}">${l}</button>`).join("")}</div>
       <div class="seg" id="chMode" role="group" aria-label="Горим"><button type="button" data-v="live" aria-pressed="true">Шууд</button><button type="button" data-v="replay" aria-pressed="false">Давтан тоглуулах</button></div>
+      <div class="ch-view"><button type="button" class="btn sm" data-ch="wide" id="btnWide" title="Захиалгын самбарыг нууж графикийг өргөсгөх">Өргөн</button><button type="button" class="btn sm" data-ch="full" id="btnFull" title="Бүтэн дэлгэцээр харах (Esc гарах)">⛶ Бүтэн дэлгэц</button></div>
       <span class="ch-status" id="chStatus" role="status"></span>
     </div>
     <div class="ch-tools" id="chTools">
@@ -1123,7 +1132,7 @@ function chBuild(){
       <div class="ch-pickhint" id="chHint" hidden></div><div class="ch-empty" id="chEmpty">График ачаалж байна…</div></div>
     <div class="muted" style="font-size:11px">Үнийн өгөгдөл: Deriv нээлттэй API. MT5 дээрх үнээс бага зэрэг зөрж болно. График: TradingView Lightweight Charts.</div>
   </section>
-  <section class="panel c4">
+  <section class="panel c4" id="opPanel">
     <div class="panel-h"><h2>Захиалгын тооцоо</h2><span class="pill neutral" id="opMode">Шууд</span></div>
     <div class="seg bs" id="opDir" role="group" aria-label="Чиглэл" style="width:100%;display:grid;grid-template-columns:1fr 1fr"><button type="button" data-v="Buy" aria-pressed="true">Buy</button><button type="button" data-v="Sell" aria-pressed="false">Sell</button></div>
     <div class="f"><span class="lbl">Эрсдэл, дансны %</span>
@@ -1150,6 +1159,8 @@ function chBuild(){
     else if(id==="sessChk"){DR.sess=e.target.checked;drOptsSave();drDirty();if(DR.sess&&CH.gran>3600)toast("Сешний бүс 1 цагаас бага интервал дээр харагдана.")}});
   const d=new Date(Date.now()-3*864e5);d.setHours(9,0,0,0);$("#rpStart").value=`${ymd(d)}T09:00`;
   $("#mtfSel").value=String(DR.mtf);$("#sessChk").checked=DR.sess;drInit();
+  let wide=false;try{wide=localStorage.getItem("alkham-chart-wide")==="1"}catch(e){}chWide(wide);
+  document.addEventListener("fullscreenchange",()=>{const on=document.fullscreenElement===$("#chPanel");$("#btnFull").textContent=on?"✕ Гарах":"⛶ Бүтэн дэлгэц";setTimeout(()=>{chZones();drDirty()},60)});
 }
 async function chCreateChart(){
   if(CH.chart)return true;
@@ -1177,6 +1188,8 @@ function chSetInst(name){CH.inst=instOf(name);try{localStorage.setItem("alkham-c
   if(CH.series){const d=decOf(CH.inst);CH.series.applyOptions({priceFormat:{type:"price",precision:d,minMove:+(10**-d).toFixed(d)}})}
   ["#opEntry","#opSl","#opTp"].forEach(id=>{const el=$(id);if(el){el.value="";el.step=String(CH.inst.tick||"any")}});}
 
+function chWide(on){$("#chartRoot").classList.toggle("wide",on);const b=$("#btnWide");if(b){b.textContent=on?"Захиалгын самбар":"Өргөн";b.setAttribute("aria-pressed",String(on))}
+  try{localStorage.setItem("alkham-chart-wide",on?"1":"0")}catch(e){}setTimeout(()=>{chZones();drDirty()},60)}
 /* --- lifecycle --- */
 async function chEnter(){
   chBuild();chFillInst();
@@ -1505,6 +1518,8 @@ async function chClick(e){
   else if(act==="rr"){const o=chCalc();if(o.entry==null||o.sl==null){toast("Эхлээд Stop-loss тавина уу.");return}const d=(CH.rp.pos?CH.rp.pos.dir:CH.dir)==="Sell"?-1:1;$("#opTp").value=fmtP(o.entry+d*Math.abs(o.entry-o.sl)*+b.dataset.v);chUpdate()}
   else if(act==="go"){const o=chCalc();if(o.entry==null){toast("Орох үнэ алга.");return}
     openForm(null,{inst:CH.inst.name,dir:CH.dir,entry:+fmtP(o.entry),sl:o.sl??"",tp:o.tp??"",lots:o.lots??"",open:nowLocal(),balance:+o.bal.toFixed(2)})}
+  else if(act==="wide")chWide(!$("#chartRoot").classList.contains("wide"));
+  else if(act==="full"){const el=$("#chPanel");try{if(document.fullscreenElement)await document.exitFullscreen();else if(el.requestFullscreen)await el.requestFullscreen();else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();else toast("Энэ хөтөч бүтэн дэлгэцийг дэмжихгүй байна.")}catch(e){toast("Бүтэн дэлгэц нээгдсэнгүй.")}}
   else if(act==="dtDel")drDelete();
   else if(act==="dtClear"){if(!drList().length)return;if(b.dataset.confirm!=="1"){b.dataset.confirm="1";b.textContent="Дахин дарж баталгаажуулна уу";setTimeout(()=>{b.dataset.confirm="";b.textContent="Бүгдийг арилгах"},3000);return}
     b.dataset.confirm="";b.textContent="Бүгдийг арилгах";drList().length=0;DR.sel=null;drSave();drSelUi();drDirty();toast("Зургуудыг арилгалаа")}
