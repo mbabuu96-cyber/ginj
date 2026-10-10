@@ -63,6 +63,7 @@ h2{font-size:15px;font-weight:600}
 .btn:hover{background:var(--surface-2)}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
 .btn.primary:hover{filter:brightness(1.06)}
+.btn:disabled,.seg button:disabled{opacity:.45;cursor:not-allowed;filter:none}
 .btn.danger{color:var(--loss);border-color:var(--loss)}
 .btn.sm{padding:5px 10px;font-size:13px}
 .btn.ghost{border-color:transparent;background:none}
@@ -182,6 +183,32 @@ input[type=number]{font-family:var(--f-mono)}
 svg text{font-family:var(--f-mono)}
 .inst-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:6px;align-items:end}
 @media (max-width:700px){.inst-row{grid-template-columns:1fr 1fr 1fr}}
+/* chart */
+#chartRoot{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:18px 60px}
+.ch-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ch-bar select{width:auto}
+.ch-status{font-size:12px;color:var(--muted);margin-left:auto}
+.ch-status.bad{color:var(--loss)}
+.ch-replay{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--surface-2);border-radius:8px}
+.ch-replay input,.ch-replay select{width:auto}
+.ch-wrap{position:relative;height:520px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+@media (max-width:700px){.ch-wrap{height:380px}}
+.ch-wrap.picking{cursor:crosshair}
+#chChart{position:absolute;inset:0}
+.zone{position:absolute;pointer-events:none;z-index:2}
+.zone.tp{background:color-mix(in srgb,var(--gain) 15%,transparent);border-top:1px dashed var(--gain);border-bottom:1px dashed var(--gain)}
+.zone.sl{background:color-mix(in srgb,var(--loss) 15%,transparent);border-top:1px dashed var(--loss);border-bottom:1px dashed var(--loss)}
+.ch-pickhint{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:3;background:var(--ink);color:var(--bg);padding:6px 12px;border-radius:6px;font-size:12px;white-space:nowrap}
+.ch-empty{position:absolute;inset:0;display:grid;place-items:center;z-index:3;color:var(--muted);text-align:center;padding:16px;background:var(--surface)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{border:1px solid var(--line);background:var(--bg);padding:5px 10px;border-radius:7px;cursor:pointer;font-size:13px;font-family:var(--f-mono)}
+.chips button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.row{display:flex;gap:6px;align-items:center}
+.row input{flex:1;min-width:0}
+.chk{display:flex;gap:4px;align-items:center;font-size:12px;color:var(--muted);white-space:nowrap;cursor:pointer}
+.op-out{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.pos-card{border:1px solid var(--accent);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;background:var(--accent-soft)}
+.pos-card .t{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}</style>
@@ -200,6 +227,7 @@ svg text{font-family:var(--f-mono)}
     </div>
     <nav class="tabs" role="tablist" id="tabs">
       <button class="tab" role="tab" data-v="dash">Самбар</button>
+      <button class="tab" role="tab" data-v="chart">График</button>
       <button class="tab" role="tab" data-v="trades">Арилжаанууд</button>
       <button class="tab" role="tab" data-v="day">Өдрийн бэлтгэл</button>
       <button class="tab" role="tab" data-v="ex">20 арилжааны дасгал</button>
@@ -210,6 +238,7 @@ svg text{font-family:var(--f-mono)}
 </header>
 
 <main id="app"></main>
+<section id="chartRoot" hidden></section>
 
 <dialog id="dlg"><form class="dlg" id="tradeForm" method="dialog" novalidate></form></dialog>
 <input type="file" id="importFile" accept=".json,application/json" hidden>
@@ -289,7 +318,7 @@ const S={settings:clone(DEFAULT_SETTINGS),trades:{},days:{},reviews:{},beliefs:{
   localCache:null,canSave:true};
 {const d=new Date();S.cal=`${d.getFullYear()}-${pad(d.getMonth()+1)}`}
 try{const v=localStorage.getItem("alkham-view");if(v)S.view=v}catch(e){}
-if(/^#(dash|trades|day|ex|review|settings)$/.test(location.hash))S.view=location.hash.slice(1);
+if(/^#(dash|chart|trades|day|ex|review|settings)$/.test(location.hash))S.view=location.hash.slice(1);
 
 function mergeSettings(o){const s=Object.assign(clone(DEFAULT_SETTINGS),o||{});if(!Array.isArray(s.instruments)||!s.instruments.length)s.instruments=clone(DEFAULT_SETTINGS.instruments);if(!Array.isArray(s.setups))s.setups=clone(DEFAULT_SETTINGS.setups);s.rules=Object.assign({},DEFAULT_SETTINGS.rules,s.rules||{});return s}
 
@@ -472,7 +501,7 @@ function calc(t){
   const when=t.close||t.open||"";
   return {ins,cs,risk,pnl,R,riskPct,rr,steps,closed,quality,session:sessionOf(t,ins),when,date:when.slice(0,10)};
 }
-function enriched(trades){return Object.entries(trades).map(([id,t])=>Object.assign({id},t,{_:calc(t)})).sort((a,b)=>(a._.when<b._.when?-1:a._.when>b._.when?1:0))}
+function enriched(trades,mode){return Object.entries(trades).filter(([,t])=>mode==="all"?true:mode==="backtest"?t.kind==="backtest":t.kind!=="backtest").map(([id,t])=>Object.assign({id},t,{_:calc(t)})).sort((a,b)=>(a._.when<b._.when?-1:a._.when>b._.when?1:0))}
 function stats(list){
   const closed=list.filter(t=>t._.closed);
   const wins=closed.filter(t=>t._.pnl>0),losses=closed.filter(t=>t._.pnl<0);
@@ -630,11 +659,11 @@ function viewDash(){
 }
 
 function viewTrades(){
-  const demo=isDemo();const all=enriched(tradesForView());
+  const demo=isDemo();const all=enriched(tradesForView(),S.filter.res==="backtest"?"backtest":undefined);
   const months=[...new Set(all.map(t=>t._.date.slice(0,7)).filter(Boolean))].sort().reverse();
   const f=S.filter;
   let list=all.filter(t=>(f.inst==="all"||t.inst===f.inst)&&(f.month==="all"||t._.date.slice(0,7)===f.month)&&
-    (f.res==="all"||(f.res==="win"&&t._.pnl>0)||(f.res==="loss"&&t._.pnl<0)||(f.res==="open"&&!t._.closed)||(f.res==="bad"&&t.followed==="n")));
+    (f.res==="all"||(f.res==="win"&&t._.pnl>0)||(f.res==="loss"&&t._.pnl<0)||(f.res==="open"&&!t._.closed)||(f.res==="bad"&&t.followed==="n")||f.res==="backtest"));
   const st=stats(list);list=list.slice().reverse();
   const opt=(v,l,cur)=>`<option value="${esc(v)}"${v===cur?" selected":""}>${esc(l)}</option>`;
   let h="";
@@ -643,7 +672,7 @@ function viewTrades(){
     <div class="filters">
       <select id="fInst" aria-label="Хэрэгсэл">${opt("all","Бүх хэрэгсэл",f.inst)}${S.settings.instruments.map(i=>opt(i.name,i.name,f.inst)).join("")}</select>
       <select id="fMonth" aria-label="Сар">${opt("all","Бүх сар",f.month)}${months.map(m=>opt(m,m,f.month)).join("")}</select>
-      <select id="fRes" aria-label="Үр дүн">${opt("all","Бүгд",f.res)}${opt("win","Ашигтай",f.res)}${opt("loss","Алдагдалтай",f.res)}${opt("open","Нээлттэй",f.res)}${opt("bad","Дүрэм зөрчсөн",f.res)}</select>
+      <select id="fRes" aria-label="Үр дүн">${opt("all","Бүгд",f.res)}${opt("win","Ашигтай",f.res)}${opt("loss","Алдагдалтай",f.res)}${opt("open","Нээлттэй",f.res)}${opt("bad","Дүрэм зөрчсөн",f.res)}${opt("backtest","Давтан тоглуулалт (backtest)",f.res)}</select>
     </div></div>
     <div class="muted" style="font-size:13px">${list.length} арилжаа · цэвэр <span class="num ${cls(st.net)}">${money(st.net)}</span> · <span class="num ${cls(st.sumR)}">${rfmt(st.sumR)}</span> · хожил ${pct(st.winRate)} · сахилга ${pct(st.disc)}</div>
     ${list.length?`<div class="tw"><table><thead><tr><th>Огноо</th><th>Хэрэгсэл</th><th>Чиглэл</th><th class="r">Лот</th><th class="r">Орох</th><th class="r">Гарах</th><th class="r">Эрсдэл</th><th class="r">P/L</th><th class="r">R</th><th>Мэдрэмж</th><th>Чанар</th><th>Setup</th></tr></thead><tbody>
@@ -832,6 +861,9 @@ function viewGate(){
     <p class="muted" style="margin:0;font-size:12px">Хэрэглэгч бүрийн өгөгдөл серверт тусдаа хадгалагдаж, өөр хэн ч харах боломжгүй. Гарах үед энэ хөтчид үлдсэн хуулбар устна.</p></div>`}
 function doRender(){
   const gate=needsLogin();$("#tabs").hidden=gate;$("#addBtn").hidden=gate;
+  const isChart=!gate&&S.view==="chart";$("#chartRoot").hidden=!isChart;$("#app").hidden=isChart;
+  if(isChart){$$(".tab").forEach(t=>t.setAttribute("aria-selected",String(t.dataset.v===S.view)));chEnter();return}
+  chLeave();
   $$(".tab").forEach(t=>t.setAttribute("aria-selected",String(t.dataset.v===S.view)));
   const app=$("#app");const active=document.activeElement;const keepId=active&&app.contains(active)&&active.id&&(active.tagName==="TEXTAREA"||active.tagName==="INPUT")?active.id:null;
   if(keepId){S.renderSkipped=true;return} // хэрэглэгч бичиж байхад дахин зурахгүй
@@ -844,12 +876,13 @@ function doRender(){
 /* ---------------- trade form ---------------- */
 let editing=null;
 function segHTML(name,val,opts,kind){return `<div class="seg ${kind||""}" data-seg="${name}" role="group">${opts.map(([v,l])=>`<button type="button" data-v="${esc(v)}" aria-pressed="${val===v}">${esc(l)}</button>`).join("")}</div>`}
-function openForm(id){
+function openForm(id,preset){
   if(id&&String(id).startsWith("demo")){toast("Жишээ арилжааг засах боломжгүй.");return}
   const list=enriched(S.trades);const bal=currentBalance(list);
   const lastInst=list.length?list[list.length-1].inst:S.settings.instruments[0].name;
   const t=id&&S.trades[id]?clone(S.trades[id]):{inst:lastInst,dir:"Buy",open:nowLocal(),close:"",entry:"",sl:"",tp:"",exit:"",lots:"",fees:"",actual:"",balance:+bal.toFixed(2),
     setup:"",emotion:"Тайван",exitReason:"",accepted:"",movedStop:"n",addedLoser:"n",addedWinner:"n",followed:"",exercise:"",calm:"",notes:"",chart:""};
+  if(preset&&!id)Object.assign(t,preset);
   editing={id:id||null,t};
   const today=ymd(new Date());const day=S.days[today];const aa=(day&&day.a)||{};const stop=DAY_Q.some((q,i)=>aa["q"+i]==="n");
   const tl=list.filter(x=>x._.date===today);const tst=stats(tl);const lim=bal*S.settings.dailyLossPct/100;
@@ -950,10 +983,10 @@ async function offer(filename,data){
   try{await dl.save({filename,data})}catch(e){if(e&&e.code==="declined")return;toast("Файл татаж чадсангүй.")}
 }
 function csv(){
-  const cols=["open","close","inst","dir","setup","entry","sl","tp","exit","lots","fees","actual","balance","emotion","accepted","exitReason","movedStop","addedLoser","addedWinner","followed","exercise","calm","notes","chart"];
+  const cols=["kind","open","close","inst","dir","setup","entry","sl","tp","exit","lots","fees","actual","balance","emotion","accepted","exitReason","movedStop","addedLoser","addedWinner","followed","exercise","calm","notes","chart"];
   const extra=["risk","riskPct","pnl","R","quality","session"];
   const q=v=>{const s=String(v??"");return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s};
-  const rows=enriched(S.trades).map(t=>cols.map(c=>q(t[c])).concat([t._.risk,t._.riskPct==null?"":(t._.riskPct*100).toFixed(2),t._.pnl,t._.R==null?"":t._.R.toFixed(3),t._.quality||"",t._.session].map(q)).join(","));
+  const rows=enriched(S.trades,"all").map(t=>cols.map(c=>q(t[c])).concat([t._.risk,t._.riskPct==null?"":(t._.riskPct*100).toFixed(2),t._.pnl,t._.R==null?"":t._.R.toFixed(3),t._.quality||"",t._.session].map(q)).join(","));
   return "﻿"+cols.concat(extra).join(",")+"\n"+rows.join("\n");
 }
 async function importJson(file){
@@ -961,6 +994,330 @@ async function importJson(file){
     if(o.settings)await saveSettings(o.settings);
     for(const coll of ["trades","days","reviews","beliefs"]){const m=o[coll]||{};for(const [k,v] of Object.entries(m)){await put(coll,k,v)}}
     toast(`${Object.keys(o.trades).length} арилжаа сэргээлээ.`)}catch(e){toast("Файлыг уншиж чадсангүй. Алхам-аас татсан JSON нөөц эсэхийг шалгана уу.")}
+}
+
+/* ---------------- График, захиалгын самбар, давтан тоглуулах ---------------- */
+const LWC_LIB="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js";
+const DERIV_WS="wss://ws.derivws.com/websockets/v3?app_id=1089";
+const TZ=-new Date().getTimezoneOffset()*60; // графикийг орон нутгийн цагаар харуулна
+const GRANS=[[60,"1м"],[300,"5м"],[900,"15м"],[3600,"1ц"],[14400,"4ц"],[86400,"1ө"]];
+const STEP_FALLBACK={100:"stpRNG",200:"stpRNG2",300:"stpRNG3",400:"stpRNG4",500:"stpRNG5"};
+const CH={built:false,active:false,chart:null,series:null,lines:{},inst:null,sym:null,gran:300,mode:"live",dir:"Buy",risk:1,mkt:true,
+  last:null,lastTime:null,pick:null,subId:null,loadSeq:0,
+  rp:{all:[],idx:0,timer:null,speed:2,pos:null,results:[],balance:0,loading:false,markers:[],sym:null}};
+
+/* --- Deriv WebSocket --- */
+const DV={ws:null,open:null,id:0,wait:new Map(),stream:new Map(),symbols:null,retry:0};
+function dvConnect(){
+  if(DV.open)return DV.open;
+  DV.open=new Promise((res,rej)=>{let ws;try{ws=new WebSocket(DERIV_WS)}catch(e){DV.open=null;return rej(e)}
+    DV.ws=ws;const to=setTimeout(()=>{try{ws.close()}catch(e){}rej(new Error("timeout"))},12000);
+    ws.onopen=()=>{clearTimeout(to);DV.retry=0;res(ws)};
+    ws.onclose=()=>{clearTimeout(to);const hadStream=DV.stream.size>0;DV.open=null;DV.ws=null;
+      DV.wait.forEach(w=>w.rej(new Error("closed")));DV.wait.clear();DV.stream.clear();CH.subId=null;
+      rej(new Error("closed"));
+      if(hadStream&&CH.active&&CH.mode==="live"){const d=Math.min(30000,1000*2**DV.retry++);chStatus("Холболт тасарлаа. Дахин холбогдож байна…",true);setTimeout(()=>{if(CH.active&&CH.mode==="live"&&!DV.open)chLoadLive()},d)}};
+    ws.onmessage=ev=>{let m;try{m=JSON.parse(ev.data)}catch(e){return}
+      if(m.msg_type==="ohlc"){const h=DV.stream.get(m.req_id)||(m.subscription&&DV.stream.get("s:"+m.subscription.id));if(h)h(m);return}
+      const w=DV.wait.get(m.req_id);if(w){DV.wait.delete(m.req_id);m.error?w.rej(m.error):w.res(m)}};
+  });
+  return DV.open;
+}
+async function dvSend(req,onStream){const ws=await dvConnect();const id=++DV.id;req.req_id=id;
+  if(onStream)DV.stream.set(id,onStream);
+  return new Promise((res,rej)=>{DV.wait.set(id,{res:m=>{if(onStream&&m.subscription)DV.stream.set("s:"+m.subscription.id,onStream);res(m)},rej:e=>{DV.stream.delete(id);rej(e)}});
+    ws.send(JSON.stringify(req));setTimeout(()=>{if(DV.wait.has(id)){DV.wait.delete(id);rej(new Error("timeout"))}},20000)})}
+setInterval(()=>{if(DV.ws&&DV.ws.readyState===1&&CH.active)try{DV.ws.send(JSON.stringify({ping:1}))}catch(e){}},30000);
+async function dvSymbols(){if(DV.symbols)return DV.symbols;try{const r=await dvSend({active_symbols:"brief"});DV.symbols=r.active_symbols||[]}catch(e){DV.symbols=[]}return DV.symbols}
+async function derivSymbol(ins){
+  if(ins.deriv)return ins.deriv;
+  const list=await dvSymbols();
+  if(ins.kind==="step"||/step/i.test(ins.name)){
+    const n=+((ins.name.match(/(\d{3})/)||[])[1]||Math.round((+ins.tick||0.1)*1000))||100;
+    const hit=list.find(s=>/step/i.test(s.display_name)&&(+((s.display_name.match(/(\d{3})/)||[])[1]||100))===n);
+    return hit?hit.symbol:(STEP_FALLBACK[n]||"stpRNG")}
+  if(ins.kind==="gold"||/xau|gold/i.test(ins.name)){const hit=list.find(s=>s.symbol==="frxXAUUSD")||list.find(s=>/gold\/usd/i.test(s.display_name));return hit?hit.symbol:"frxXAUUSD"}
+  const key=ins.name.toLowerCase().replace(/[^a-z0-9]/g,"");
+  const hit=list.find(s=>s.display_name.toLowerCase()===ins.name.toLowerCase()||s.symbol.toLowerCase().replace(/[^a-z0-9]/g,"").endsWith(key));
+  return hit?hit.symbol:null}
+function dvErrMsg(e){const c=e&&e.code;
+  if(c==="MarketIsClosed")return "Зах зээл одоо хаалттай байна (алт амралтын өдөр арилжаалагддаггүй). Давтан тоглуулах горимыг ашиглаж болно.";
+  if(c==="InvalidSymbol")return "Deriv дээр энэ хэрэгсэл олдсонгүй. Тохиргоо → Хэрэгслүүд дэх нэрийг шалгана уу.";
+  if(c==="RateLimit")return "Хэт олон хүсэлт илгээлээ. Хэдэн секунд хүлээгээд дахин оролдоно уу.";
+  if(e&&e.message==="timeout")return "Deriv сервер хариу өгсөнгүй. Интернэтээ шалгаад дахин оролдоно уу.";
+  if(e&&e.message==="closed"||e instanceof Event)return "Deriv сервертэй холбогдож чадсангүй.";
+  return (e&&e.message)||"Өгөгдөл ачаалж чадсангүй."}
+
+/* --- helpers --- */
+const toBar=c=>({time:(+c.epoch)+TZ,open:+c.open,high:+c.high,low:+c.low,close:+c.close});
+const decOf=ins=>{const t=+ins.tick||0.01;return Math.max(0,Math.min(6,Math.round(-Math.log10(t))+(String(t).includes("5")&&t<1?0:0)))};
+const fmtP=(v,ins)=>v==null||!isFinite(v)?"—":(+v).toFixed(decOf(ins||CH.inst));
+const localStr=epoch=>{const d=new Date(epoch*1000);return `${ymd(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`};
+function chStatus(msg,bad){const el=$("#chStatus");if(el){el.textContent=msg||"";el.classList.toggle("bad",!!bad)}}
+function chEmpty(msg){const el=$("#chEmpty");if(!el)return;el.hidden=!msg;if(msg)el.innerHTML=msg}
+function cssVar(n){return getComputedStyle(document.body).getPropertyValue(n).trim()}
+function chTheme(){if(!CH.chart)return;const ink=cssVar("--ink"),muted=cssVar("--muted"),line=cssVar("--line"),bg=cssVar("--surface"),gain=cssVar("--gain"),loss=cssVar("--loss");
+  CH.chart.applyOptions({layout:{background:{type:"solid",color:bg},textColor:muted,fontFamily:cssVar("--f-mono")||"monospace"},
+    grid:{vertLines:{color:line},horzLines:{color:line}},rightPriceScale:{borderColor:line},timeScale:{borderColor:line},crosshair:{vertLine:{labelBackgroundColor:ink},horzLine:{labelBackgroundColor:ink}}});
+  CH.series.applyOptions({upColor:gain,downColor:loss,borderUpColor:gain,borderDownColor:loss,wickUpColor:gain,wickDownColor:loss});chLines()}
+function chBalance(){return CH.mode==="replay"?CH.rp.balance:currentBalance(enriched(S.trades))}
+
+/* --- build once --- */
+function chBuild(){
+  if(CH.built)return;CH.built=true;
+  const root=$("#chartRoot");
+  root.innerHTML=`<div class="grid">
+  <section class="panel c8" style="gap:10px">
+    <div class="ch-bar">
+      <select id="chInst" aria-label="Хэрэгсэл"></select>
+      <div class="seg" id="chGran" role="group" aria-label="Хугацааны интервал">${GRANS.map(([g,l])=>`<button type="button" data-v="${g}" aria-pressed="${g===CH.gran}">${l}</button>`).join("")}</div>
+      <div class="seg" id="chMode" role="group" aria-label="Горим"><button type="button" data-v="live" aria-pressed="true">Шууд</button><button type="button" data-v="replay" aria-pressed="false">Давтан тоглуулах</button></div>
+      <span class="ch-status" id="chStatus" role="status"></span>
+    </div>
+    <div class="ch-replay" id="chReplay" hidden>
+      <label class="lbl" for="rpStart">Эхлэх цаг</label><input type="datetime-local" id="rpStart">
+      <button type="button" class="btn sm" data-ch="rpLoad">Ачаалах</button>
+      <button type="button" class="btn sm" data-ch="rpStep" title="Нэг лаа урагшлах">+1 лаа</button>
+      <button type="button" class="btn sm primary" data-ch="rpPlay" id="rpPlay">▶ Тоглуулах</button>
+      <select id="rpSpeed" aria-label="Хурд"><option value="1">1 лаа/сек</option><option value="2" selected>2 лаа/сек</option><option value="5">5 лаа/сек</option><option value="10">10 лаа/сек</option></select>
+      <span class="mono muted" id="rpTime" style="font-size:12px"></span>
+    </div>
+    <div class="ch-wrap" id="chWrap"><div id="chChart"></div><div class="zone tp" id="zTp" hidden></div><div class="zone sl" id="zSl" hidden></div>
+      <div class="ch-pickhint" id="chHint" hidden></div><div class="ch-empty" id="chEmpty">График ачаалж байна…</div></div>
+    <div class="muted" style="font-size:11px">Үнийн өгөгдөл: Deriv нээлттэй API. MT5 дээрх үнээс бага зэрэг зөрж болно. График: TradingView Lightweight Charts.</div>
+  </section>
+  <section class="panel c4">
+    <div class="panel-h"><h2>Захиалгын тооцоо</h2><span class="pill neutral" id="opMode">Шууд</span></div>
+    <div class="seg bs" id="opDir" role="group" aria-label="Чиглэл" style="width:100%;display:grid;grid-template-columns:1fr 1fr"><button type="button" data-v="Buy" aria-pressed="true">Buy</button><button type="button" data-v="Sell" aria-pressed="false">Sell</button></div>
+    <div class="f"><span class="lbl">Эрсдэл, дансны %</span>
+      <div class="chips" id="opRisk">${[0.5,1,2,3,5].map(v=>`<button type="button" data-v="${v}">${v}%</button>`).join("")}</div>
+      <input type="number" id="opRiskIn" step="0.1" min="0.1" aria-label="Эрсдэлийн хувь"></div>
+    <div class="muted" style="font-size:12px" id="opBal"></div>
+    <div class="f"><label for="opEntry">Орох үнэ</label><div class="row"><input type="number" step="any" id="opEntry"><label class="chk"><input type="checkbox" id="opMkt" checked> Зах зээлийн</label></div></div>
+    <div class="f"><label for="opSl">Stop-loss</label><div class="row"><input type="number" step="any" id="opSl"><button type="button" class="btn sm" data-ch="pick" data-k="sl">Графикаас</button></div></div>
+    <div class="f"><label for="opTp">Зорилтот үнэ</label><div class="row"><input type="number" step="any" id="opTp"><button type="button" class="btn sm" data-ch="pick" data-k="tp">Графикаас</button></div>
+      <div class="chips" style="margin-top:4px">${[1,1.5,2,3].map(v=>`<button type="button" data-ch="rr" data-v="${v}">1:${v}</button>`).join("")}</div></div>
+    <div class="preview op-out" id="opOut"></div>
+    <div class="warns" id="opWarn"></div>
+    <button type="button" class="btn primary" data-ch="go" id="opGo" style="justify-content:center">Тэмдэглэлд бүртгэх</button>
+    <div id="rpBox" hidden style="display:flex;flex-direction:column;gap:10px"></div>
+  </section></div>`;
+  $("#opRiskIn").value=CH.risk=S.settings.riskPct||1;
+  root.addEventListener("click",chClick);
+  root.addEventListener("input",e=>{if(e.target.id==="opRiskIn"){const v=num(e.target.value);if(v)CH.risk=v}chUpdate()});
+  root.addEventListener("change",e=>{const id=e.target.id;
+    if(id==="chInst"){chSetInst(e.target.value);chReload()}
+    else if(id==="opMkt"){CH.mkt=e.target.checked;chUpdate()}
+    else if(id==="rpSpeed"){CH.rp.speed=+e.target.value;if(CH.rp.timer){rpPause();rpPlay()}}});
+  const d=new Date(Date.now()-3*864e5);d.setHours(9,0,0,0);$("#rpStart").value=`${ymd(d)}T09:00`;
+}
+async function chCreateChart(){
+  if(CH.chart)return true;
+  try{await loadScriptOnce(LWC_LIB,"LightweightCharts")}catch(e){chEmpty("График зурах санг ачаалж чадсангүй. Интернэтээ шалгаад хуудсаа дахин ачаална уу.");return false}
+  const LW=window.LightweightCharts;
+  CH.chart=LW.createChart($("#chChart"),{autoSize:true,timeScale:{timeVisible:true,secondsVisible:false,rightOffset:8},crosshair:{mode:0},localization:{locale:"en-US"}});
+  CH.series=CH.chart.addCandlestickSeries({priceLineVisible:true});
+  if(CH.inst){const d=decOf(CH.inst);CH.series.applyOptions({priceFormat:{type:"price",precision:d,minMove:+(10**-d).toFixed(d)}})}
+  chTheme();
+  CH.chart.subscribeClick(p=>{if(!CH.pick||!p.point)return;const price=CH.series.coordinateToPrice(p.point.y);if(price==null)return;
+    $(CH.pick==="sl"?"#opSl":"#opTp").value=fmtP(price);CH.pick=null;$("#chHint").hidden=true;$("#chWrap").classList.remove("picking");chUpdate()});
+  CH.chart.timeScale().subscribeVisibleLogicalRangeChange(()=>chZones());
+  new ResizeObserver(()=>chZones()).observe($("#chWrap"));
+  try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>setTimeout(chTheme,50))}catch(e){}
+  new MutationObserver(()=>setTimeout(chTheme,50)).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+  return true;
+}
+function loadScriptOnce(src,global){return new Promise((res,rej)=>{if(window[global])return res();const el=document.createElement("script");el.src=src;el.onload=()=>window[global]?res():rej(new Error("lib"));el.onerror=()=>rej(new Error("lib"));document.head.appendChild(el)})}
+function chFillInst(){const sel=$("#chInst");const names=S.settings.instruments.map(i=>i.name);
+  if(sel.dataset.names!==names.join("|")){sel.innerHTML=names.map(n=>`<option>${esc(n)}</option>`).join("");sel.dataset.names=names.join("|")}
+  if(!CH.inst||!names.includes(CH.inst.name)){let pref=null;try{pref=localStorage.getItem("alkham-chart-inst")}catch(e){}chSetInst(names.includes(pref)?pref:names[0])}
+  else CH.inst=instOf(CH.inst.name);sel.value=CH.inst.name}
+function chSetInst(name){CH.inst=instOf(name);try{localStorage.setItem("alkham-chart-inst",name)}catch(e){}
+  if(CH.series){const d=decOf(CH.inst);CH.series.applyOptions({priceFormat:{type:"price",precision:d,minMove:+(10**-d).toFixed(d)}})}
+  ["#opEntry","#opSl","#opTp"].forEach(id=>{const el=$(id);if(el){el.value="";el.step=String(CH.inst.tick||"any")}});}
+
+/* --- lifecycle --- */
+async function chEnter(){
+  chBuild();chFillInst();
+  if(CH.active){chUpdate();return}
+  CH.active=true;
+  if(!(await chCreateChart()))return;
+  if(CH.mode==="live")chLoadLive();else{chUpdate();chZones()}
+}
+function chLeave(){if(!CH.active)return;CH.active=false;rpPause();chForget()}
+function chReload(){if(CH.mode==="live")chLoadLive();else if(CH.rp.all.length)rpLoad()}
+async function chForget(){const id=CH.subId;CH.subId=null;DV.stream.clear();if(id&&DV.ws&&DV.ws.readyState===1){try{await dvSend({forget:id})}catch(e){}}}
+
+/* --- live --- */
+async function chLoadLive(){
+  const seq=++CH.loadSeq;rpPause();await chForget();if(seq!==CH.loadSeq||!CH.active)return;
+  const ins=CH.inst;chStatus("Ачаалж байна…");if(!CH.series.data().length)chEmpty("График ачаалж байна…");
+  try{const sym=await derivSymbol(ins);if(!sym)throw {code:"InvalidSymbol"};CH.sym=sym;
+    const onBar=m=>{const o=m.ohlc;if(!o||CH.mode!=="live"||seq!==CH.loadSeq)return;const bar={time:+o.open_time+TZ,open:+o.open,high:+o.high,low:+o.low,close:+o.close};
+      try{CH.series.update(bar)}catch(e){}CH.last=bar.close;CH.lastTime=bar.time;chUpdate(true)};
+    const req={ticks_history:sym,style:"candles",granularity:CH.gran,count:1000,end:"latest",adjust_start_time:1};
+    let r,closed=false;
+    try{r=await dvSend(Object.assign({subscribe:1},req),onBar)}catch(e){if(e&&e.code==="MarketIsClosed"){closed=true;r=await dvSend(req)}else throw e}
+    if(seq!==CH.loadSeq)return;
+    CH.subId=r.subscription&&r.subscription.id;
+    const bars=(r.candles||[]).map(toBar);CH.series.setData(bars);CH.series.setMarkers([]);
+    CH.last=bars.length?bars[bars.length-1].close:null;CH.lastTime=bars.length?bars[bars.length-1].time:null;
+    CH.chart.timeScale().scrollToRealTime();chEmpty(bars.length?"":"Энэ хэрэгсэлд өгөгдөл ирсэнгүй.");
+    chStatus(closed?"Зах зээл хаалттай · сүүлийн өгөгдөл":`Шууд · ${sym}`,closed);chUpdate(true);
+  }catch(e){if(seq!==CH.loadSeq)return;chStatus(dvErrMsg(e),true);if(!CH.series.data().length)chEmpty(esc(dvErrMsg(e)))}
+}
+
+/* --- order calculation --- */
+function chCalc(){
+  const ins=CH.inst,cs=+ins.cs||1,step=+ins.lotStep||0.01,minLot=+ins.minLot||step;
+  const replay=CH.mode==="replay",pos=replay&&CH.rp.pos;
+  const entry=pos?pos.entry:(CH.mkt||replay)?CH.last:num($("#opEntry").value);
+  const sl=num($("#opSl").value),tp=num($("#opTp").value),bal=chBalance(),riskPct=CH.risk||0;
+  const o={ins,entry,sl,tp,bal,riskPct,riskAmt:bal*riskPct/100,dir:pos?pos.dir:CH.dir,warn:[]};
+  if(entry==null){o.warn.push(["",replay?"Эхлээд түүхэн өгөгдлөө ачаална уу.":"Орох үнэ алга."]);return o}
+  if(sl==null){o.warn.push(["bad","Stop-loss тавина уу. Сайн ялагдагч орохоосоо өмнө гарах цэгээ мэддэг."]);return o}
+  const d=o.dir==="Sell"?-1:1;const dist=Math.abs(entry-sl);
+  if(dist===0){o.warn.push(["bad","Stop-loss орох үнэтэй ижил байна."]);return o}
+  if((sl-entry)*d>0)o.warn.push(["bad",`${o.dir} арилжаанд stop орох үнийн ${d>0?"доор":"дээр"} байх ёстой.`]);
+  if(tp!=null&&(tp-entry)*d<0)o.warn.push(["bad",`${o.dir} арилжаанд зорилт орох үнийн ${d>0?"дээр":"доор"} байх ёстой.`]);
+  o.dist=dist;o.steps=+ins.tick?Math.round(dist/ins.tick):null;
+  let lots=pos?pos.lots:Math.floor(o.riskAmt/(dist*cs)/step+1e-9)*step;
+  if(!pos&&lots<minLot){o.warn.push(["bad",`Тооцоолсон лот хамгийн бага лот (${minLot})-оос бага байна. ${minLot} лотоор орвол эрсдэл ${S.settings.currency}${fm(dist*cs*minLot)} (${fm(dist*cs*minLot/bal*100)}%) болно. Stop-оо ойртуулах эсвэл орохгүй байх нь дээр.`]);lots=minLot}
+  o.lots=+lots.toFixed(4);o.risk=dist*cs*o.lots;o.riskReal=bal?o.risk/bal:null;
+  if(tp!=null){o.rr=Math.abs(tp-entry)/dist;o.reward=Math.abs(tp-entry)*cs*o.lots}
+  if(o.riskReal!=null&&o.riskReal>S.settings.maxRiskPct/100)o.warn.push(["bad",`Эрсдэл ${(o.riskReal*100).toFixed(2)}% нь таны дээд хязгаар ${S.settings.maxRiskPct}%-иас их байна.`]);
+  if(o.rr!=null&&o.rr<1)o.warn.push(["","R:R 1-ээс бага байна. Ашиг алдагдлаасаа бага байх арилжаа урт хугацаанд хохиролтой."]);
+  return o;
+}
+function chUpdate(fromTick){
+  if(!CH.built)return;
+  const replay=CH.mode==="replay";const o=chCalc();const ins=CH.inst;
+  const ent=$("#opEntry");if((CH.mkt||replay)&&document.activeElement!==ent)ent.value=CH.last==null?"":fmtP(CH.last);
+  ent.disabled=CH.mkt||replay;$("#opMkt").disabled=replay;
+  $$("#opRisk button").forEach(b=>b.classList.toggle("on",+b.dataset.v===CH.risk));
+  if(document.activeElement!==$("#opRiskIn"))$("#opRiskIn").value=CH.risk;
+  $("#opBal").innerHTML=`${replay?"Симуляцын данс":"Данс"}: <b class="num">${S.settings.currency}${fm(o.bal)}</b> · эрсдэл <b class="num">${S.settings.currency}${fm(o.riskAmt)}</b>`;
+  const cell=(l,v,c="")=>`<div><span class="lbl">${l}</span><b class="${c}">${v}</b></div>`;
+  $("#opOut").innerHTML=cell("Лот",o.lots==null?"—":fm(o.lots,2))+cell("Бодит эрсдэл",o.risk==null?"—":`${S.settings.currency}${fm(o.risk)}`,o.riskReal>S.settings.maxRiskPct/100?"neg":"")
+    +cell(ins.kind==="step"?"Stop хүртэл алхам":"Stop зай",o.steps==null?"—":(ins.kind==="step"?o.steps.toLocaleString("en-US"):fmtP(o.dist)))
+    +cell("R:R",o.rr==null?"—":"1 : "+o.rr.toFixed(2))+cell("Боломжит ашиг",o.reward==null?"—":`${S.settings.currency}${fm(o.reward)}`,"pos")
+    +cell("Орох үнэ",fmtP(o.entry));
+  $("#opWarn").innerHTML=o.warn.map(([k,m])=>`<div class="${k}">${esc(m)}</div>`).join("");
+  const go=$("#opGo");
+  if(replay){go.textContent=CH.rp.pos?"Позицийг одоо хаах":`${CH.dir} позиц нээх (симуляц)`;go.dataset.ch=CH.rp.pos?"rpCloseNow":"rpOpen";go.disabled=!CH.rp.pos&&(o.lots==null||o.warn.some(w=>w[0]==="bad"&&/байх ёстой/.test(w[1])))}
+  else{go.textContent="Тэмдэглэлд бүртгэх";go.dataset.ch="go";go.disabled=false}
+  $("#opMode").textContent=replay?"Давтан тоглуулах":"Шууд";
+  $$("#opDir button").forEach(b=>{b.setAttribute("aria-pressed",String(b.dataset.v===(CH.rp.pos?CH.rp.pos.dir:CH.dir)));b.disabled=!!CH.rp.pos});
+  chLines(o);rpRenderBox();
+}
+let zoneRaf=0;
+function chLines(o){
+  if(!CH.series)return;o=o||chCalc();
+  const want={entry:o.entry!=null&&(o.sl!=null||CH.rp.pos)?o.entry:null,sl:o.sl,tp:o.tp};
+  const col={entry:cssVar("--accent"),sl:cssVar("--loss"),tp:cssVar("--gain")},title={entry:"Орох",sl:"SL",tp:"TP"};
+  for(const k of ["entry","sl","tp"]){const v=want[k];const L=CH.lines[k];
+    if(v==null){if(L){CH.series.removePriceLine(L);delete CH.lines[k]}continue}
+    if(L)L.applyOptions({price:v,color:col[k]});else CH.lines[k]=CH.series.createPriceLine({price:v,color:col[k],lineWidth:k==="entry"?2:1,lineStyle:k==="entry"?0:2,axisLabelVisible:true,title:title[k]})}
+  CH._zone={entry:want.entry,sl:o.sl,tp:o.tp,time:CH.rp.pos?CH.rp.pos.time:CH.lastTime};chZones();
+}
+function chZones(){cancelAnimationFrame(zoneRaf);zoneRaf=requestAnimationFrame(()=>{
+  const z=CH._zone,zt=$("#zTp"),zs=$("#zSl");if(!z||!CH.series||z.entry==null){zt.hidden=zs.hidden=true;return}
+  const ts=CH.chart.timeScale();let x0=z.time!=null?ts.timeToCoordinate(z.time):null;const w=$("#chWrap").clientWidth-CH.chart.priceScale("right").width();
+  if(x0==null||x0<0)x0=Math.max(0,w-140);const ye=CH.series.priceToCoordinate(z.entry);
+  const place=(el,p)=>{if(p==null||ye==null){el.hidden=true;return}const y=CH.series.priceToCoordinate(p);if(y==null){el.hidden=true;return}
+    el.hidden=false;el.style.left=x0+"px";el.style.width=Math.max(0,w-x0)+"px";el.style.top=Math.min(y,ye)+"px";el.style.height=Math.abs(y-ye)+"px"};
+  place(zt,z.tp);place(zs,z.sl)})}
+
+/* --- replay (backtest) --- */
+async function rpLoad(){
+  rpPause();await chForget();const seq=++CH.loadSeq;const ins=CH.inst,g=CH.gran;
+  const v=$("#rpStart").value;const start=Math.floor(new Date(v).getTime()/1000);
+  if(!v||!isFinite(start)){chStatus("Эхлэх цагаа сонгоно уу.",true);return}
+  if(start>Date.now()/1000-g*5){chStatus("Эхлэх цаг өнгөрсөн хугацаанд байх ёстой.",true);return}
+  chStatus("Түүхэн өгөгдөл ачаалж байна…");chEmpty("Түүхэн өгөгдөл ачаалж байна…");
+  try{const sym=await derivSymbol(ins);if(!sym)throw {code:"InvalidSymbol"};
+    const past=await dvSend({ticks_history:sym,style:"candles",granularity:g,end:start,count:300,adjust_start_time:1});
+    const fut=await dvSend({ticks_history:sym,style:"candles",granularity:g,start:start,end:Math.min(Math.floor(Date.now()/1000),start+4999*g),count:5000});
+    if(seq!==CH.loadSeq)return;
+    const pb=(past.candles||[]).filter(c=>+c.epoch<start).map(toBar),fb=(fut.candles||[]).filter(c=>+c.epoch>=start).map(toBar);
+    if(!fb.length)throw new Error("Сонгосон цагаас хойш өгөгдөл олдсонгүй. Өөр цаг сонгоно уу.");
+    const R=CH.rp;R.sym=sym;R.all=pb.concat(fb);R.idx=Math.max(1,pb.length);R.pos=null;R.markers=[];R.results=[];R.balance=currentBalance(enriched(S.trades));
+    CH.series.setData(R.all.slice(0,R.idx));CH.series.setMarkers([]);const b=R.all[R.idx-1];CH.last=b.close;CH.lastTime=b.time;
+    CH.chart.timeScale().scrollToRealTime();chEmpty("");rpTimeLabel();
+    chStatus(`Давтан тоглуулах · ${sym} · ${fb.length} лаа бэлэн`);chUpdate();
+  }catch(e){if(seq!==CH.loadSeq)return;chStatus(dvErrMsg(e),true);chEmpty(esc(dvErrMsg(e)))}
+}
+async function rpMore(){const R=CH.rp;if(R.loading||!R.all.length)return false;const g=CH.gran,lastEp=R.all[R.all.length-1].time-TZ,now=Math.floor(Date.now()/1000);
+  if(lastEp+g>=now-g)return false;R.loading=true;
+  try{const r=await dvSend({ticks_history:R.sym,style:"candles",granularity:g,start:lastEp+g,end:Math.min(now,lastEp+5000*g),count:5000});
+    const add=(r.candles||[]).map(toBar).filter(b=>b.time>R.all[R.all.length-1].time);R.all=R.all.concat(add);return add.length>0}
+  catch(e){return false}finally{R.loading=false}}
+async function rpStep(){const R=CH.rp;if(!R.all.length){chStatus("Эхлээд Ачаалах дарна уу.",true);return}
+  if(R.idx>=R.all.length-3)rpMore();
+  if(R.idx>=R.all.length){rpPause();chStatus("Өгөгдлийн төгсгөлд хүрлээ.");return}
+  const bar=R.all[R.idx++];CH.series.update(bar);CH.last=bar.close;CH.lastTime=bar.time;rpCheck(bar);rpTimeLabel();chUpdate(true)}
+function rpTimeLabel(){const R=CH.rp,b=R.all[R.idx-1];$("#rpTime").textContent=b?new Date((b.time-TZ)*1000).toLocaleString("en-GB",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}):""}
+function rpPlay(){const R=CH.rp;if(R.timer){rpPause();return}if(!R.all.length){chStatus("Эхлээд Ачаалах дарна уу.",true);return}
+  R.timer=setInterval(rpStep,1000/(R.speed||2));$("#rpPlay").textContent="❚❚ Зогсоох"}
+function rpPause(){const R=CH.rp;if(R.timer){clearInterval(R.timer);R.timer=null}const b=$("#rpPlay");if(b)b.textContent="▶ Тоглуулах"}
+function rpOpen(){const R=CH.rp;const o=chCalc();if(o.lots==null||o.sl==null)return;
+  const bar=R.all[R.idx-1];R.pos={dir:CH.dir,entry:bar.close,sl:o.sl,tp:o.tp,lots:o.lots,risk:o.risk,time:bar.time,epoch:bar.time-TZ,balance:R.balance};
+  R.markers.push({time:bar.time,position:CH.dir==="Buy"?"belowBar":"aboveBar",color:cssVar("--accent"),shape:CH.dir==="Buy"?"arrowUp":"arrowDown",text:CH.dir});
+  CH.series.setMarkers(R.markers.slice().sort((a,b)=>a.time-b.time));chUpdate()}
+function rpCheck(bar){const R=CH.rp,p=R.pos;if(!p||bar.time<=p.time)return;const buy=p.dir==="Buy";
+  const hitSl=buy?bar.low<=p.sl:bar.high>=p.sl;const hitTp=p.tp!=null&&(buy?bar.high>=p.tp:bar.low<=p.tp);
+  if(hitSl)rpClose(p.sl,"SL",bar);else if(hitTp)rpClose(p.tp,"TP",bar)} // нэг лаанд хоёулаа хүрвэл SL гэж үзнэ (болгоомжтой)
+function rpClose(price,reason,bar){const R=CH.rp,p=R.pos;if(!p)return;bar=bar||R.all[R.idx-1];
+  const cs=+CH.inst.cs||1,pnl=(price-p.entry)*(p.dir==="Buy"?1:-1)*p.lots*cs,Rv=p.risk?pnl/p.risk:null;
+  R.results.push({inst:CH.inst.name,dir:p.dir,entry:p.entry,sl:p.sl,tp:p.tp,exit:price,lots:p.lots,pnl,R:Rv,reason,openEp:p.epoch,closeEp:bar.time-TZ,balance:p.balance,saved:false});
+  R.balance+=pnl;R.pos=null;
+  R.markers.push({time:bar.time,position:"inBar",color:pnl>=0?cssVar("--gain"):cssVar("--loss"),shape:"circle",text:`${reason} ${rfmt(Rv)}`});
+  CH.series.setMarkers(R.markers.slice().sort((a,b)=>a.time-b.time));
+  $("#opSl").value="";$("#opTp").value="";chUpdate()}
+function rpRenderBox(){const box=$("#rpBox");if(CH.mode!=="replay"){box.hidden=true;return}box.hidden=false;const R=CH.rp,cs=+CH.inst.cs||1;
+  let h="";
+  if(R.pos){const p=R.pos,fl=(CH.last-p.entry)*(p.dir==="Buy"?1:-1)*p.lots*cs;
+    h+=`<div class="pos-card"><div class="t"><b>${esc(p.dir)} ${fm(p.lots,2)} лот @ ${fmtP(p.entry)}</b><span class="num ${cls(fl)}">${money(fl)} · ${rfmt(p.risk?fl/p.risk:null)}</span></div>
+      <div class="muted" style="font-size:12px">SL ${fmtP(p.sl)} · TP ${fmtP(p.tp)} · Лаа урагшлуулахад SL эсвэл TP-д хүрэхэд автоматаар хаагдана.</div></div>`}
+  const res=R.results,wins=res.filter(r=>r.pnl>0).length,sumR=res.reduce((a,r)=>a+(r.R||0),0),sumP=res.reduce((a,r)=>a+r.pnl,0),unsaved=res.filter(r=>!r.saved).length;
+  h+=`<div class="panel-h"><h2>Симуляцын үр дүн</h2><span class="muted" style="font-size:12px">${res.length} арилжаа</span></div>`;
+  if(res.length){h+=`<div class="preview op-out">
+      <div><span class="lbl">Хожлын хувь</span><b>${pct(wins/res.length)}</b></div><div><span class="lbl">Нийт R</span><b class="${cls(sumR)}">${rfmt(sumR)}</b></div>
+      <div><span class="lbl">Нийт P/L</span><b class="${cls(sumP)}">${money(sumP)}</b></div><div><span class="lbl">Дундаж R</span><b class="${cls(sumR)}">${rfmt(sumR/res.length)}</b></div></div>
+    <div class="tw"><table><thead><tr><th>#</th><th>Чиглэл</th><th class="r">Орох</th><th class="r">Гарах</th><th>Шалтгаан</th><th class="r">R</th></tr></thead><tbody>
+    ${res.map((r,i)=>`<tr><td class="num">${i+1}</td><td><span class="dir ${r.dir==="Sell"?"sell":"buy"}">${r.dir}</span></td><td class="r num">${fmtP(r.entry)}</td><td class="r num">${fmtP(r.exit)}</td><td>${r.reason==="TP"?"Зорилт":r.reason==="SL"?"Stop":"Гараар"}</td><td class="r num ${cls(r.R)}">${rfmt(r.R)}</td></tr>`).join("")}</tbody></table></div>
+    ${unsaved?`<button type="button" class="btn" data-ch="rpSave">${unsaved} арилжааг тэмдэглэлд хадгалах (backtest)</button>`:`<div class="muted" style="font-size:12px">Бүгд тэмдэглэлд хадгалагдсан. Арилжаанууд таб → шүүлтүүр “Давтан тоглуулалт”.</div>`}`}
+  else h+=`<div class="muted" style="font-size:13px">Ачаалах дараад SL, TP-ээ тавиад позиц нээнэ. Дараа нь +1 лаа эсвэл Тоглуулах товчоор урагшлуулна. Backtest-ийн арилжаа таны жинхэнэ статистикт орохгүй.</div>`;
+  box.innerHTML=h}
+async function rpSave(){const R=CH.rp;const list=R.results.filter(r=>!r.saved);if(!list.length)return;
+  for(const r of list){await put("trades",uid(),{kind:"backtest",inst:r.inst,dir:r.dir,open:localStr(r.openEp),close:localStr(r.closeEp),entry:r.entry,sl:r.sl,tp:r.tp??"",exit:r.exit,lots:r.lots,fees:0,actual:"",balance:+r.balance.toFixed(2),
+    setup:"Backtest",emotion:"Тайван",exitReason:r.reason==="TP"?"Зорилтод хүрсэн":r.reason==="SL"?"Stop-д хүрсэн":"Дүрмээр гарсан",accepted:"y",movedStop:"n",addedLoser:"n",addedWinner:"n",followed:"y",exercise:"",calm:"",
+    notes:`Давтан тоглуулалт · ${CH.inst.name} · ${GRANS.find(x=>x[0]===CH.gran)[1]}`,chart:""});r.saved=true}
+  toast(`${list.length} backtest арилжаа хадгаллаа`);rpRenderBox()}
+
+/* --- clicks inside chart tab --- */
+async function chClick(e){
+  const seg=e.target.closest(".seg button");
+  if(seg){const g=seg.parentElement;if(seg.disabled)return;$$("button",g).forEach(b=>b.setAttribute("aria-pressed",String(b===seg)));
+    if(g.id==="chGran"){CH.gran=+seg.dataset.v;chReload()}
+    else if(g.id==="opDir"){CH.dir=seg.dataset.v;chUpdate()}
+    else if(g.id==="chMode"){const m=seg.dataset.v;if(m===CH.mode)return;CH.mode=m;$("#chReplay").hidden=m!=="replay";
+      if(m==="live"){CH.rp.pos=null;chLoadLive()}else{rpPause();await chForget();CH.rp.balance=currentBalance(enriched(S.trades));
+        if(CH.rp.all.length){CH.series.setData(CH.rp.all.slice(0,CH.rp.idx));CH.series.setMarkers(CH.rp.markers);const b=CH.rp.all[CH.rp.idx-1];CH.last=b.close;CH.lastTime=b.time;chStatus("Давтан тоглуулах")}
+        else{CH.last=null;chStatus("Эхлэх цагаа сонгоод Ачаалах дарна уу.")}chUpdate()}}
+    return}
+  const rk=e.target.closest("#opRisk button");if(rk){CH.risk=+rk.dataset.v;chUpdate();return}
+  const b=e.target.closest("[data-ch]");if(!b||b.disabled)return;const act=b.dataset.ch;
+  if(act==="pick"){CH.pick=CH.pick===b.dataset.k?null:b.dataset.k;const h=$("#chHint");h.hidden=!CH.pick;h.textContent=CH.pick==="sl"?"Stop-loss тавих үнэ дээр графикт дарна уу":"Зорилтот үнэ дээр графикт дарна уу";$("#chWrap").classList.toggle("picking",!!CH.pick)}
+  else if(act==="rr"){const o=chCalc();if(o.entry==null||o.sl==null){toast("Эхлээд Stop-loss тавина уу.");return}const d=(CH.rp.pos?CH.rp.pos.dir:CH.dir)==="Sell"?-1:1;$("#opTp").value=fmtP(o.entry+d*Math.abs(o.entry-o.sl)*+b.dataset.v);chUpdate()}
+  else if(act==="go"){const o=chCalc();if(o.entry==null){toast("Орох үнэ алга.");return}
+    openForm(null,{inst:CH.inst.name,dir:CH.dir,entry:+fmtP(o.entry),sl:o.sl??"",tp:o.tp??"",lots:o.lots??"",open:nowLocal(),balance:+o.bal.toFixed(2)})}
+  else if(act==="rpLoad")rpLoad();
+  else if(act==="rpStep"){rpPause();rpStep()}
+  else if(act==="rpPlay")rpPlay();
+  else if(act==="rpOpen")rpOpen();
+  else if(act==="rpCloseNow"){rpClose(CH.last,"Гараар")}
+  else if(act==="rpSave")rpSave();
 }
 
 /* ---------------- events ---------------- */
