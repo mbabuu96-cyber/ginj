@@ -226,6 +226,14 @@ svg text{font-family:var(--f-mono)}
 .dt-props .seg button{padding:2px 7px;font-size:11px}
 .dt-props .btn.sm{padding:2px 7px;font-size:11px;border-radius:6px}
 .dt-props .swatches button{width:16px;height:16px}
+.pat-box{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:10px}
+.pat-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px}
+@media (max-width:900px){.pat-grid{grid-template-columns:1fr}}
+.pat-chart,.pat-side{min-width:0;display:flex;flex-direction:column;gap:8px}
+.pat-bar{display:flex;height:30px;border-radius:7px;overflow:hidden;font-weight:600;font-size:13px}
+.pat-bar.base{height:18px;font-size:11px;opacity:.75}
+.pat-bar .pb{display:flex;align-items:center;justify-content:center;color:#fff;white-space:nowrap;overflow:hidden;min-width:0}
+.pat-bar .buy{background:var(--gain)}.pat-bar .sell{background:var(--loss)}
 .fib-dlg{width:min(560px,calc(100vw - 24px))}
 .fib-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px}
 @media (max-width:520px){.fib-grid{grid-template-columns:1fr}}
@@ -1127,7 +1135,7 @@ function chBuild(){
       <select id="chInst" aria-label="Хэрэгсэл"></select>
       <div class="seg" id="chGran" role="group" aria-label="Хугацааны интервал">${GRANS.map(([g,l])=>`<button type="button" data-v="${g}" aria-pressed="${g===CH.gran}">${l}</button>`).join("")}</div>
       <div class="seg" id="chMode" role="group" aria-label="Горим"><button type="button" data-v="live" aria-pressed="true">Шууд</button><button type="button" data-v="replay" aria-pressed="false">Давтан тоглуулах</button></div>
-      <div class="ch-view"><button type="button" class="btn sm" data-ch="zoom" data-v="-1" title="Лааг жижигрүүлэх" aria-label="Лааг жижигрүүлэх">−</button><button type="button" class="btn sm" data-ch="zoom" data-v="1" title="Лааг томруулах" aria-label="Лааг томруулах">＋</button><button type="button" class="btn sm" data-ch="wide" id="btnWide" title="Захиалгын самбарыг нууж графикийг өргөсгөх">Өргөн</button><button type="button" class="btn sm" data-ch="full" id="btnFull" title="Бүтэн дэлгэцээр харах (Esc гарах)">⛶ Бүтэн дэлгэц</button></div>
+      <div class="ch-view"><button type="button" class="btn sm" data-ch="zoom" data-v="-1" title="Лааг жижигрүүлэх" aria-label="Лааг жижигрүүлэх">−</button><button type="button" class="btn sm" data-ch="zoom" data-v="1" title="Лааг томруулах" aria-label="Лааг томруулах">＋</button><button type="button" class="btn sm" data-ch="patOpen" id="btnPat" title="Одоогийн хөдөлгөөнтэй төстэй өнгөрсний хэв маягийг олох">Хэв маяг</button><button type="button" class="btn sm" data-ch="wide" id="btnWide" title="Захиалгын самбарыг нууж графикийг өргөсгөх">Өргөн</button><button type="button" class="btn sm" data-ch="full" id="btnFull" title="Бүтэн дэлгэцээр харах (Esc гарах)">⛶ Бүтэн дэлгэц</button></div>
       <span class="ch-status" id="chStatus" role="status"></span>
     </div>
     <div class="ch-tools" id="chTools">
@@ -1145,6 +1153,7 @@ function chBuild(){
     </div>
     <div class="ch-wrap" id="chWrap"><div class="dt-bar" id="dtBar" role="toolbar" aria-label="Зурах хэрэгсэл"></div><div id="chChart"></div><canvas id="chDraw" aria-hidden="true"></canvas><div class="dt-props" id="dtProps" hidden></div><div class="zone tp" id="zTp" hidden></div><div class="zone sl" id="zSl" hidden></div>
       <div class="ch-pickhint" id="chHint" hidden></div><div class="ch-empty" id="chEmpty">График ачаалж байна…</div></div>
+    <div class="pat-box" id="patBox" hidden></div>
     <div class="muted" style="font-size:11px">Үнийн өгөгдөл: Deriv нээлттэй API. MT5 дээрх үнээс бага зэрэг зөрж болно. График: TradingView Lightweight Charts.</div>
   </section>
   <section class="panel c4" id="opPanel">
@@ -1167,9 +1176,11 @@ function chBuild(){
   root.addEventListener("click",chClick);
   root.addEventListener("input",e=>{if(e.target.id==="opRiskIn"){const v=num(e.target.value);if(v)CH.risk=v}chUpdate()});
   root.addEventListener("change",e=>{const id=e.target.id;
-    if(id==="chInst"){chSetInst(e.target.value);chReload()}
+    if(id==="chInst"){chSetInst(e.target.value);PAT.lastN=0;PAT.res=null;PAT.focus=null;chReload()}
     else if(id==="opMkt"){CH.mkt=e.target.checked;chUpdate()}
     else if(id==="rpSpeed"){CH.rp.speed=+e.target.value;if(CH.rp.timer){rpPause();rpPlay()}}
+    else if(id==="patW"||id==="patH"||id==="patK"){PAT[id.slice(3).toLowerCase()]=+e.target.value;PAT.focus=null;patGo()}
+    else if(id==="patShow"){PAT.show=e.target.checked;drDirty()}
     else if(id==="mtfSel"){DR.mtf=+e.target.value;drOptsSave();drDirty();if(DR.mtf&&DR.mtf<=CH.gran)toast("Дээд интервал нь графикийн интервалаас их байх ёстой.")}
     else if(id==="sessChk"){DR.sess=e.target.checked;drOptsSave();drDirty();if(DR.sess&&CH.gran>3600)toast("Сешний бүс 1 цагаас бага интервал дээр харагдана.")}});
   const d=new Date(Date.now()-3*864e5);d.setHours(9,0,0,0);$("#rpStart").value=`${ymd(d)}T09:00`;
@@ -1462,6 +1473,7 @@ function drRender(){
   const font=cssVar("--f-mono")||"monospace";
   if(DR.sess&&CH.gran<=3600)drSessions(ctx,box,font);
   if(DR.mtf&&DR.mtf>CH.gran)drMtf(ctx,box);
+  patDraw(ctx,box);
   if(!DR.hidden)for(const d of drList())drShape(ctx,d,box,font,d===DR.sel,d===DR.hover);
   if(DR.draft)drShape(ctx,DR.draft,box,font,true,false);
   ctx.restore()}
@@ -1693,7 +1705,7 @@ function drBarClick(b){
 function drLoop(){cancelAnimationFrame(DR.raf);const tick=()=>{if(!CH.active||!CH.chart){DR.raf=0;return}
   const r=CH.chart.timeScale().getVisibleLogicalRange(),w=$("#chChart"),d=CH.series.data(),ref=d.length?d[d.length-1].close:0;
   const sig=[r&&r.from.toFixed(3),r&&r.to.toFixed(3),pY(ref),pY(ref*1.01),w.clientWidth,w.clientHeight,d.length,ref,CH.risk].join("|");
-  if(DR.dirty||sig!==DR.sig){DR.sig=sig;DR.dirty=false;drRender()}DR.raf=requestAnimationFrame(tick)};DR.raf=requestAnimationFrame(tick)}
+  if(DR.dirty||sig!==DR.sig){DR.sig=sig;DR.dirty=false;drRender();patAuto()}DR.raf=requestAnimationFrame(tick)};DR.raf=requestAnimationFrame(tick)}
 function drInit(){
   const w=$("#chWrap"),bar=$("#dtBar");bar.innerHTML=drBarHtml();
   bar.addEventListener("click",e=>{const b=e.target.closest("button");if(b)drBarClick(b)});
@@ -1711,12 +1723,112 @@ function drInit(){
     else if(e.key==="Escape"){if(DR.draft||DR.tool!=="cursor")drSetTool("cursor");else if(DR.sel){DR.sel=null;drSelUi()}drDirty()}});
 }
 
+/* ---------------- Төстэй хэв маяг (өнгөрсөнд давтагдсан хөдөлгөөн) ---------------- */
+const PAT={open:false,res:null,w:30,h:20,k:20,show:true,focus:null,t:0,lastN:0,lastClose:null};
+function patStats(a){const n=a.length;if(!n)return {mean:0,med:0};const s=a.slice().sort((x,y)=>x-y);return {mean:a.reduce((x,y)=>x+y,0)/n,med:n%2?s[(n-1)/2]:(s[n/2-1]+s[n/2])/2,p25:s[Math.floor(n*0.25)],p75:s[Math.min(n-1,Math.floor(n*0.75))]}}
+function patRun(){
+  const data=CH.series?CH.series.data():[];const n=data.length,w=PAT.w,h=PAT.h,K=PAT.k;
+  if(n<w*4+h){PAT.res={err:`Хангалттай өгөгдөл алга (${n} лаа). Дор хаяж ${w*4+h} лаа хэрэгтэй — графикийг зүүн тийш гүйлгэж хуучин түүх ачаална уу.`};return}
+  const c=new Float64Array(n);for(let i=0;i<n;i++)c[i]=data[i].close;
+  const cur=c.subarray(n-w);let cm=0;for(const v of cur)cm+=v;cm/=w;let cv=0;for(const v of cur)cv+=(v-cm)**2;const cs=Math.sqrt(cv/w);
+  if(!cs){PAT.res={err:"Сүүлийн лааны үнэ өөрчлөгдөөгүй тул харьцуулах боломжгүй."};return}
+  const z=new Float64Array(w);for(let j=0;j<w;j++)z[j]=(cur[j]-cm)/cs;
+  const P1=new Float64Array(n+1),P2=new Float64Array(n+1);for(let i=0;i<n;i++){P1[i+1]=P1[i]+c[i];P2[i+1]=P2[i]+c[i]*c[i]}
+  const lastStart=n-w-h-w;const cand=[];
+  for(let s=0;s<=lastStart;s++){const m=(P1[s+w]-P1[s])/w,va=(P2[s+w]-P2[s])/w-m*m;if(va<=1e-12)continue;let dot=0;for(let j=0;j<w;j++)dot+=z[j]*c[s+j];
+    const r=dot/w/Math.sqrt(va);if(r>0.5)cand.push([s,r,m,Math.sqrt(va)])}
+  cand.sort((a,b)=>b[1]-a[1]);const pick=[],used=[];
+  for(const x of cand){if(pick.length>=K)break;if(used.some(u=>Math.abs(u-x[0])<w))continue;used.push(x[0]);pick.push(x)}
+  if(!pick.length){PAT.res={err:"Төстэй хэв маяг олдсонгүй. Цонхны уртыг багасгах эсвэл илүү урт түүх ачаалж үзнэ үү."};return}
+  const ins=CH.inst,tick=+ins.tick||0.01;
+  const matches=pick.map(([s,r,m,sd])=>{const e=s+w-1,sc=cs/sd;const past=[],fut=[];
+    for(let j=0;j<w;j++)past.push((c[s+j]-m)*sc+cm);
+    let mfe=0,mae=0;for(let j=0;j<=h;j++){const d=(c[e+j]-c[e])*sc;fut.push(d);if(d>mfe)mfe=d;if(d<mae)mae=d}
+    return {s,e,r,past,fut,move:fut[h],raw:c[e+h]-c[e],time:data[e].time-TZ,mfe,mae}});
+  const ups=matches.filter(x=>x.move>0).length,downs=matches.filter(x=>x.move<0).length,N=matches.length;
+  let bu=0,bd=0;for(let i=w;i+h<n;i++){const d=c[i+h]-c[i];if(d>0)bu++;else if(d<0)bd++}
+  const meanPath=[],p25=[],p75=[];for(let j=0;j<=h;j++){const col=matches.map(x=>x.fut[j]);const st=patStats(col);meanPath.push(st.mean);p25.push(st.p25);p75.push(st.p75)}
+  const pB=ups/N,moe=1.96*Math.sqrt(0.25/N);
+  PAT.res={matches,N,ups,downs,buy:ups/N,sell:downs/N,base:{buy:bu/(bu+bd||1),sell:bd/(bu+bd||1),n:bu+bd},moe,
+    move:patStats(matches.map(x=>x.move)),mfe:patStats(matches.map(x=>x.mfe)),mae:patStats(matches.map(x=>x.mae)),
+    cur:Array.from(cur),meanPath,p25,p75,n,lastEp:data[n-1].time-TZ,lastClose:c[n-1],tick,w,h,
+    signif:Math.abs(pB-0.5)>moe};
+  PAT.lastN=n;PAT.lastClose=c[n-1];
+}
+function patSvg(R){const W=640,H=230,padL=8,padR=56,padT=12,padB=22,w=R.w,h=R.h;
+  const all=[];R.cur.forEach(v=>all.push(v));const base=R.cur[R.cur.length-1];
+  R.matches.forEach(m=>{m.past.forEach(v=>all.push(v));m.fut.forEach(d=>all.push(base+d))});
+  let lo=Math.min(...all),hi=Math.max(...all);if(hi===lo){hi+=1;lo-=1}const pad=(hi-lo)*0.06;lo-=pad;hi+=pad;
+  const X=j=>padL+(W-padL-padR)*(j+w-1)/(w-1+h),Y=v=>padT+(H-padT-padB)*(1-(v-lo)/(hi-lo));
+  const path=pts=>pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+","+p[1].toFixed(1)).join("");
+  let g="";for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4,y=Y(v);g+=`<line x1="${padL}" x2="${W-padR}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${W-padR+4}" y="${y+3}" font-size="10" fill="var(--muted)">${v.toFixed(decOf(CH.inst))}</text>`}
+  const x0=X(0);let lines="";
+  R.matches.slice().reverse().forEach(m=>{const up=m.move>0;const col=up?"var(--gain)":m.move<0?"var(--loss)":"var(--muted)";
+    lines+=`<path d="${path(m.past.map((v,j)=>[X(j-w+1),Y(v-m.past[w-1]+base)]))}" fill="none" stroke="var(--muted)" stroke-opacity=".25" stroke-width="1"/>`;
+    lines+=`<path d="${path(m.fut.map((d,j)=>[X(j),Y(base+d)]))}" fill="none" stroke="${col}" stroke-opacity=".45" stroke-width="1.2"/>`});
+  const band=R.p75.map((d,j)=>[X(j),Y(base+d)]).concat(R.p25.map((d,j)=>[X(j),Y(base+d)]).reverse());
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Одоогийн хөдөлгөөн ба өнгөрсөн төстэй хэв маягуудын үргэлжлэл">
+    ${g}<rect x="${x0}" y="${padT}" width="${W-padR-x0}" height="${H-padT-padB}" fill="var(--surface-2)" opacity=".5"/>
+    <line x1="${x0}" x2="${x0}" y1="${padT}" y2="${H-padB}" stroke="var(--muted)" stroke-dasharray="3 3"/>
+    <text x="${x0+4}" y="${H-8}" font-size="10" fill="var(--muted)">одоо → дараагийн ${h} лаа</text><text x="${padL}" y="${H-8}" font-size="10" fill="var(--muted)">сүүлийн ${w} лаа</text>
+    ${lines}<path d="${path(band)}Z" fill="var(--accent)" fill-opacity=".12"/>
+    <path d="${path(R.meanPath.map((d,j)=>[X(j),Y(base+d)]))}" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-dasharray="6 3"/>
+    <path d="${path(R.cur.map((v,j)=>[X(j-w+1),Y(v)]))}" fill="none" stroke="var(--ink)" stroke-width="2.4"/>
+    <circle cx="${x0}" cy="${Y(base)}" r="3.5" fill="var(--ink)"/></svg>`}
+function patRender(){const box=$("#patBox");if(!box)return;box.hidden=!PAT.open;if(!PAT.open)return;const R=PAT.res;
+  const sel=(id,vals,cur,suf)=>`<select id="${id}">${vals.map(v=>`<option value="${v}"${v===cur?" selected":""}>${v} ${suf}</option>`).join("")}</select>`;
+  let h=`<div class="panel-h"><h2>Төстэй хэв маяг</h2><span class="muted" style="font-size:12px">${CH.mode==="replay"?"давтан тоглуулалтын харагдаж буй лаагаар":"ачаалсан түүхээр"}</span>
+    <button type="button" class="btn sm ghost" data-ch="patClose" aria-label="Хаах">✕</button></div>
+    <div class="ch-tools"><label class="lbl" for="patW">Харьцуулах</label>${sel("patW",[15,20,30,50,80],PAT.w,"лаа")}
+      <label class="lbl" for="patH">Урагш</label>${sel("patH",[5,10,20,30,50],PAT.h,"лаа")}
+      <label class="lbl" for="patK">Хамгийн төстэй</label>${sel("patK",[10,20,30,50],PAT.k,"")}
+      <label class="chk"><input type="checkbox" id="patShow"${PAT.show?" checked":""}> Графикт харуулах</label>
+      <button type="button" class="btn sm primary" data-ch="patRun">Дахин шинжлэх</button></div>`;
+  if(!R)h+=`<div class="muted">Шинжилж байна…</div>`;
+  else if(R.err)h+=`<div class="warns"><div>${esc(R.err)}</div></div>`;
+  else{const pc=v=>(v*100).toFixed(0)+"%",dec=decOf(CH.inst),stepTxt=v=>CH.inst.kind==="step"?`${Math.round(v/R.tick)} алхам`:`${v>=0?"+":""}${v.toFixed(dec)}`;
+    h+=`<div class="pat-grid"><div class="pat-chart">${patSvg(R)}
+        <div class="muted" style="font-size:11px">Хар: одоогийн ${R.w} лаа · Саарал: өнгөрсний төстэй ${R.N} хэсэг · Ногоон/улаан: тэдгээрийн дараах ${R.h} лаа · Тасархай: дундаж, бүс: 25–75%</div></div>
+      <div class="pat-side">
+        <div class="pat-bar"><div class="pb buy" style="width:${R.buy*100}%">Buy ${pc(R.buy)}</div><div class="pb sell" style="width:${R.sell*100}%">Sell ${pc(R.sell)}</div></div>
+        <div class="muted" style="font-size:12px">${R.N} төстэй хэсгээс ${R.ups} нь дээш, ${R.downs} нь доош ${R.h} лааны дараа хаагдсан. Түүврийн алдаа ±${(R.moe*100).toFixed(0)}%.</div>
+        <div class="pat-bar base"><div class="pb buy" style="width:${R.base.buy*100}%">${pc(R.base.buy)}</div><div class="pb sell" style="width:${R.base.sell*100}%">${pc(R.base.sell)}</div></div>
+        <div class="muted" style="font-size:12px">Харьцуулалт: бүх түүхийн ${R.base.n.toLocaleString("en-US")} тохиолдолд ${R.h} лааны дараах дээш/доош харьцаа.</div>
+        <div class="banner ${R.signif?"demo":"info"}" style="padding:8px 10px"><p style="font-size:12px;min-width:0">${R.signif?`Хувь 50%-иас түүврийн алдаанаас их зөрж байна. Гэхдээ ${R.N} тохиолдол цөөн тул санамсаргүй тохиолдол байх магадлал өндөр хэвээр.`:`Энэ хувь ердийн 50/50-аас <b>статистикийн хувьд ялгаагүй</b>. Өнгөрсөн хэв маяг энд ирээдүйг таамаглахгүй байна.`}</p></div>
+        <div class="preview op-out"><div><span class="lbl">Дундаж хөдөлгөөн</span><b class="${cls(R.move.mean)}">${stepTxt(R.move.mean)}</b></div><div><span class="lbl">Медиан</span><b class="${cls(R.move.med)}">${stepTxt(R.move.med)}</b></div>
+          <div><span class="lbl">Дундаж хамгийн өндөр</span><b class="pos">${stepTxt(R.mfe.mean)}</b></div><div><span class="lbl">Дундаж хамгийн нам</span><b class="neg">${stepTxt(R.mae.mean)}</b></div></div>
+      </div></div>
+      <div class="tw" style="max-height:220px;overflow-y:auto"><table><thead><tr><th>Огноо (төстэй хэсгийн төгсгөл)</th><th class="r">Төстэй байдал</th><th class="r">${R.h} лааны дараа</th><th></th></tr></thead><tbody>
+      ${R.matches.map((m,i)=>`<tr class="click" data-pat="${i}" tabindex="0"><td class="num">${new Date(m.time*1000).toLocaleString("en-GB",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})}</td>
+        <td class="r num">${(m.r*100).toFixed(0)}%</td><td class="r num ${cls(m.raw)}">${stepTxt(m.raw)}</td><td class="muted" style="font-size:11px">графикт харах →</td></tr>`).join("")}</tbody></table></div>
+      ${PAT.focus!=null?`<div><button type="button" class="btn sm" data-ch="patBack">← Одоогийн үнэ рүү буцах</button></div>`:""}`}
+  h+=`<p class="muted" style="font-size:11px;margin:0">Step Index нь Deriv-ийн тодорхойлолтоор дээш, доош алхах магадлал тэнцүү санамсаргүй процесс. Энэ хэрэгсэл зөвхөн судалгаа, сэтгэл зүйн дасгалд зориулагдсан; арилжааны дохио биш.</p>`;
+  box.innerHTML=h}
+function patGo(){PAT.res=null;patRender();setTimeout(()=>{try{patRun()}catch(e){PAT.res={err:"Шинжилгээ амжилтгүй: "+e.message}}patRender();drDirty()},20)}
+function patAuto(){if(!PAT.open||!CH.series)return;const d=CH.series.data();if(!d.length)return;
+  if(d.length!==PAT.lastN&&PAT.focus==null){clearTimeout(PAT.t);PAT.t=setTimeout(()=>{try{patRun()}catch(e){}patRender();drDirty()},400)}}
+function patJump(i){const R=PAT.res;if(!R||!R.matches[i])return;const m=R.matches[i];PAT.focus=i;
+  CH.chart.timeScale().setVisibleLogicalRange({from:m.s-R.w,to:m.e+R.h+R.w});patRender();drDirty()}
+function patDraw(ctx,box){const R=PAT.res;if(!PAT.open||!R||R.err)return;
+  if(PAT.focus!=null){const m=R.matches[PAT.focus];const data=CH.series.data();if(!data[m.s]||!data[m.e+R.h])return;
+    const x1=dX(data[m.s].time-TZ),x2=dX(data[m.e].time-TZ),x3=dX(data[m.e+R.h].time-TZ);if(x1==null||x3==null)return;
+    ctx.fillStyle=rgba("#2F6FDE",0.10);ctx.fillRect(x1,0,x2-x1,box.h);ctx.fillStyle=m.raw>=0?rgba("#16936A",0.12):rgba("#C43D3D",0.12);ctx.fillRect(x2,0,x3-x2,box.h);
+    ctx.fillStyle=cssVar("--ink");ctx.font=`11px ${cssVar("--f-body")||"sans-serif"}`;ctx.textBaseline="top";ctx.fillText(`Төстэй хэсэг ${(m.r*100).toFixed(0)}%`,x1+4,6);ctx.fillText(`Дараах ${R.h} лаа`,x2+4,6);return}
+  if(!PAT.show)return;const data=CH.series.data();if(!data.length||data[data.length-1].time-TZ!==R.lastEp)return;
+  const g=CH.gran,base=R.lastClose,pts=j=>[dX(R.lastEp+j*g),null];
+  const P=(arr)=>arr.map((d,j)=>[dX(R.lastEp+j*g),pY(base+d)]).filter(p=>p[0]!=null&&p[1]!=null);
+  const hi=P(R.p75),lo=P(R.p25).reverse(),mn=P(R.meanPath);if(mn.length<2)return;
+  ctx.beginPath();hi.concat(lo).forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fillStyle=rgba("#C8961E",0.14);ctx.fill();
+  ctx.beginPath();mn.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.strokeStyle="#C8961E";ctx.lineWidth=2;ctx.setLineDash([6,3]);ctx.stroke();ctx.setLineDash([]);
+  const e=mn[mn.length-1];ctx.font=`600 11px ${cssVar("--f-body")||"sans-serif"}`;ctx.fillStyle="#C8961E";ctx.textBaseline="middle";
+  const t=`Buy ${(R.buy*100).toFixed(0)}% · Sell ${(R.sell*100).toFixed(0)}%`;ctx.fillText(t,Math.min(e[0]+6,box.w-ctx.measureText(t).width-4),e[1]-12)}
+
 /* --- clicks inside chart tab --- */
 async function chClick(e){
   if(e.target.closest("#dtBar,#dtProps"))return;
   const seg=e.target.closest(".seg button");
   if(seg){const g=seg.parentElement;if(seg.disabled)return;$$("button",g).forEach(b=>b.setAttribute("aria-pressed",String(b===seg)));
-    if(g.id==="chGran"){CH.gran=+seg.dataset.v;chReload()}
+    if(g.id==="chGran"){CH.gran=+seg.dataset.v;PAT.lastN=0;PAT.res=null;PAT.focus=null;chReload()}
     else if(g.id==="opDir"){CH.dir=seg.dataset.v;chUpdate()}
     else if(g.id==="chMode"){const m=seg.dataset.v;if(m===CH.mode)return;CH.mode=m;$("#chReplay").hidden=m!=="replay";
       if(m==="live"){CH.rp.pos=null;chLoadLive()}else{rpPause();await chForget();CH.rp.balance=currentBalance(enriched(S.trades));
@@ -1724,11 +1836,16 @@ async function chClick(e){
         else{CH.last=null;chStatus("Эхлэх цагаа сонгоод Ачаалах дарна уу.")}chUpdate()}}
     return}
   const rk=e.target.closest("#opRisk button");if(rk){CH.risk=+rk.dataset.v;chUpdate();return}
+  const pr=e.target.closest("tr[data-pat]");if(pr){patJump(+pr.dataset.pat);return}
   const b=e.target.closest("[data-ch]");if(!b||b.disabled)return;const act=b.dataset.ch;
   if(act==="pick"){CH.pick=CH.pick===b.dataset.k?null:b.dataset.k;const h=$("#chHint");h.hidden=!CH.pick;h.textContent=CH.pick==="sl"?"Stop-loss тавих үнэ дээр графикт дарна уу":"Зорилтот үнэ дээр графикт дарна уу";$("#chWrap").classList.toggle("picking",!!CH.pick)}
   else if(act==="rr"){const o=chCalc();if(o.entry==null||o.sl==null){toast("Эхлээд Stop-loss тавина уу.");return}const d=(CH.rp.pos?CH.rp.pos.dir:CH.dir)==="Sell"?-1:1;$("#opTp").value=fmtP(o.entry+d*Math.abs(o.entry-o.sl)*+b.dataset.v);chUpdate()}
   else if(act==="go"){const o=chCalc();if(o.entry==null){toast("Орох үнэ алга.");return}
     openForm(null,{inst:CH.inst.name,dir:CH.dir,entry:+fmtP(o.entry),sl:o.sl??"",tp:o.tp??"",lots:o.lots??"",open:nowLocal(),balance:+o.bal.toFixed(2)})}
+  else if(act==="patOpen"){PAT.open=!PAT.open;b.setAttribute("aria-pressed",String(PAT.open));PAT.focus=null;if(PAT.open)patGo();else{patRender();drDirty()}}
+  else if(act==="patClose"){PAT.open=false;PAT.focus=null;$("#btnPat").setAttribute("aria-pressed","false");patRender();drDirty()}
+  else if(act==="patRun"){PAT.focus=null;patGo()}
+  else if(act==="patBack"){PAT.focus=null;CH.chart.timeScale().scrollToRealTime();patGo()}
   else if(act==="zoom"){const ts=CH.chart.timeScale();const cur=ts.options().barSpacing||CH.bs;const nx=Math.max(1,Math.min(60,+(cur*(+b.dataset.v>0?1.35:1/1.35)).toFixed(2)));
     ts.applyOptions({barSpacing:nx});CH.bs=nx;try{localStorage.setItem("alkham-chart-bs",String(nx))}catch(e){}ts.scrollToRealTime();drDirty();chZones()}
   else if(act==="wide")chWide(!$("#chartRoot").classList.contains("wide"));
