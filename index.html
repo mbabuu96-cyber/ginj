@@ -296,7 +296,7 @@ function mergeSettings(o){const s=Object.assign(clone(DEFAULT_SETTINGS),o||{});i
 /* ---------------- storage ---------------- */
 const LS="alkham-journal-v1";
 function lsLoad(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):null}catch(e){return null}}
-function lsSave(){if(S.mode!=="local")return;try{localStorage.setItem(LS,JSON.stringify({settings:S.settings,trades:S.trades,days:S.days,reviews:S.reviews,beliefs:S.beliefs}))}catch(e){}}
+function lsSave(){if(S.mode!=="local"||needsLogin())return;try{localStorage.setItem(LS,JSON.stringify({settings:S.settings,trades:S.trades,days:S.days,reviews:S.reviews,beliefs:S.beliefs}))}catch(e){}}
 (function initLocal(){const d=lsLoad();S.localCache=d;if(d){S.settings=mergeSettings(d.settings);S.trades=d.trades||{};S.days=d.days||{};S.reviews=d.reviews||{};S.beliefs=d.beliefs||{}}})();
 
 let BASE=null,SETDOC=null;
@@ -363,7 +363,7 @@ async function initSupa(){
     SB.client=window.supabase.createClient(SB.cfg.url,SB.cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:"alkham-auth"}});
     SB.client.auth.onAuthStateChange((ev,session)=>{const u=session?session.user:null;const prev=SB.user&&SB.user.id;SB.user=u;
       if(ev==="PASSWORD_RECOVERY"){SB.recovery=true;SB.err="";S.view="settings";setTimeout(render,0)}
-      if((u&&u.id)!==prev){setTimeout(()=>{u?enterSupa():leaveSupa()},0)}});
+      if((u&&u.id)!==prev){setTimeout(()=>{u?enterSupa():leaveSupa(prev)},0)}});
     const {data}=await SB.client.auth.getSession();
     SB.user=data&&data.session?data.session.user:null;
     if(linkErr){SB.err="Имэйлийн холбоос хүчингүй эсвэл хугацаа нь дууссан байна. Нууц үг мартсан товчоор шинэ холбоос авна уу.";SB.raw=decodeURIComponent(linkErr.replace(/\+/g," "));SB.recovery=false;S.view="settings"}
@@ -373,14 +373,17 @@ async function initSupa(){
   }catch(e){SB.status="error";SB.err=supaMsg(e);setMode();render()}
 }
 async function enterSupa(){
-  S.mode="supa";SB.status="syncing";
+  S.mode="supa";SB.status="syncing";SB.err="";SB.info="";DEMO=null;
   const c=cacheLoad();
   if(c){S.settings=mergeSettings(c.settings);S.trades=c.trades||{};S.days=c.days||{};S.reviews=c.reviews||{};S.beliefs=c.beliefs||{};S.cloudLoaded=true}
   else{S.trades={};S.days={};S.reviews={};S.beliefs={};S.cloudLoaded=false}
   setMode();render();await flushPending();await pullAll();
 }
-function leaveSupa(){S.mode="local";SB.status=SB.client?"signedout":"off";const d=lsLoad();
-  S.settings=mergeSettings(d&&d.settings);S.trades=(d&&d.trades)||{};S.days=(d&&d.days)||{};S.reviews=(d&&d.reviews)||{};S.beliefs=(d&&d.beliefs)||{};setMode();render()}
+function leaveSupa(prevId){S.mode="local";SB.status=SB.client?"signedout":"off";SB.recovery=false;SB.pwOpen=false;
+  // Өмнөх хэрэглэгчийн өгөгдлийг дэлгэцнээс болон энэ хөтчөөс арилгана (илгээгдээгүй өөрчлөлт байвал хадгална)
+  if(prevId&&!pendingGet().some(o=>o.u===prevId))try{localStorage.removeItem("alkham-cache-"+prevId)}catch(e){}
+  S.settings=mergeSettings(null);S.trades={};S.days={};S.reviews={};S.beliefs={};S.cloudLoaded=false;DEMO=null;
+  setMode();render()}
 async function pullAll(){
   if(S.mode!=="supa"||SB.loading||!SB.client)return;SB.loading=true;
   try{const rows=[];for(let from=0;;from+=1000){const {data,error}=await SB.client.from("journal_docs").select("coll,id,data").range(from,from+999);if(error)throw error;rows.push(...data);if(data.length<1000)break}
@@ -418,7 +421,7 @@ async function supaMigrateLocal(){
   ["trades","days","reviews","beliefs"].forEach(c=>Object.entries(lc[c]||{}).forEach(([k,v])=>rows.push({user_id:SB.user.id,coll:c,id:k,data:v,updated_at:new Date().toISOString()})));
   SB.busy=true;render();
   try{for(let i=0;i<rows.length;i+=200){const {error}=await SB.client.from("journal_docs").upsert(rows.slice(i,i+200),{onConflict:"user_id,coll,id"});if(error)throw error}
-    toast(`${rows.filter(r=>r.coll==="trades").length} арилжааг серверт хууллаа.`);await pullAll()}
+    toast(`${rows.filter(r=>r.coll==="trades").length} арилжааг серверт хууллаа.`);try{localStorage.removeItem(LS)}catch(e){}S.localCache=null;await pullAll()}
   catch(e){toast(supaMsg(e))}
   SB.busy=false;render();
 }
@@ -519,7 +522,7 @@ function demoTrades(){
   return out;
 }
 let DEMO=null;
-function isDemo(){return !Object.keys(S.trades).length&&(S.mode==="local"||S.cloudLoaded)}
+function isDemo(){return !Object.keys(S.trades).length&&S.mode==="local"&&!needsLogin()}
 function tradesForView(){if(isDemo()){if(!DEMO)DEMO=demoTrades();return DEMO}return S.trades}
 
 /* ---------------- charts ---------------- */
@@ -817,11 +820,22 @@ function viewSettings(){
 /* ---------------- render ---------------- */
 let rafPending=false;
 function render(){if(rafPending)return;rafPending=true;requestAnimationFrame(()=>{rafPending=false;doRender()})}
+function inClaude(){return !!(window.claude&&typeof window.claude.use==="function")}
+function needsLogin(){return !inClaude()&&S.mode!=="supa"}
+function viewGate(){
+  const intro=!SB.cfg?"Эхлэхийн тулд серверийн хаяг, түлхүүрээ нэг удаа оруулна.":SB.status==="connecting"||SB.status==="off"?"Сервертэй холбогдож байна…":"Өөрийн бүртгэлээр нэвтэрнэ үү. Таны арилжааны мэдээллийг зөвхөн та харна.";
+  return `<div style="max-width:620px;width:100%;margin:24px auto 0;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;flex-direction:column;gap:4px"><h1 style="font-family:var(--f-display);font-size:22px;font-weight:500">Нэвтрэх</h1>
+    <p class="muted" style="margin:0">${intro}</p></div>
+    <div class="grid">${SB.status==="connecting"&&SB.cfg?`<section class="panel c12"><div class="muted">Сервертэй холбогдож байна…</div></section>`:supaPanel()}</div>
+    <p class="muted" style="margin:0;font-size:12px">Хэрэглэгч бүрийн өгөгдөл серверт тусдаа хадгалагдаж, өөр хэн ч харах боломжгүй. Гарах үед энэ хөтчид үлдсэн хуулбар устна.</p></div>`}
 function doRender(){
+  const gate=needsLogin();$("#tabs").hidden=gate;$("#addBtn").hidden=gate;
   $$(".tab").forEach(t=>t.setAttribute("aria-selected",String(t.dataset.v===S.view)));
   const app=$("#app");const active=document.activeElement;const keepId=active&&app.contains(active)&&active.id&&(active.tagName==="TEXTAREA"||active.tagName==="INPUT")?active.id:null;
   if(keepId){S.renderSkipped=true;return} // хэрэглэгч бичиж байхад дахин зурахгүй
   S.renderSkipped=false;
+  if(gate){app.innerHTML=viewGate();return}
   const v={dash:viewDash,trades:viewTrades,day:viewDay,ex:viewEx,review:viewReview,settings:viewSettings}[S.view]||viewDash;
   app.innerHTML=v();
 }
@@ -950,7 +964,7 @@ async function importJson(file){
 
 /* ---------------- events ---------------- */
 $("#tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(!b)return;S.view=b.dataset.v;try{localStorage.setItem("alkham-view",S.view)}catch(x){}doRender();window.scrollTo(0,0)});
-$("#addBtn").addEventListener("click",()=>openForm());
+$("#addBtn").addEventListener("click",()=>{if(!needsLogin())openForm()});
 $("#modeTag").addEventListener("click",()=>{S.view="settings";doRender();window.scrollTo(0,0)});
 document.addEventListener("click",async e=>{
   const segBtn=e.target.closest(".seg button");
@@ -963,7 +977,7 @@ document.addEventListener("click",async e=>{
     if(seg.closest("#tradeForm"))updatePreview();return}
   const row=e.target.closest("tr[data-edit]");if(row){openForm(row.dataset.edit);return}
   const a=e.target.closest("[data-act]");if(!a)return;const act=a.dataset.act;
-  if(act==="add")openForm();
+  if(act==="add"){if(!needsLogin())openForm()}
   else if(act==="close"){$("#dlg").close();editing=null}
   else if(act==="useLot"){const v=a.dataset.lot;if(v){$("#tLots").value=v;updatePreview()}}
   else if(act==="askDel"){$("#delWrap").innerHTML=`<span class="confirm">Устгах уу? <button type="button" class="btn sm danger" data-act="doDel">Тийм, устгах</button><button type="button" class="btn sm" data-act="noDel">Үгүй</button></span>`}
@@ -1039,7 +1053,9 @@ document.addEventListener("click",async e=>{
     catch(e){SB.info="";SB.err=supaMsg(e)}
     SB.busy=false;render()}
   else if(act==="sbShow"){const el=$("#sbPass");if(el){el.type=el.type==="password"?"text":"password";a.textContent=el.type==="password"?"Харах":"Нуух"}}
-  else if(act==="sbOut"){await SB.client.auth.signOut();toast("Гарлаа")}
+  else if(act==="sbOut"){a.disabled=true;await flushPending();
+    if(pendingGet().some(o=>SB.user&&o.u===SB.user.id)){a.disabled=false;toast("Илгээгдээгүй өөрчлөлт байна. Интернэтээ шалгаад Одоо синк хийх дарсны дараа гарна уу.");return}
+    await SB.client.auth.signOut();S.view="dash";toast("Гарлаа")}
   else if(act==="sbSync"){await flushPending();await pullAll();toast(SB.status==="ok"?"Синк хийлээ":SB.err||"Синк хийж чадсангүй")}
   else if(act==="sbMigrate")supaMigrateLocal();
   else if(act==="sbForget"){try{localStorage.removeItem(SUPA_CFG_KEY)}catch(e){}if(SB.cfg){SB.draft.url=SB.cfg.url;SB.draft.key=SB.cfg.key}SB.cfg=null;SB.client=null;SB.status="off";SB.err="";setMode();render()}
