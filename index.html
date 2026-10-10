@@ -203,18 +203,28 @@ svg text{font-family:var(--f-mono)}
 .ch-view+.ch-status{margin-left:0;flex-basis:100%;text-align:right}
 .ch-wrap.picking,.ch-wrap.drawing{cursor:crosshair}
 .ch-wrap.drawing{touch-action:none}
-#chDraw{position:absolute;inset:0;z-index:3;pointer-events:none}
+#chDraw{position:absolute;top:0;left:40px;z-index:3;pointer-events:none}
 .ch-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .ch-tools .sep{width:1px;align-self:stretch;background:var(--line);margin:0 2px}
 .ch-tools select{width:auto}
 .swatches{display:flex;gap:4px}
 .swatches button{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
 .swatches button[aria-pressed="true"]{border-color:var(--ink)}
-#chChart{position:absolute;inset:0}
+#chChart{position:absolute;top:0;right:0;bottom:0;left:40px}
+.dt-bar{position:absolute;top:0;left:0;bottom:0;width:40px;z-index:6;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;border-right:1px solid var(--line);background:var(--surface);overflow-y:auto;scrollbar-width:none}
+.dt-bar::-webkit-scrollbar{display:none}
+.dt-bar button{width:32px;height:32px;flex:none;display:grid;place-items:center;border:0;border-radius:6px;background:none;color:var(--muted);cursor:pointer}
+.dt-bar button:hover{background:var(--surface-2);color:var(--ink)}
+.dt-bar button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.dt-bar button.confirm{background:var(--loss-soft);color:var(--loss)}
+.dt-bar button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.dt-bar .sep{width:22px;height:1px;background:var(--line);margin:4px 0;flex:none}
+.dt-props{position:absolute;top:8px;left:calc(50% + 20px);transform:translateX(-50%);z-index:7;display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:calc(100% - 60px);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 8px;box-shadow:var(--shadow)}
+.dt-props .seg button{padding:4px 8px;font-size:12px}
 .zone{position:absolute;pointer-events:none;z-index:2}
 .zone.tp{background:color-mix(in srgb,var(--gain) 15%,transparent);border-top:1px dashed var(--gain);border-bottom:1px dashed var(--gain)}
 .zone.sl{background:color-mix(in srgb,var(--loss) 15%,transparent);border-top:1px dashed var(--loss);border-bottom:1px dashed var(--loss)}
-.ch-pickhint{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:4;pointer-events:none;background:var(--ink);color:var(--bg);padding:6px 12px;border-radius:6px;font-size:12px;white-space:nowrap}
+.ch-pickhint{position:absolute;bottom:42px;left:calc(50% + 20px);transform:translateX(-50%);z-index:4;pointer-events:none;background:var(--ink);color:var(--bg);padding:6px 12px;border-radius:6px;font-size:12px;white-space:nowrap}
 .ch-empty{position:absolute;inset:0;display:grid;place-items:center;z-index:5;color:var(--muted);text-align:center;padding:16px;background:var(--surface)}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chips button{border:1px solid var(--line);background:var(--bg);padding:5px 10px;border-radius:7px;cursor:pointer;font-size:13px;font-family:var(--f-mono)}
@@ -1105,17 +1115,6 @@ function chBuild(){
       <span class="ch-status" id="chStatus" role="status"></span>
     </div>
     <div class="ch-tools" id="chTools">
-      <div class="seg" id="dtTool" role="group" aria-label="Зурах хэрэгсэл">
-        <button type="button" data-v="cursor" aria-pressed="true" title="Сонгох, зөөх (Esc)">Курсор</button>
-        <button type="button" data-v="trend" aria-pressed="false" title="Хоёр цэгийг холбосон шугам">Шугам</button>
-        <button type="button" data-v="hline" aria-pressed="false" title="Хэвтээ түвшин">Хэвтээ</button>
-        <button type="button" data-v="rect" aria-pressed="false" title="Бүс тэмдэглэх">Тэгш өнцөгт</button>
-        <button type="button" data-v="fib" aria-pressed="false" title="Фибоначчийн түвшин">Фибо</button>
-      </div>
-      <div class="swatches" id="dtColor" role="group" aria-label="Өнгө">${DCOLORS.map(c=>`<button type="button" data-v="${c}" style="background:${c}" aria-label="Өнгө ${c}" aria-pressed="${c===DR.color}"></button>`).join("")}</div>
-      <button type="button" class="btn sm" data-ch="dtDel" disabled title="Сонгосон зургийг устгах (Delete)">Устгах</button>
-      <button type="button" class="btn sm ghost" data-ch="dtClear">Бүгдийг арилгах</button>
-      <span class="sep" aria-hidden="true"></span>
       <label class="lbl" for="mtfSel">Дээд интервалын лаа</label>
       <select id="mtfSel"><option value="0">Үгүй</option><option value="900">15м</option><option value="3600">1ц</option><option value="14400">4ц</option><option value="86400">1ө</option><option value="604800">7 хоног</option></select>
       <label class="chk"><input type="checkbox" id="sessChk"> Сешн (Ази, Лондон, NY)</label>
@@ -1128,7 +1127,7 @@ function chBuild(){
       <select id="rpSpeed" aria-label="Хурд"><option value="1">1 лаа/сек</option><option value="2" selected>2 лаа/сек</option><option value="5">5 лаа/сек</option><option value="10">10 лаа/сек</option></select>
       <span class="mono muted" id="rpTime" style="font-size:12px"></span>
     </div>
-    <div class="ch-wrap" id="chWrap"><div id="chChart"></div><canvas id="chDraw" aria-hidden="true"></canvas><div class="zone tp" id="zTp" hidden></div><div class="zone sl" id="zSl" hidden></div>
+    <div class="ch-wrap" id="chWrap"><div class="dt-bar" id="dtBar" role="toolbar" aria-label="Зурах хэрэгсэл"></div><div id="chChart"></div><canvas id="chDraw" aria-hidden="true"></canvas><div class="dt-props" id="dtProps" hidden></div><div class="zone tp" id="zTp" hidden></div><div class="zone sl" id="zSl" hidden></div>
       <div class="ch-pickhint" id="chHint" hidden></div><div class="ch-empty" id="chEmpty">График ачаалж байна…</div></div>
     <div class="muted" style="font-size:11px">Үнийн өгөгдөл: Deriv нээлттэй API. MT5 дээрх үнээс бага зэрэг зөрж болно. График: TradingView Lightweight Charts.</div>
   </section>
@@ -1301,10 +1300,10 @@ function chLines(o){
 }
 function chZones(){cancelAnimationFrame(zoneRaf);zoneRaf=requestAnimationFrame(()=>{
   const z=CH._zone,zt=$("#zTp"),zs=$("#zSl");if(!z||!CH.series||z.entry==null){zt.hidden=zs.hidden=true;return}
-  const ts=CH.chart.timeScale();let x0=z.time!=null?ts.timeToCoordinate(z.time):null;const w=$("#chWrap").clientWidth-CH.chart.priceScale("right").width();
+  const ts=CH.chart.timeScale();let x0=z.time!=null?ts.timeToCoordinate(z.time):null;const w=$("#chChart").clientWidth-CH.chart.priceScale("right").width();
   if(x0==null||x0<0)x0=Math.max(0,w-140);const ye=CH.series.priceToCoordinate(z.entry);
   const place=(el,p)=>{if(p==null||ye==null){el.hidden=true;return}const y=CH.series.priceToCoordinate(p);if(y==null){el.hidden=true;return}
-    el.hidden=false;el.style.left=x0+"px";el.style.width=Math.max(0,w-x0)+"px";el.style.top=Math.min(y,ye)+"px";el.style.height=Math.abs(y-ye)+"px"};
+    el.hidden=false;el.style.left=(x0+40)+"px";el.style.width=Math.max(0,w-x0)+"px";el.style.top=Math.min(y,ye)+"px";el.style.height=Math.abs(y-ye)+"px"};
   place(zt,z.tp);place(zs,z.sl)})}
 
 /* --- replay (backtest) --- */
@@ -1375,23 +1374,41 @@ async function rpSave(){const R=CH.rp;const list=R.results.filter(r=>!r.saved);i
   toast(`${list.length} backtest арилжаа хадгаллаа`);rpRenderBox()}
 
 /* ---------------- Зурах хэрэгсэл, дээд интервалын лаа, сешн ---------------- */
-const DCOLORS=["#2F6FDE","#C8961E","#16936A","#C43D3D","#8A5AD6"];
+const DCOLORS=["#2F6FDE","#C8961E","#16936A","#C43D3D","#8A5AD6","#5B6670"];
 const FIB=[0,0.236,0.382,0.5,0.618,0.786,1,1.618,2.618,4.236];
 const SESS=[["Ази",0,9,"47,111,222"],["Лондон",7,16,"22,147,106"],["Нью-Йорк",13,22,"200,150,30"]]; // UTC цаг (зуны цагийг тооцоогүй)
-const DR={tool:"cursor",color:DCOLORS[0],sel:null,draft:null,drag:null,intercept:false,dirty:true,sig:"",raf:0,saveT:{},
-  mtf:0,sess:false};
-try{const o=JSON.parse(localStorage.getItem("alkham-chart-opts")||"{}");DR.mtf=+o.mtf||0;DR.sess=!!o.sess;if(o.color)DR.color=o.color}catch(e){}
-function drOptsSave(){try{localStorage.setItem("alkham-chart-opts",JSON.stringify({mtf:DR.mtf,sess:DR.sess,color:DR.color}))}catch(e){}}
+const TOOLS=[ // [түлхүүр, нэр, товчлол, svg path]
+  ["cursor","Курсор — сонгох, зөөх","Esc",'<path d="M5 3l12 6-5 1.6L10 16z"/>'],
+  ["trend","Трендийн шугам","Alt+T",'<path d="M4 16L16 4"/><circle cx="4" cy="16" r="1.6"/><circle cx="16" cy="4" r="1.6"/>'],
+  ["ray","Сунгасан шугам (ray)","Alt+Y",'<path d="M4 16L18 2"/><circle cx="4" cy="16" r="1.6"/>'],
+  ["hline","Хэвтээ шугам","Alt+H",'<path d="M2 10h16"/>'],
+  ["hray","Хэвтээ ray","Alt+J",'<path d="M5 10h13"/><circle cx="5" cy="10" r="1.6"/>'],
+  ["vline","Босоо шугам","Alt+V",'<path d="M10 2v16"/>'],
+  ["rect","Тэгш өнцөгт","Alt+R",'<rect x="3.5" y="5.5" width="13" height="9" rx="1"/>'],
+  ["fib","Фибоначчи","Alt+F",'<path d="M3 4h14M3 8h14M3 12h14M3 16h14"/>'],
+  ["long","Long позиц","Alt+L",'<path d="M3 10h14"/><path d="M3 4h14v6H3z" fill="currentColor" fill-opacity=".25"/><path d="M3 10h14v4H3z"/>'],
+  ["short","Short позиц","Alt+S",'<path d="M3 10h14"/><path d="M3 10h14v6H3z" fill="currentColor" fill-opacity=".25"/><path d="M3 6h14v4H3z"/>'],
+];
+const KEYMAP={t:"trend",y:"ray",h:"hline",j:"hray",v:"vline",r:"rect",f:"fib",l:"long",s:"short"};
+const TB=40; // зүүн хэрэгслийн самбарын өргөн
+const DR={tool:"cursor",color:DCOLORS[0],sel:null,hover:null,draft:null,drag:null,intercept:false,dirty:true,sig:"",raf:0,saveT:{},undo:{},
+  mtf:0,sess:false,magnet:true,lock:false,hidden:false};
+try{const o=JSON.parse(localStorage.getItem("alkham-chart-opts")||"{}");DR.mtf=+o.mtf||0;DR.sess=!!o.sess;if(o.color)DR.color=o.color;if(o.magnet!=null)DR.magnet=!!o.magnet;DR.lock=!!o.lock}catch(e){}
+function drOptsSave(){try{localStorage.setItem("alkham-chart-opts",JSON.stringify({mtf:DR.mtf,sess:DR.sess,color:DR.color,magnet:DR.magnet,lock:DR.lock}))}catch(e){}}
 function drKey(){return CH.inst?CH.inst.name:""}
 function drList(){S.drawings=S.drawings||{};const k=drKey();if(!S.drawings[k])S.drawings[k]=[];return S.drawings[k]}
-function drSave(){const k=drKey(),items=drList().map(d=>({id:d.id,type:d.type,a:d.a,b:d.b,color:d.color}));
+const drClean=d=>{const o={};for(const k of ["id","type","a","b","sl","tp","t2","color","width","dash","ext"])if(d[k]!==undefined)o[k]=d[k];return o};
+function drSave(){const k=drKey(),items=drList().map(drClean);
   clearTimeout(DR.saveT[k]);DR.saveT[k]=setTimeout(()=>{
     if(S.mode==="supa")supaQueue({t:"put",coll:"settings",id:"draw:"+k,data:{items}});
     else try{localStorage.setItem("alkham-draw-"+k,JSON.stringify(items))}catch(e){}},600)}
 function drLoadLocal(){if(S.mode==="supa")return;const k=drKey();S.drawings=S.drawings||{};if(S.drawings[k])return;
   try{S.drawings[k]=JSON.parse(localStorage.getItem("alkham-draw-"+k)||"[]")}catch(e){S.drawings[k]=[]}}
+function drPush(){const k=drKey();const st=DR.undo[k]=DR.undo[k]||[];st.push(JSON.stringify(drList().map(drClean)));if(st.length>40)st.shift()}
+function drUndo(){const k=drKey(),st=DR.undo[k];if(!st||!st.length){toast("Буцаах өөрчлөлт алга");return}
+  S.drawings[k]=JSON.parse(st.pop());DR.sel=null;DR.draft=null;drSave();drSelUi();drDirty()}
 
-/* --- координат хөрвүүлэлт: хадгалахдаа жинхэнэ epoch, графикт TZ нэмсэн цаг --- */
+/* --- координат: хадгалахдаа жинхэнэ epoch, графикт TZ нэмсэн цаг --- */
 function dX(ep){const data=CH.series.data();if(!data.length)return null;const t=ep+TZ,n=data.length,g=CH.gran,ts=CH.chart.timeScale();let l;
   if(t>=data[n-1].time)l=(n-1)+(t-data[n-1].time)/g;
   else if(t<=data[0].time)l=(t-data[0].time)/g;
@@ -1401,126 +1418,227 @@ function xEp(x){const data=CH.series.data();if(!data.length)return null;const l=
   if(l>=n-1)t=data[n-1].time+(l-(n-1))*CH.gran;else if(l<=0)t=data[0].time+l*CH.gran;else{const i=Math.floor(l),f=l-i;t=data[i].time+f*(data[i+1].time-data[i].time)}
   return Math.round(t-TZ)}
 const pY=p=>CH.series.priceToCoordinate(p),yP=y=>CH.series.coordinateToPrice(y);
-function evPt(e){const r=$("#chWrap").getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;const ep=xEp(x),p=yP(y);return ep==null||p==null?null:{x,y,t:ep,p:+(+p).toFixed(decOf(CH.inst)+1)}}
-function plotBox(){const w=$("#chWrap");return {w:w.clientWidth-CH.chart.priceScale("right").width(),h:w.clientHeight-CH.chart.timeScale().height()}}
+// соронз: курсорын доорх лааны O/H/L/C-д наалдана
+function drSnap(x,y){const data=CH.series.data();const l=CH.chart.timeScale().coordinateToLogical(x);if(l==null)return null;const i=Math.round(l);
+  if(i<0||i>=data.length)return null;const b=data[i];let best=null;
+  for(const p of [b.open,b.high,b.low,b.close]){const yy=pY(p);if(yy==null)continue;const d=Math.abs(yy-y);if(!best||d<best.d)best={d,p}}
+  return best&&best.d<40?{t:b.time-TZ,p:best.p}:null}
+function evPt(e,noSnap){const r=$("#chChart").getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;
+  if(DR.magnet&&!noSnap&&!e.ctrlKey){const s=drSnap(x,y);if(s)return {x,y,t:s.t,p:s.p,snap:true}}
+  const ep=xEp(x),p=yP(y);return ep==null||p==null?null:{x,y,t:ep,p:+(+p).toFixed(decOf(CH.inst))}}
+function plotBox(){const c=$("#chChart");return {w:c.clientWidth-CH.chart.priceScale("right").width(),h:c.clientHeight-CH.chart.timeScale().height()}}
 
 /* --- зурах --- */
-function drCanvas(){const c=$("#chDraw"),w=$("#chWrap"),dpr=window.devicePixelRatio||1,W=w.clientWidth,H=w.clientHeight;
+function drCanvas(){const c=$("#chDraw"),w=$("#chChart"),dpr=window.devicePixelRatio||1,W=w.clientWidth,H=w.clientHeight;
   if(c.width!==Math.round(W*dpr)||c.height!==Math.round(H*dpr)){c.width=Math.round(W*dpr);c.height=Math.round(H*dpr);c.style.width=W+"px";c.style.height=H+"px"}
   const ctx=c.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);return ctx}
 function rgba(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`}
 function drRender(){
   if(!CH.chart||!CH.active)return;const ctx=drCanvas();const box=plotBox();if(box.w<=0)return;
   ctx.save();ctx.beginPath();ctx.rect(0,0,box.w,box.h);ctx.clip();
-  const font=getComputedStyle(document.body).getPropertyValue("--f-mono")||"monospace";
+  const font=cssVar("--f-mono")||"monospace";
   if(DR.sess&&CH.gran<=3600)drSessions(ctx,box,font);
   if(DR.mtf&&DR.mtf>CH.gran)drMtf(ctx,box);
-  for(const d of drList())drShape(ctx,d,box,font,d===DR.sel);
-  if(DR.draft)drShape(ctx,DR.draft,box,font,true);
+  if(!DR.hidden)for(const d of drList())drShape(ctx,d,box,font,d===DR.sel,d===DR.hover);
+  if(DR.draft)drShape(ctx,DR.draft,box,font,true,false);
   ctx.restore()}
-function drSessions(ctx,box,font){const r=CH.chart.timeScale().getVisibleLogicalRange();if(!r)return;
-  const t0=xEp(0),t1=xEp(box.w);if(t0==null||t1==null)return;const day=86400;
+function drSessions(ctx,box,font){const t0=xEp(0),t1=xEp(box.w);if(t0==null||t1==null)return;const day=86400;
   ctx.font=`11px ${font}`;ctx.textBaseline="top";
   for(let d=Math.floor(t0/day)*day-day;d<=t1;d+=day)SESS.forEach(([name,a,b,rgb],i)=>{
     const x1=dX(d+a*3600),x2=dX(d+b*3600);if(x1==null||x2==null||x2<0||x1>box.w)return;
     ctx.fillStyle=`rgba(${rgb},0.07)`;ctx.fillRect(x1,0,x2-x1,box.h);
     ctx.fillStyle=`rgba(${rgb},0.9)`;ctx.fillRect(x1,i*3,x2-x1,2);
-    if(x2-x1>40){ctx.fillText(name,Math.max(x1,2)+3,8+i*13)}})}
+    if(x2-x1>40)ctx.fillText(name,Math.max(x1,2)+3,8+i*13)})}
 function drMtf(ctx,box){const data=CH.series.data();if(!data.length)return;const H=DR.mtf,g=CH.gran;
   const r=CH.chart.timeScale().getVisibleLogicalRange();if(!r)return;
-  const i0=Math.max(0,Math.floor(r.from)-Math.ceil(H/g)),i1=Math.min(data.length-1,Math.ceil(r.to));
+  const i0=Math.max(0,Math.floor(r.from)-Math.ceil(H/g)),i1=Math.min(data.length-1,Math.ceil(r.to));if(i1<i0)return;
   const up=cssVar("--gain")||"#1C7449",dn=cssVar("--loss")||"#B13636";
-  const bs=Math.max(1,(dX(data[Math.max(0,i1-1)].time-TZ+g)||0)-(dX(data[Math.max(0,i1-1)].time-TZ)||0));
+  const bs=Math.max(1,(dX(data[i1].time-TZ+g)||0)-(dX(data[i1].time-TZ)||0));
   let cur=null;const groups=[];
-  for(let i=i0;i<=i1;i++){const b=data[i],ep=b.time-TZ,k=Math.floor(ep/H)*H;
+  for(let i=i0;i<=i1;i++){const b=data[i],k=Math.floor((b.time-TZ)/H)*H;
     if(!cur||cur.k!==k){cur={k,o:b.open,h:b.high,l:b.low,c:b.close};groups.push(cur)}else{cur.h=Math.max(cur.h,b.high);cur.l=Math.min(cur.l,b.low);cur.c=b.close}}
-  ctx.lineWidth=1;
+  ctx.lineWidth=1;ctx.setLineDash([]);
   for(const G of groups){const x1=dX(G.k)-bs/2,x2=dX(G.k+H-g)+bs/2;if(!isFinite(x1)||!isFinite(x2)||x2<0||x1>box.w)continue;
     const col=G.c>=G.o?up:dn,yo=pY(G.o),yc=pY(G.c),yh=pY(G.h),yl=pY(G.l);if(yo==null||yc==null)continue;
-    const top=Math.min(yo,yc),bot=Math.max(yo,yc),xm=(x1+x2)/2;
-    ctx.fillStyle=col.startsWith("#")?rgba(col,0.10):col;ctx.strokeStyle=col.startsWith("#")?rgba(col,0.75):col;
+    const top=Math.min(yo,yc),bot=Math.max(yo,yc),xm=(x1+x2)/2,hx=col.startsWith("#");
+    ctx.fillStyle=hx?rgba(col,0.10):col;ctx.strokeStyle=hx?rgba(col,0.75):col;
     ctx.fillRect(x1,top,x2-x1,Math.max(1,bot-top));ctx.strokeRect(x1+.5,top+.5,x2-x1-1,Math.max(1,bot-top)-1);
     ctx.beginPath();ctx.moveTo(xm,yh);ctx.lineTo(xm,top);ctx.moveTo(xm,bot);ctx.lineTo(xm,yl);ctx.stroke()}}
-function drShape(ctx,d,box,font,sel){
+function drLabel(ctx,text,x,y,bg,fg){ctx.font=`11px ${cssVar("--f-mono")||"monospace"}`;const w=ctx.measureText(text).width+10;x=Math.max(2,Math.min(x,plotBox().w-w-4));ctx.fillStyle=bg;ctx.fillRect(x,y-9,w,18);ctx.fillStyle=fg;ctx.textBaseline="middle";ctx.fillText(text,x+5,y)}
+function extendLine(x1,y1,x2,y2,ext,W){if(x1===x2)return [x1,y1,x2,y2];const m=(y2-y1)/(x2-x1);let a=[x1,y1],b=[x2,y2];
+  const dir=x2>x1?1:-1;if(ext==="right"||ext==="both"){const xe=dir>0?W:0;b=[xe,y1+m*(xe-x1)]}if(ext==="both"){const xs=dir>0?0:W;a=[xs,y1+m*(xs-x1)]}return [a[0],a[1],b[0],b[1]]}
+function posCalc(d){const ins=CH.inst,cs=+ins.cs||1,step=+ins.lotStep||0.01,minLot=+ins.minLot||step,dist=Math.abs(d.a.p-d.sl);
+  const riskAmt=chBalance()*(CH.risk||0)/100;let lots=dist?Math.floor(riskAmt/(dist*cs)/step+1e-9)*step:0;if(lots<minLot)lots=minLot;
+  return {lots:+lots.toFixed(4),risk:dist*cs*lots,reward:Math.abs(d.tp-d.a.p)*cs*lots,rr:dist?Math.abs(d.tp-d.a.p)/dist:0,dist,steps:+ins.tick?Math.round(dist/ins.tick):0}}
+function drShape(ctx,d,box,font,sel,hov){
   const xa=dX(d.a.t),ya=pY(d.a.p);if(xa==null||ya==null)return;
-  const xb=d.b?dX(d.b.t):null,yb=d.b?pY(d.b.p):null;
-  ctx.strokeStyle=d.color;ctx.fillStyle=d.color;ctx.lineWidth=sel?2:1.5;ctx.setLineDash([]);ctx.font=`11px ${font}`;
-  const dec=decOf(CH.inst);
-  if(d.type==="hline"){ctx.beginPath();ctx.moveTo(0,ya);ctx.lineTo(box.w,ya);ctx.stroke();
-    ctx.textBaseline="bottom";ctx.fillText((+d.a.p).toFixed(dec),box.w-ctx.measureText((+d.a.p).toFixed(dec)).width-6,ya-3)}
-  else if(d.type==="trend"&&xb!=null){ctx.beginPath();ctx.moveTo(xa,ya);ctx.lineTo(xb,yb);ctx.stroke()}
+  const xb=d.b?dX(d.b.t):null,yb=d.b?pY(d.b.p):null;const dec=decOf(CH.inst);const lw=(d.width||1.5)+(hov&&!sel?1:0);
+  ctx.strokeStyle=d.color;ctx.fillStyle=d.color;ctx.lineWidth=lw;ctx.setLineDash(d.dash?[6,4]:[]);ctx.font=`11px ${font}`;
+  if(d.type==="hline"||d.type==="hray"){ctx.beginPath();ctx.moveTo(d.type==="hray"?xa:0,ya);ctx.lineTo(box.w,ya);ctx.stroke();ctx.setLineDash([]);
+    const t=(+d.a.p).toFixed(dec);ctx.textBaseline="bottom";ctx.fillText(t,box.w-ctx.measureText(t).width-6,ya-3)}
+  else if(d.type==="vline"){ctx.beginPath();ctx.moveTo(xa,0);ctx.lineTo(xa,box.h);ctx.stroke()}
+  else if(d.type==="trend"&&xb!=null){const [p,q,r,s]=extendLine(xa,ya,xb,yb,d.ext,box.w);ctx.beginPath();ctx.moveTo(p,q);ctx.lineTo(r,s);ctx.stroke();
+    if(sel){ctx.setLineDash([]);const ch=d.b.p-d.a.p,pc=d.a.p?ch/d.a.p*100:0,bars=Math.round((d.b.t-d.a.t)/CH.gran);
+      drLabel(ctx,`${ch>=0?"+":""}${ch.toFixed(dec)} (${pc.toFixed(2)}%) · ${bars} лаа`,Math.min(Math.max(xb+8,0),box.w-200),yb,rgba(d.color,0.9),"#fff")}}
   else if(d.type==="rect"&&xb!=null){ctx.fillStyle=rgba(d.color,0.12);ctx.fillRect(Math.min(xa,xb),Math.min(ya,yb),Math.abs(xb-xa),Math.abs(yb-ya));ctx.strokeRect(Math.min(xa,xb),Math.min(ya,yb),Math.abs(xb-xa),Math.abs(yb-ya))}
-  else if(d.type==="fib"&&xb!=null){const L=Math.min(xa,xb),R=Math.max(xa,xb,L+40),range=d.b.p-d.a.p;
-    ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(xa,ya);ctx.lineTo(xb,yb);ctx.stroke();ctx.setLineDash([]);ctx.textBaseline="bottom";
-    FIB.forEach(f=>{const price=d.b.p-range*f,y=pY(price);if(y==null)return;ctx.globalAlpha=f===0||f===1?1:0.85;
-      ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(R,y);ctx.stroke();if(R>4)ctx.fillText(`${f} (${price.toFixed(dec)})`,Math.max(L,0)+3,y-2)});ctx.globalAlpha=1}
-  if(sel){const pts=[[xa,ya]];if(xb!=null&&d.type!=="hline")pts.push([xb,yb]);
-    pts.forEach(([x,y])=>{ctx.fillStyle=cssVar("--surface")||"#fff";ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle=d.color;ctx.lineWidth=2;ctx.stroke()})}}
+  else if(d.type==="fib"&&xb!=null){const L=Math.min(xa,xb),R=d.ext==="right"?box.w:Math.max(xa,xb,L+40),range=d.b.p-d.a.p;
+    ctx.save();ctx.setLineDash([4,3]);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(xa,ya);ctx.lineTo(xb,yb);ctx.stroke();ctx.restore();ctx.textBaseline="bottom";
+    let prevY=null;FIB.forEach(f=>{const price=d.b.p-range*f,y=pY(price);if(y==null)return;
+      if(prevY!=null){ctx.fillStyle=rgba(d.color,f<=1?0.06:0.03);ctx.fillRect(L,Math.min(prevY,y),R-L,Math.abs(y-prevY))}prevY=y;
+      ctx.fillStyle=d.color;ctx.globalAlpha=f===0||f===1?1:0.85;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(R,y);ctx.stroke();
+      if(R>4)ctx.fillText(`${f} (${price.toFixed(dec)})`,Math.max(L,0)+3,y-2)});ctx.globalAlpha=1}
+  else if((d.type==="long"||d.type==="short")&&d.t2!=null){const x2=dX(d.t2),ys=pY(d.sl),yt=pY(d.tp);if(x2==null||ys==null||yt==null)return;
+    const L=Math.min(xa,x2),W=Math.abs(x2-xa),gain=cssVar("--gain")||"#1C7449",loss=cssVar("--loss")||"#B13636",gx=gain.startsWith("#"),lx=loss.startsWith("#");
+    ctx.setLineDash([]);ctx.fillStyle=gx?rgba(gain,0.18):gain;ctx.fillRect(L,Math.min(ya,yt),W,Math.abs(yt-ya));
+    ctx.fillStyle=lx?rgba(loss,0.18):loss;ctx.fillRect(L,Math.min(ya,ys),W,Math.abs(ys-ya));
+    ctx.strokeStyle=cssVar("--ink")||"#222";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(L,ya);ctx.lineTo(L+W,ya);ctx.stroke();
+    const c=posCalc(d),cur=S.settings.currency||"$",lx0=Math.max(L+4,2);
+    drLabel(ctx,`Зорилт ${(+d.tp).toFixed(dec)} · ${cur}${fm(c.reward)} · ${c.rr.toFixed(2)}R`,lx0,yt+(yt<ya?-12:12),gx?rgba(gain,0.95):gain,"#fff");
+    drLabel(ctx,`Stop ${(+d.sl).toFixed(dec)} · ${CH.inst.kind==="step"?c.steps+" алхам":c.dist.toFixed(dec)} · ${cur}${fm(c.risk)}`,lx0,ys+(ys>ya?12:-12),lx?rgba(loss,0.95):loss,"#fff");
+    if(sel||hov)drLabel(ctx,`${d.type==="long"?"Long":"Short"} ${fm(c.lots,2)} лот @ ${(+d.a.p).toFixed(dec)}`,lx0,ya+(d.type==="long"?12:-12),rgba("#202826",0.9),"#fff")}
+  if(sel){ctx.setLineDash([]);for(const h of drHandles(d)){ctx.fillStyle=cssVar("--surface")||"#fff";ctx.beginPath();ctx.arc(h.x,h.y,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle=d.color||cssVar("--ink");ctx.lineWidth=2;ctx.stroke()}}}
+function drHandles(d){const xa=dX(d.a.t),ya=pY(d.a.p);if(xa==null||ya==null)return [];const H=[];
+  if(d.type==="trend"||d.type==="rect"||d.type==="fib"){H.push({k:"a",x:xa,y:ya});const xb=dX(d.b.t),yb=pY(d.b.p);if(xb!=null&&yb!=null)H.push({k:"b",x:xb,y:yb})}
+  else if(d.type==="hray")H.push({k:"a",x:xa,y:ya});
+  else if(d.type==="long"||d.type==="short"){const x2=dX(d.t2);H.push({k:"a",x:xa,y:ya},{k:"sl",x:xa,y:pY(d.sl)},{k:"tp",x:xa,y:pY(d.tp)});if(x2!=null)H.push({k:"t2",x:x2,y:ya})}
+  return H.filter(h=>h.y!=null&&isFinite(h.y))}
 
 /* --- хит тест --- */
 function segDist(px,py,x1,y1,x2,y2){const dx=x2-x1,dy=y2-y1,L=dx*dx+dy*dy;let t=L?((px-x1)*dx+(py-y1)*dy)/L:0;t=Math.max(0,Math.min(1,t));return Math.hypot(px-(x1+t*dx),py-(y1+t*dy))}
-function drHit(x,y){const box=plotBox();
-  if(DR.sel){const d=DR.sel,xa=dX(d.a.t),ya=pY(d.a.p);if(xa!=null&&Math.hypot(x-xa,y-ya)<9)return {d,h:"a"};
-    if(d.b&&d.type!=="hline"){const xb=dX(d.b.t),yb=pY(d.b.p);if(xb!=null&&Math.hypot(x-xb,y-yb)<9)return {d,h:"b"}}}
+function drHit(x,y){if(DR.hidden)return null;const box=plotBox();
+  if(DR.sel)for(const h of drHandles(DR.sel))if(Math.hypot(x-h.x,y-h.y)<9)return {d:DR.sel,h:h.k};
   const list=drList();for(let i=list.length-1;i>=0;i--){const d=list[i],xa=dX(d.a.t),ya=pY(d.a.p);if(xa==null||ya==null)continue;
     if(d.type==="hline"){if(Math.abs(y-ya)<6&&x<box.w)return {d,h:"move"};continue}
+    if(d.type==="hray"){if(Math.abs(y-ya)<6&&x>=xa-6&&x<box.w)return {d,h:"move"};continue}
+    if(d.type==="vline"){if(Math.abs(x-xa)<6)return {d,h:"move"};continue}
+    if(d.type==="long"||d.type==="short"){const x2=dX(d.t2),ys=pY(d.sl),yt=pY(d.tp);if(x2==null)continue;const t=Math.min(ys,yt,ya),b=Math.max(ys,yt,ya);
+      if(x>=Math.min(xa,x2)-4&&x<=Math.max(xa,x2)+4&&y>=t-4&&y<=b+4)return {d,h:"move"};continue}
     const xb=dX(d.b.t),yb=pY(d.b.p);if(xb==null||yb==null)continue;
-    if(d.type==="trend"&&segDist(x,y,xa,ya,xb,yb)<6)return {d,h:"move"};
+    if(d.type==="trend"){const [p,q,r,s]=extendLine(xa,ya,xb,yb,d.ext,box.w);if(segDist(x,y,p,q,r,s)<6)return {d,h:"move"}}
     if(d.type==="rect"&&x>=Math.min(xa,xb)-4&&x<=Math.max(xa,xb)+4&&y>=Math.min(ya,yb)-4&&y<=Math.max(ya,yb)+4)return {d,h:"move"};
-    if(d.type==="fib"){const L=Math.min(xa,xb),R=Math.max(xa,xb,L+40);if(x>=L-4&&x<=R+4){const range=d.b.p-d.a.p;if(FIB.some(f=>{const yy=pY(d.b.p-range*f);return yy!=null&&Math.abs(y-yy)<5}))return {d,h:"move"}}}}
+    if(d.type==="fib"){const L=Math.min(xa,xb),R=d.ext==="right"?box.w:Math.max(xa,xb,L+40);const range=d.b.p-d.a.p;
+      if(x>=L-4&&x<=R+4){const ys=FIB.map(f=>pY(d.b.p-range*f)).filter(v=>v!=null);if(ys.length&&y>=Math.min(...ys)-5&&y<=Math.max(...ys)+5)return {d,h:"move"}}}}
   return null}
+
+/* --- үүсгэх --- */
+function drNew(type,pt){const base={id:uid(),color:DR.color,width:1.5,dash:false};
+  if(type==="hline"||type==="hray"||type==="vline")return Object.assign(base,{type,a:{t:pt.t,p:pt.p}});
+  if(type==="long"||type==="short"){const r=CH.series.priceToCoordinate(pt.p),box=plotBox();
+    const off=Math.abs((yP(r-box.h*0.08)||pt.p)-pt.p)||pt.p*0.002,dir=type==="long"?1:-1,dec=decOf(CH.inst);
+    return Object.assign(base,{type,color:"#5B6670",a:{t:pt.t,p:pt.p},sl:+(pt.p-dir*off).toFixed(dec),tp:+(pt.p+dir*off*2).toFixed(dec),t2:pt.t+CH.gran*30})}
+  return Object.assign(base,{type:type==="ray"?"trend":type,ext:type==="ray"?"right":"none",a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p}})}
+const ONE_CLICK=["hline","hray","vline","long","short"];
 
 /* --- хулгана / хуруу --- */
 function drDown(e){
-  if(!CH.chart||CH.pick||e.button>0)return;const pt=evPt(e);if(!pt)return;
+  if(!CH.chart||CH.pick)return;if(e.target.closest("#dtBar,#dtProps"))return;
+  if(e.button===2){const pt0=evPt(e,true);const hit=pt0&&drHit(pt0.x,pt0.y);if(hit){e.preventDefault();e.stopPropagation();DR.sel=hit.d;drSelUi();drDirty()}return}
+  if(e.button>0)return;const pt=evPt(e);if(!pt)return;
   const stop=()=>{e.preventDefault();e.stopPropagation();DR.intercept=true};
   if(DR.tool!=="cursor"){stop();
-    if(DR.tool==="hline"){const d={id:uid(),type:"hline",a:{t:pt.t,p:pt.p},color:DR.color};drList().push(d);drFinish(d);return}
-    if(!DR.draft){DR.draft={id:uid(),type:DR.tool,a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p},color:DR.color};DR.drag={mode:"draw",x:pt.x,y:pt.y};drHint("Хоёр дахь цэг дээр дарна уу (эсвэл чирээд суллана)")}
-    else{DR.draft.b={t:pt.t,p:pt.p};const d=DR.draft;DR.draft=null;DR.drag=null;drList().push(d);drFinish(d)}
+    if(ONE_CLICK.includes(DR.tool)){drPush();const d=drNew(DR.tool,pt);drList().push(d);drFinish(d);return}
+    if(!DR.draft){DR.draft=drNew(DR.tool,pt);DR.drag={mode:"draw",x:pt.x,y:pt.y};drHint("Хоёр дахь цэг дээр дарна уу (эсвэл чирээд суллана) · Shift: хэвтээ")}
+    else{drSetB(DR.draft,pt,e);const d=DR.draft;DR.draft=null;DR.drag=null;drPush();drList().push(d);drFinish(d)}
     drDirty();return}
-  const hit=drHit(pt.x,pt.y);
-  if(hit){stop();DR.sel=hit.d;DR.drag={mode:hit.h,start:pt,a:{...hit.d.a},b:hit.d.b?{...hit.d.b}:null,moved:false};drSelUi();drDirty()}
+  const p0=evPt(e,true);const hit=p0&&drHit(p0.x,p0.y);
+  if(hit){stop();if(DR.sel!==hit.d){DR.sel=hit.d;drSelUi()}DR.drag={mode:hit.h,start:p0,orig:JSON.parse(JSON.stringify(drClean(hit.d))),moved:false};drDirty()}
   else if(DR.sel){DR.sel=null;drSelUi();drDirty()}}
-function drMove(e){if(!DR.drag&&!DR.draft){if(DR.tool==="cursor"&&CH.chart&&!CH.pick&&e.target.closest&&e.target.closest("#chWrap")){const pt=evPt(e);$("#chWrap").style.cursor=pt&&drHit(pt.x,pt.y)?"move":""}return}
-  const pt=evPt(e);if(!pt)return;if(DR.intercept)e.preventDefault();
-  if(DR.draft){DR.draft.b={t:pt.t,p:pt.p};drDirty();return}
-  const g=DR.drag,d=DR.sel;if(!g||!d)return;g.moved=true;
-  if(g.mode==="a")d.a={t:pt.t,p:pt.p};else if(g.mode==="b")d.b={t:pt.t,p:pt.p};
-  else{const dt=pt.t-g.start.t,dp=pt.p-g.start.p;d.a={t:g.a.t+dt,p:+(g.a.p+dp).toFixed(6)};if(g.b)d.b={t:g.b.t+dt,p:+(g.b.p+dp).toFixed(6)}}
+function drSetB(d,pt,e){d.b={t:pt.t,p:e&&e.shiftKey?d.a.p:pt.p}}
+function drMove(e){
+  if(!DR.drag&&!DR.draft){if(CH.chart&&!CH.pick&&e.target.closest&&e.target.closest("#chChart")){const p=evPt(e,true);const hit=p&&DR.tool==="cursor"?drHit(p.x,p.y):null;
+      const hv=hit?hit.d:null;if(hv!==DR.hover){DR.hover=hv;drDirty()}$("#chChart").style.cursor=hit?(hit.h==="move"?"move":"grab"):""}return}
+  if(DR.intercept)e.preventDefault();
+  if(DR.draft){const pt=evPt(e);if(pt){drSetB(DR.draft,pt,e);drDirty()}return}
+  const g=DR.drag,d=DR.sel;if(!g||!d)return;const o=g.orig;
+  const pt=evPt(e,g.mode==="move");if(!pt)return;if(!g.moved){drPushFrom(o);g.moved=true}
+  const dec=decOf(CH.inst);
+  if(g.mode==="move"){const dt=pt.t-g.start.t,dp=pt.p-g.start.p;
+    d.a={t:o.a.t+(d.type==="hline"?0:dt),p:+(o.a.p+(d.type==="vline"?0:dp)).toFixed(dec)};
+    if(o.b)d.b={t:o.b.t+dt,p:+(o.b.p+dp).toFixed(dec)};
+    if(o.sl!=null){d.sl=+(o.sl+dp).toFixed(dec);d.tp=+(o.tp+dp).toFixed(dec);d.t2=o.t2+dt}}
+  else if(g.mode==="a"){if(d.type==="long"||d.type==="short"){d.a={t:pt.t,p:pt.p}}else d.a={t:pt.t,p:pt.p}}
+  else if(g.mode==="b")drSetB(d,pt,e);
+  else if(g.mode==="sl")d.sl=+(+pt.p).toFixed(dec);else if(g.mode==="tp")d.tp=+(+pt.p).toFixed(dec);
+  else if(g.mode==="t2")d.t2=Math.max(pt.t,d.a.t+CH.gran);
   drDirty()}
+function drPushFrom(orig){const k=drKey();const st=DR.undo[k]=DR.undo[k]||[];const list=drList().map(x=>x.id===orig.id?orig:drClean(x));st.push(JSON.stringify(list));if(st.length>40)st.shift()}
 function drUp(e){const g=DR.drag;
-  if(DR.draft&&g&&g.mode==="draw"){const pt=evPt(e);if(pt&&Math.hypot(pt.x-g.x,pt.y-g.y)>6){DR.draft.b={t:pt.t,p:pt.p};const d=DR.draft;DR.draft=null;drList().push(d);drFinish(d)}DR.drag=null}
-  else if(g&&g.mode!=="draw"){DR.drag=null;if(g.moved)drSave()}
+  if(DR.draft&&g&&g.mode==="draw"){const pt=evPt(e);if(pt&&Math.hypot(pt.x-g.x,pt.y-g.y)>6){drSetB(DR.draft,pt,e);const d=DR.draft;DR.draft=null;drPush();drList().push(d);drFinish(d)}DR.drag=null}
+  else if(g&&g.mode!=="draw"){DR.drag=null;if(g.moved){drSave();drPropsUi()}}
   setTimeout(()=>{DR.intercept=false},0)}
-function drFinish(d){DR.sel=d;drSetTool("cursor");drSave();drSelUi();drDirty()}
+function drFinish(d){DR.sel=d;if(!DR.lock)drSetTool("cursor");else drHint(drToolHint(DR.tool));drSave();drSelUi();drDirty()}
 function drHint(t){const h=$("#chHint");h.hidden=!t;if(t)h.textContent=t}
-function drSetTool(t){DR.tool=t;DR.draft=null;$$("#dtTool button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===t)));
-  const w=$("#chWrap");w.classList.toggle("drawing",t!=="cursor");
-  drHint(t==="cursor"?"":t==="hline"?"Шугам татах үнэ дээр дарна уу":"Эхний цэг дээр дарна уу")}
-function drSelUi(){const b=$("[data-ch=dtDel]");if(b)b.disabled=!DR.sel}
-function drDelete(){if(!DR.sel)return;const L=drList(),i=L.indexOf(DR.sel);if(i>=0)L.splice(i,1);DR.sel=null;drSave();drSelUi();drDirty()}
+function drToolHint(t){return t==="cursor"?"":ONE_CLICK.includes(t)?(t==="long"||t==="short"?"Орох үнэ дээр дарна уу · дараа нь SL, TP-г чирж тохируулна":"Байрлуулах цэг дээр дарна уу"):"Эхний цэг дээр дарна уу"}
+function drSetTool(t){DR.tool=t;DR.draft=null;$$("#dtBar [data-tool]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.tool===t)));
+  $("#chWrap").classList.toggle("drawing",t!=="cursor");drHint(drToolHint(t))}
+function drSelUi(){drPropsUi()}
+function drDelete(){if(!DR.sel)return;drPush();const L=drList(),i=L.indexOf(DR.sel);if(i>=0)L.splice(i,1);DR.sel=null;drSave();drSelUi();drDirty()}
 function drDirty(){DR.dirty=true}
+
+/* --- сонгосон зургийн самбар --- */
+function drPropsUi(){const el=$("#dtProps");if(!el)return;const d=DR.sel;if(!d){el.hidden=true;return}el.hidden=false;
+  const pos=d.type==="long"||d.type==="short",lineish=d.type==="trend"||d.type==="fib";
+  el.innerHTML=`${pos?"":`<div class="swatches">${DCOLORS.map(c=>`<button type="button" data-prop="color" data-v="${c}" style="background:${c}" aria-label="Өнгө" aria-pressed="${c===d.color}"></button>`).join("")}</div>
+    <div class="seg" role="group" aria-label="Зузаан">${[1,1.5,2.5].map((w,i)=>`<button type="button" data-prop="width" data-v="${w}" aria-pressed="${(d.width||1.5)===w}">${["Нимгэн","Дунд","Зузаан"][i]}</button>`).join("")}</div>
+    <button type="button" class="btn sm" data-prop="dash" aria-pressed="${!!d.dash}">${d.dash?"Тасархай":"Үргэлжилсэн"}</button>`}
+    ${lineish?`<div class="seg" role="group" aria-label="Сунгах">${(d.type==="fib"?[["none","Богино"],["right","Баруун тийш"]]:[["none","Сунгахгүй"],["right","Баруун"],["both","Хоёр тал"]]).map(([v,l])=>`<button type="button" data-prop="ext" data-v="${v}" aria-pressed="${(d.ext||"none")===v}">${l}</button>`).join("")}</div>`:""}
+    ${pos?`<span class="muted" style="font-size:12px">${d.type==="long"?"Long":"Short"} позиц — бүсийг чирж зөөнө, бариулаар SL/TP-г өөрчилнө</span><button type="button" class="btn sm primary" data-prop="toOrder">Захиалгын тооцоонд ашиглах</button>`:""}
+    <button type="button" class="btn sm" data-prop="clone" title="Хуулбарлах">Хуулбар</button>
+    <button type="button" class="btn sm danger" data-prop="del" title="Устгах (Delete)">Устгах</button>`}
+function drProp(btn){const d=DR.sel;if(!d)return;const k=btn.dataset.prop,v=btn.dataset.v;
+  if(k==="del"){drDelete();return}
+  if(k==="toOrder"){CH.dir=d.type==="long"?"Buy":"Sell";if(CH.mode!=="replay"){CH.mkt=false;$("#opMkt").checked=false;$("#opEntry").value=(+d.a.p).toFixed(decOf(CH.inst))}
+    $("#opSl").value=(+d.sl).toFixed(decOf(CH.inst));$("#opTp").value=(+d.tp).toFixed(decOf(CH.inst));if($("#chartRoot").classList.contains("wide"))chWide(false);chUpdate();toast("Захиалгын тооцоонд шилжүүллээ");return}
+  drPush();
+  if(k==="clone"){const c=JSON.parse(JSON.stringify(drClean(d)));c.id=uid();const dt=CH.gran*10;c.a.t+=dt;if(c.b)c.b.t+=dt;if(c.t2)c.t2+=dt;drList().push(c);DR.sel=c}
+  else if(k==="color"){d.color=v;DR.color=v;drOptsSave()}
+  else if(k==="width")d.width=+v;else if(k==="dash")d.dash=!d.dash;else if(k==="ext")d.ext=v;
+  drSave();drPropsUi();drDirty()}
+
+/* --- зүүн хэрэгслийн самбар --- */
+function drBarHtml(){const ic=p=>`<svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+  return TOOLS.map(([k,n,sc,p])=>`<button type="button" data-tool="${k}" aria-pressed="${k===DR.tool}" title="${n} (${sc})" aria-label="${n}">${ic(p)}</button>`).join("")
+  +`<span class="sep"></span>
+  <button type="button" data-dt="magnet" aria-pressed="${DR.magnet}" title="Соронз — лааны O/H/L/C-д наалдах (Ctrl дарвал түр унтарна)" aria-label="Соронз">${ic('<path d="M5 3v7a5 5 0 0010 0V3"/><path d="M5 6h3M12 6h3"/>')}</button>
+  <button type="button" data-dt="lock" aria-pressed="${DR.lock}" title="Зурах горимыг түгжих — нэг хэрэгслээр олон удаа зурах" aria-label="Түгжих">${ic('<rect x="4.5" y="9" width="11" height="8" rx="1.5"/><path d="M7 9V6.5a3 3 0 016 0V9"/>')}</button>
+  <button type="button" data-dt="hide" aria-pressed="${DR.hidden}" title="Бүх зургийг нуух/харуулах" aria-label="Нуух">${ic('<path d="M2 10s3-5.5 8-5.5S18 10 18 10s-3 5.5-8 5.5S2 10 2 10z"/><circle cx="10" cy="10" r="2.3"/>')}</button>
+  <button type="button" data-dt="undo" title="Буцаах (Ctrl+Z)" aria-label="Буцаах">${ic('<path d="M7 5L3 9l4 4"/><path d="M3 9h9a5 5 0 010 10h-2"/>')}</button>
+  <button type="button" data-dt="clear" title="Энэ хэрэгслийн бүх зургийг арилгах" aria-label="Бүгдийг арилгах">${ic('<path d="M4 6h12M8 6V4h4v2M6 6l1 11h6l1-11"/>')}</button>`}
+function drBarClick(b){
+  if(b.dataset.tool){drSetTool(b.dataset.tool);if(b.dataset.tool!=="cursor"){DR.sel=null;drSelUi()}drDirty();return}
+  const k=b.dataset.dt;
+  if(k==="magnet"){DR.magnet=!DR.magnet;b.setAttribute("aria-pressed",String(DR.magnet));drOptsSave();toast(DR.magnet?"Соронз асаалаа":"Соронз унтраалаа")}
+  else if(k==="lock"){DR.lock=!DR.lock;b.setAttribute("aria-pressed",String(DR.lock));drOptsSave();toast(DR.lock?"Зурах горим түгжигдлээ":"Түгжээ тайлагдлаа")}
+  else if(k==="hide"){DR.hidden=!DR.hidden;b.setAttribute("aria-pressed",String(DR.hidden));if(DR.hidden){DR.sel=null;drSelUi()}drDirty()}
+  else if(k==="undo")drUndo();
+  else if(k==="clear"){if(!drList().length){toast("Арилгах зураг алга");return}if(b.dataset.confirm!=="1"){b.dataset.confirm="1";b.classList.add("confirm");toast("Дахин дарж бүх зургийг арилгана");setTimeout(()=>{b.dataset.confirm="";b.classList.remove("confirm")},3000);return}
+    b.dataset.confirm="";b.classList.remove("confirm");drPush();drList().length=0;DR.sel=null;drSave();drSelUi();drDirty();toast("Зургуудыг арилгалаа (Ctrl+Z буцаана)")}}
+
 function drLoop(){cancelAnimationFrame(DR.raf);const tick=()=>{if(!CH.active||!CH.chart){DR.raf=0;return}
-  const r=CH.chart.timeScale().getVisibleLogicalRange(),w=$("#chWrap"),d=CH.series.data(),ref=d.length?d[d.length-1].close:0;
-  const sig=[r&&r.from.toFixed(3),r&&r.to.toFixed(3),pY(ref),pY(ref*1.01),w.clientWidth,w.clientHeight,d.length,ref].join("|");
+  const r=CH.chart.timeScale().getVisibleLogicalRange(),w=$("#chChart"),d=CH.series.data(),ref=d.length?d[d.length-1].close:0;
+  const sig=[r&&r.from.toFixed(3),r&&r.to.toFixed(3),pY(ref),pY(ref*1.01),w.clientWidth,w.clientHeight,d.length,ref,CH.risk].join("|");
   if(DR.dirty||sig!==DR.sig){DR.sig=sig;DR.dirty=false;drRender()}DR.raf=requestAnimationFrame(tick)};DR.raf=requestAnimationFrame(tick)}
 function drInit(){
-  const w=$("#chWrap");
+  const w=$("#chWrap"),bar=$("#dtBar");bar.innerHTML=drBarHtml();
+  bar.addEventListener("click",e=>{const b=e.target.closest("button");if(b)drBarClick(b)});
+  $("#dtProps").addEventListener("click",e=>{const b=e.target.closest("[data-prop]");if(b)drProp(b)});
   w.addEventListener("pointerdown",drDown,true);
-  ["mousedown","touchstart"].forEach(ev=>w.addEventListener(ev,e=>{if(DR.intercept||DR.tool!=="cursor"){e.stopPropagation();if(ev==="touchstart"&&DR.tool!=="cursor")e.preventDefault()}},{capture:true,passive:false}));
+  w.addEventListener("contextmenu",e=>{if(e.target.closest("#chChart")){const p=evPt(e,true);if(p&&drHit(p.x,p.y))e.preventDefault()}});
+  ["mousedown","touchstart"].forEach(ev=>w.addEventListener(ev,e=>{if(e.target.closest("#dtBar,#dtProps"))return;if(DR.intercept||DR.tool!=="cursor"){e.stopPropagation();if(ev==="touchstart"&&DR.tool!=="cursor")e.preventDefault()}},{capture:true,passive:false}));
   w.addEventListener("touchmove",e=>{if(DR.intercept||DR.draft){e.stopPropagation();e.preventDefault()}},{capture:true,passive:false});
   window.addEventListener("pointermove",drMove,{passive:false});window.addEventListener("pointerup",drUp);window.addEventListener("pointercancel",drUp);
   document.addEventListener("keydown",e=>{if(S.view!=="chart"||!CH.active)return;const tag=(document.activeElement||{}).tagName;if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT")return;
+    if(e.altKey&&!e.ctrlKey&&KEYMAP[e.key.toLowerCase()]){e.preventDefault();drSetTool(KEYMAP[e.key.toLowerCase()]);DR.sel=null;drSelUi();drDirty();return}
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){e.preventDefault();drUndo();return}
     if((e.key==="Delete"||e.key==="Backspace")&&DR.sel){e.preventDefault();drDelete()}
     else if(e.key==="Escape"){if(DR.draft||DR.tool!=="cursor")drSetTool("cursor");else if(DR.sel){DR.sel=null;drSelUi()}drDirty()}});
 }
 
 /* --- clicks inside chart tab --- */
 async function chClick(e){
+  if(e.target.closest("#dtBar,#dtProps"))return;
   const seg=e.target.closest(".seg button");
   if(seg){const g=seg.parentElement;if(seg.disabled)return;$$("button",g).forEach(b=>b.setAttribute("aria-pressed",String(b===seg)));
-    if(g.id==="dtTool"){drSetTool(seg.dataset.v);DR.sel=null;drSelUi();drDirty();return}
     if(g.id==="chGran"){CH.gran=+seg.dataset.v;chReload()}
     else if(g.id==="opDir"){CH.dir=seg.dataset.v;chUpdate()}
     else if(g.id==="chMode"){const m=seg.dataset.v;if(m===CH.mode)return;CH.mode=m;$("#chReplay").hidden=m!=="replay";
@@ -1529,8 +1647,6 @@ async function chClick(e){
         else{CH.last=null;chStatus("Эхлэх цагаа сонгоод Ачаалах дарна уу.")}chUpdate()}}
     return}
   const rk=e.target.closest("#opRisk button");if(rk){CH.risk=+rk.dataset.v;chUpdate();return}
-  const sw=e.target.closest("#dtColor button");if(sw){DR.color=sw.dataset.v;$$("#dtColor button").forEach(x=>x.setAttribute("aria-pressed",String(x===sw)));
-    if(DR.sel){DR.sel.color=DR.color;drSave();drDirty()}drOptsSave();return}
   const b=e.target.closest("[data-ch]");if(!b||b.disabled)return;const act=b.dataset.ch;
   if(act==="pick"){CH.pick=CH.pick===b.dataset.k?null:b.dataset.k;const h=$("#chHint");h.hidden=!CH.pick;h.textContent=CH.pick==="sl"?"Stop-loss тавих үнэ дээр графикт дарна уу":"Зорилтот үнэ дээр графикт дарна уу";$("#chWrap").classList.toggle("picking",!!CH.pick)}
   else if(act==="rr"){const o=chCalc();if(o.entry==null||o.sl==null){toast("Эхлээд Stop-loss тавина уу.");return}const d=(CH.rp.pos?CH.rp.pos.dir:CH.dir)==="Sell"?-1:1;$("#opTp").value=fmtP(o.entry+d*Math.abs(o.entry-o.sl)*+b.dataset.v);chUpdate()}
@@ -1540,9 +1656,6 @@ async function chClick(e){
     ts.applyOptions({barSpacing:nx});CH.bs=nx;try{localStorage.setItem("alkham-chart-bs",String(nx))}catch(e){}ts.scrollToRealTime();drDirty();chZones()}
   else if(act==="wide")chWide(!$("#chartRoot").classList.contains("wide"));
   else if(act==="full"){const el=$("#chPanel");try{if(document.fullscreenElement)await document.exitFullscreen();else if(el.requestFullscreen)await el.requestFullscreen();else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();else toast("Энэ хөтөч бүтэн дэлгэцийг дэмжихгүй байна.")}catch(e){toast("Бүтэн дэлгэц нээгдсэнгүй.")}}
-  else if(act==="dtDel")drDelete();
-  else if(act==="dtClear"){if(!drList().length)return;if(b.dataset.confirm!=="1"){b.dataset.confirm="1";b.textContent="Дахин дарж баталгаажуулна уу";setTimeout(()=>{b.dataset.confirm="";b.textContent="Бүгдийг арилгах"},3000);return}
-    b.dataset.confirm="";b.textContent="Бүгдийг арилгах";drList().length=0;DR.sel=null;drSave();drSelUi();drDirty();toast("Зургуудыг арилгалаа")}
   else if(act==="rpLoad")rpLoad();
   else if(act==="rpStep"){rpPause();rpStep()}
   else if(act==="rpPlay")rpPlay();
