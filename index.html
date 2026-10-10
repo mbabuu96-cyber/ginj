@@ -1101,7 +1101,7 @@ function chBuild(){
       <select id="chInst" aria-label="Хэрэгсэл"></select>
       <div class="seg" id="chGran" role="group" aria-label="Хугацааны интервал">${GRANS.map(([g,l])=>`<button type="button" data-v="${g}" aria-pressed="${g===CH.gran}">${l}</button>`).join("")}</div>
       <div class="seg" id="chMode" role="group" aria-label="Горим"><button type="button" data-v="live" aria-pressed="true">Шууд</button><button type="button" data-v="replay" aria-pressed="false">Давтан тоглуулах</button></div>
-      <div class="ch-view"><button type="button" class="btn sm" data-ch="wide" id="btnWide" title="Захиалгын самбарыг нууж графикийг өргөсгөх">Өргөн</button><button type="button" class="btn sm" data-ch="full" id="btnFull" title="Бүтэн дэлгэцээр харах (Esc гарах)">⛶ Бүтэн дэлгэц</button></div>
+      <div class="ch-view"><button type="button" class="btn sm" data-ch="zoom" data-v="-1" title="Лааг жижигрүүлэх" aria-label="Лааг жижигрүүлэх">−</button><button type="button" class="btn sm" data-ch="zoom" data-v="1" title="Лааг томруулах" aria-label="Лааг томруулах">＋</button><button type="button" class="btn sm" data-ch="wide" id="btnWide" title="Захиалгын самбарыг нууж графикийг өргөсгөх">Өргөн</button><button type="button" class="btn sm" data-ch="full" id="btnFull" title="Бүтэн дэлгэцээр харах (Esc гарах)">⛶ Бүтэн дэлгэц</button></div>
       <span class="ch-status" id="chStatus" role="status"></span>
     </div>
     <div class="ch-tools" id="chTools">
@@ -1166,7 +1166,8 @@ async function chCreateChart(){
   if(CH.chart)return true;
   try{await loadScriptOnce(LWC_LIB,"LightweightCharts")}catch(e){chEmpty("График зурах санг ачаалж чадсангүй. Интернэтээ шалгаад хуудсаа дахин ачаална уу.");return false}
   const LW=window.LightweightCharts;
-  CH.chart=LW.createChart($("#chChart"),{autoSize:true,timeScale:{timeVisible:true,secondsVisible:false,rightOffset:8},crosshair:{mode:0},localization:{locale:"en-US"}});
+  let bs=12;try{bs=+localStorage.getItem("alkham-chart-bs")||12}catch(e){}CH.bs=Math.max(3,Math.min(60,bs));
+  CH.chart=LW.createChart($("#chChart"),{autoSize:true,timeScale:{timeVisible:true,secondsVisible:false,rightOffset:8,barSpacing:CH.bs,minBarSpacing:2},crosshair:{mode:0},localization:{locale:"en-US"}});
   CH.series=CH.chart.addCandlestickSeries({priceLineVisible:true});
   if(CH.inst){const d=decOf(CH.inst);CH.series.applyOptions({priceFormat:{type:"price",precision:d,minMove:+(10**-d).toFixed(d)}})}
   chTheme();
@@ -1518,6 +1519,8 @@ async function chClick(e){
   else if(act==="rr"){const o=chCalc();if(o.entry==null||o.sl==null){toast("Эхлээд Stop-loss тавина уу.");return}const d=(CH.rp.pos?CH.rp.pos.dir:CH.dir)==="Sell"?-1:1;$("#opTp").value=fmtP(o.entry+d*Math.abs(o.entry-o.sl)*+b.dataset.v);chUpdate()}
   else if(act==="go"){const o=chCalc();if(o.entry==null){toast("Орох үнэ алга.");return}
     openForm(null,{inst:CH.inst.name,dir:CH.dir,entry:+fmtP(o.entry),sl:o.sl??"",tp:o.tp??"",lots:o.lots??"",open:nowLocal(),balance:+o.bal.toFixed(2)})}
+  else if(act==="zoom"){const ts=CH.chart.timeScale();const cur=ts.options().barSpacing||CH.bs;const nx=Math.max(3,Math.min(60,Math.round(cur*(+b.dataset.v>0?1.35:1/1.35))));
+    ts.applyOptions({barSpacing:nx});CH.bs=nx;try{localStorage.setItem("alkham-chart-bs",String(nx))}catch(e){}ts.scrollToRealTime();drDirty();chZones()}
   else if(act==="wide")chWide(!$("#chartRoot").classList.contains("wide"));
   else if(act==="full"){const el=$("#chPanel");try{if(document.fullscreenElement)await document.exitFullscreen();else if(el.requestFullscreen)await el.requestFullscreen();else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();else toast("Энэ хөтөч бүтэн дэлгэцийг дэмжихгүй байна.")}catch(e){toast("Бүтэн дэлгэц нээгдсэнгүй.")}}
   else if(act==="dtDel")drDelete();
