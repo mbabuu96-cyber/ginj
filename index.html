@@ -226,6 +226,16 @@ svg text{font-family:var(--f-mono)}
 .dt-props .seg button{padding:2px 7px;font-size:11px}
 .dt-props .btn.sm{padding:2px 7px;font-size:11px;border-radius:6px}
 .dt-props .swatches button{width:16px;height:16px}
+.fib-dlg{width:min(560px,calc(100vw - 24px))}
+.fib-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px}
+@media (max-width:520px){.fib-grid{grid-template-columns:1fr}}
+.fib-row{display:grid;grid-template-columns:auto 1fr 34px auto;gap:6px;align-items:center}
+.fib-row.off input[type=number]{opacity:.5}
+.fib-row input[type=number]{padding:5px 8px}
+.fib-row input[type=color]{width:34px;height:28px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer}
+.fib-opts{display:flex;flex-wrap:wrap;gap:8px 16px}
+.fib-opt{font-size:13px;color:var(--ink)}
+.fib-opt select{width:auto;padding:3px 6px}
 .dt-props .vsep{width:1px;height:18px;background:var(--line);margin:0 2px}
 .zone{position:absolute;pointer-events:none;z-index:2}
 .zone.tp{background:color-mix(in srgb,var(--gain) 15%,transparent);border-top:1px dashed var(--gain);border-bottom:1px dashed var(--gain)}
@@ -1382,6 +1392,12 @@ async function rpSave(){const R=CH.rp;const list=R.results.filter(r=>!r.saved);i
 /* ---------------- Зурах хэрэгсэл, дээд интервалын лаа, сешн ---------------- */
 const DCOLORS=["#2F6FDE","#C8961E","#16936A","#C43D3D","#8A5AD6","#5B6670"];
 const FIB=[0,0.236,0.382,0.5,0.618,0.786,1,1.618,2.618,4.236];
+// Фибоначчийн анхдагч түвшин (асаалттай/унтраалттай), өнгө — хэрэглэгч өөрчилж, анхдагч болгон хадгалж болно
+const FIB_BASE={levels:[[0,1,"#787B86"],[0.236,1,"#E05D5D"],[0.382,1,"#D9A23A"],[0.5,1,"#4CAF6F"],[0.618,1,"#2E9E8F"],[0.786,1,"#3A8FD9"],[1,1,"#787B86"],
+  [1.272,0,"#B3612A"],[1.414,0,"#E05D5D"],[1.618,1,"#3A8FD9"],[2,0,"#B3612A"],[2.618,1,"#E05D5D"],[3,0,"#6C5CC7"],[3.618,1,"#8A5AD6"],[4.236,1,"#D94C8A"],[4.618,0,"#2E9E8F"]].map(([v,on,c])=>({v,on:!!on,c})),
+  opt:{prices:true,values:true,side:"left",extL:false,extR:false,reverse:false,bg:true,one:false}};
+function fibDefault(){try{const o=JSON.parse(localStorage.getItem("alkham-fib-default")||"null");if(o&&Array.isArray(o.levels)&&o.levels.length)return JSON.parse(JSON.stringify({levels:o.levels,opt:Object.assign({},FIB_BASE.opt,o.opt)}))}catch(e){}return JSON.parse(JSON.stringify(FIB_BASE))}
+function fibOf(d){if(!d.levels){const f=fibDefault();return {levels:f.levels,opt:Object.assign({},f.opt,{extR:d.ext==="right"||f.opt.extR})}}return {levels:d.levels,opt:Object.assign({},FIB_BASE.opt,d.fopt)}}
 const SESS=[["Ази",0,9,"47,111,222"],["Лондон",7,16,"22,147,106"],["Нью-Йорк",13,22,"200,150,30"]]; // UTC цаг (зуны цагийг тооцоогүй)
 const TOOLS=[ // [түлхүүр, нэр, товчлол, svg path]
   ["cursor","Курсор — сонгох, зөөх","Esc",'<path d="M5 3l12 6-5 1.6L10 16z"/>'],
@@ -1403,7 +1419,7 @@ try{const o=JSON.parse(localStorage.getItem("alkham-chart-opts")||"{}");DR.mtf=+
 function drOptsSave(){try{localStorage.setItem("alkham-chart-opts",JSON.stringify({mtf:DR.mtf,sess:DR.sess,color:DR.color,magnet:DR.magnet,lock:DR.lock}))}catch(e){}}
 function drKey(){return CH.inst?CH.inst.name:""}
 function drList(){S.drawings=S.drawings||{};const k=drKey();if(!S.drawings[k])S.drawings[k]=[];return S.drawings[k]}
-const drClean=d=>{const o={};for(const k of ["id","type","a","b","sl","tp","t2","color","width","dash","ext"])if(d[k]!==undefined)o[k]=d[k];return o};
+const drClean=d=>{const o={};for(const k of ["id","type","a","b","sl","tp","t2","color","width","dash","ext","levels","fopt"])if(d[k]!==undefined)o[k]=d[k];return o};
 function drSave(){const k=drKey(),items=drList().map(drClean);
   clearTimeout(DR.saveT[k]);DR.saveT[k]=setTimeout(()=>{
     if(S.mode==="supa")supaQueue({t:"put",coll:"settings",id:"draw:"+k,data:{items}});
@@ -1487,12 +1503,16 @@ function drShape(ctx,d,box,font,sel,hov){
     if(sel){ctx.setLineDash([]);const ch=d.b.p-d.a.p,pc=d.a.p?ch/d.a.p*100:0,bars=Math.round((d.b.t-d.a.t)/CH.gran);
       drLabel(ctx,`${ch>=0?"+":""}${ch.toFixed(dec)} (${pc.toFixed(2)}%) · ${bars} лаа`,Math.min(Math.max(xb+8,0),box.w-200),yb,rgba(d.color,0.9),"#fff")}}
   else if(d.type==="rect"&&xb!=null){ctx.fillStyle=rgba(d.color,0.12);ctx.fillRect(Math.min(xa,xb),Math.min(ya,yb),Math.abs(xb-xa),Math.abs(yb-ya));ctx.strokeRect(Math.min(xa,xb),Math.min(ya,yb),Math.abs(xb-xa),Math.abs(yb-ya))}
-  else if(d.type==="fib"&&xb!=null){const L=Math.min(xa,xb),R=d.ext==="right"?box.w:Math.max(xa,xb,L+40),range=d.b.p-d.a.p;
-    ctx.save();ctx.setLineDash([4,3]);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(xa,ya);ctx.lineTo(xb,yb);ctx.stroke();ctx.restore();ctx.textBaseline="bottom";
-    let prevY=null,lastLbl=-1e9;FIB.forEach(f=>{const price=d.b.p-range*f,y=pY(price);if(y==null)return;
-      if(prevY!=null){ctx.fillStyle=rgba(d.color,f<=1?0.06:0.03);ctx.fillRect(L,Math.min(prevY,y),R-L,Math.abs(y-prevY))}prevY=y;
-      ctx.fillStyle=d.color;ctx.globalAlpha=f===0||f===1?1:0.85;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(R,y);ctx.stroke();
-      const key=f===0||f===0.5||f===1;if(R>4&&(Math.abs(y-lastLbl)>=12||key)){ctx.fillText(`${f} (${price.toFixed(dec)})`,Math.max(L,0)+3,y-2);lastLbl=y}});ctx.globalAlpha=1}
+  else if(d.type==="fib"&&xb!=null){const F=fibOf(d),o=F.opt;let L=Math.min(xa,xb),R=Math.max(xa,xb,L+40);if(o.extL)L=0;if(o.extR)R=box.w;
+    const p0=o.reverse?d.a.p:d.b.p,p1=o.reverse?d.b.p:d.a.p,range=p0-p1;
+    ctx.save();ctx.setLineDash([4,3]);ctx.lineWidth=1;ctx.strokeStyle=rgba(d.color,0.7);ctx.beginPath();ctx.moveTo(xa,ya);ctx.lineTo(xb,yb);ctx.stroke();ctx.restore();
+    const lv=F.levels.filter(l=>l.on&&isFinite(+l.v)).map(l=>({v:+l.v,c:o.one?d.color:(l.c||d.color),y:pY(p0-range*+l.v),price:p0-range*+l.v})).filter(l=>l.y!=null).sort((a,b)=>a.v-b.v);
+    if(o.bg)for(let i=1;i<lv.length;i++){const A=lv[i-1],B2=lv[i];ctx.fillStyle=rgba(B2.c.startsWith("#")?B2.c:"#888888",0.08);ctx.fillRect(L,Math.min(A.y,B2.y),R-L,Math.abs(B2.y-A.y))}
+    ctx.textBaseline="bottom";let lastLbl=-1e9;
+    for(const l of lv){ctx.strokeStyle=l.c;ctx.fillStyle=l.c;ctx.beginPath();ctx.moveTo(L,l.y);ctx.lineTo(R,l.y);ctx.stroke();
+      const txt=[o.values?String(l.v):"",o.prices?`(${l.price.toFixed(dec)})`:""].filter(Boolean).join(" ");
+      const key=l.v===0||l.v===0.5||l.v===1;
+      if(txt&&R>4&&(Math.abs(l.y-lastLbl)>=12||key)){const tw=ctx.measureText(txt).width;const tx=o.side==="right"?Math.min(R,box.w)-tw-4:Math.max(L,0)+3;ctx.fillText(txt,tx,l.y-2);lastLbl=l.y}}}
   else if((d.type==="long"||d.type==="short")&&d.t2!=null){const x2=dX(d.t2),ys=pY(d.sl),yt=pY(d.tp);if(x2==null||ys==null||yt==null)return;
     const L=Math.min(xa,x2),W=Math.abs(x2-xa),gain=cssVar("--gain")||"#1C7449",loss=cssVar("--loss")||"#B13636",gx=gain.startsWith("#"),lx=loss.startsWith("#");
     ctx.setLineDash([]);ctx.fillStyle=gx?rgba(gain,0.18):gain;ctx.fillRect(L,Math.min(ya,yt),W,Math.abs(yt-ya));
@@ -1522,8 +1542,8 @@ function drHit(x,y){if(DR.hidden)return null;const box=plotBox();
     const xb=dX(d.b.t),yb=pY(d.b.p);if(xb==null||yb==null)continue;
     if(d.type==="trend"){const [p,q,r,s]=extendLine(xa,ya,xb,yb,d.ext,box.w);if(segDist(x,y,p,q,r,s)<6)return {d,h:"move"}}
     if(d.type==="rect"&&x>=Math.min(xa,xb)-4&&x<=Math.max(xa,xb)+4&&y>=Math.min(ya,yb)-4&&y<=Math.max(ya,yb)+4)return {d,h:"move"};
-    if(d.type==="fib"){const L=Math.min(xa,xb),R=d.ext==="right"?box.w:Math.max(xa,xb,L+40);const range=d.b.p-d.a.p;
-      if(x>=L-4&&x<=R+4){const ys=FIB.map(f=>pY(d.b.p-range*f)).filter(v=>v!=null);if(ys.length&&y>=Math.min(...ys)-5&&y<=Math.max(...ys)+5)return {d,h:"move"}}}}
+    if(d.type==="fib"){const F=fibOf(d),o=F.opt;let L=Math.min(xa,xb),R=Math.max(xa,xb,L+40);if(o.extL)L=0;if(o.extR)R=box.w;const p0=o.reverse?d.a.p:d.b.p,range=p0-(o.reverse?d.b.p:d.a.p);
+      if(x>=L-4&&x<=R+4){const ys=F.levels.filter(l=>l.on).map(l=>pY(p0-range*+l.v)).filter(v=>v!=null);if(ys.length&&y>=Math.min(...ys)-5&&y<=Math.max(...ys)+5)return {d,h:"move"}}}}
   return null}
 
 /* --- үүсгэх --- */
@@ -1532,6 +1552,7 @@ function drNew(type,pt){const base={id:uid(),color:DR.color,width:1.5,dash:false
   if(type==="long"||type==="short"){const r=CH.series.priceToCoordinate(pt.p),box=plotBox();
     const off=Math.abs((yP(r-box.h*0.08)||pt.p)-pt.p)||pt.p*0.002,dir=type==="long"?1:-1,dec=decOf(CH.inst);
     return Object.assign(base,{type,color:"#5B6670",a:{t:pt.t,p:pt.p},sl:+(pt.p-dir*off).toFixed(dec),tp:+(pt.p+dir*off*2).toFixed(dec),t2:pt.t+CH.gran*30})}
+  if(type==="fib"){const f=fibDefault();return Object.assign(base,{type,a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p},levels:f.levels,fopt:f.opt})}
   return Object.assign(base,{type:type==="ray"?"trend":type,ext:type==="ray"?"right":"none",a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p}})}
 const ONE_CLICK=["hline","hray","vline","long","short"];
 
@@ -1583,16 +1604,18 @@ function drDirty(){DR.dirty=true}
 
 /* --- сонгосон зургийн самбар --- */
 function drPropsUi(){const el=$("#dtProps");if(!el)return;const d=DR.sel;if(!d){el.hidden=true;return}el.hidden=false;
-  const pos=d.type==="long"||d.type==="short",lineish=d.type==="trend"||d.type==="fib";
+  const pos=d.type==="long"||d.type==="short",lineish=d.type==="trend";
   el.innerHTML=`${pos?"":`<div class="swatches">${DCOLORS.map(c=>`<button type="button" data-prop="color" data-v="${c}" style="background:${c}" aria-label="Өнгө" aria-pressed="${c===d.color}"></button>`).join("")}</div>
     <div class="seg" role="group" aria-label="Зузаан">${[1,1.5,2.5].map((w,i)=>`<button type="button" data-prop="width" data-v="${w}" aria-pressed="${(d.width||1.5)===w}" title="${["Нимгэн","Дунд","Зузаан"][i]}" aria-label="${["Нимгэн","Дунд","Зузаан"][i]}"><svg width="16" height="10" viewBox="0 0 16 10" aria-hidden="true"><path d="M1 5h14" stroke="currentColor" stroke-width="${[1,2,3.5][i]}"/></svg></button>`).join("")}</div>
     <button type="button" class="btn sm" data-prop="dash" aria-pressed="${!!d.dash}" title="${d.dash?"Тасархай":"Үргэлжилсэн"} (солих)" aria-label="Шугамын хэв маяг"><svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true"><path d="M1 5h16" stroke="currentColor" stroke-width="2" ${d.dash?'stroke-dasharray="4 3"':""}/></svg></button><span class="vsep"></span>`}
     ${lineish?`<div class="seg" role="group" aria-label="Сунгах">${(d.type==="fib"?[["none","Богино"],["right","Сунгах →"]]:[["none","—"],["right","→"],["both","↔"]]).map(([v,l])=>`<button type="button" data-prop="ext" data-v="${v}" aria-pressed="${(d.ext||"none")===v}" title="${{none:"Сунгахгүй",right:"Баруун тийш сунгах",both:"Хоёр тийш сунгах"}[v]}">${l}</button>`).join("")}</div><span class="vsep"></span>`:""}
+    ${d.type==="fib"?`<button type="button" class="btn sm" data-prop="fibset" title="Түвшин, өнгө, сунгалт (зураг дээр давхар дарж ч нээнэ)">⚙ Түвшин</button><span class="vsep"></span>`:""}
     ${pos?`<button type="button" class="btn sm primary" data-prop="toOrder" title="Орох, SL, TP-г захиалгын тооцоо руу шилжүүлэх">Захиалгад ашиглах</button>`:""}
     <button type="button" class="btn sm" data-prop="clone" title="Хуулбарлах" aria-label="Хуулбарлах"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M13 4H4.5A1.5 1.5 0 003 5.5V13"/></svg></button>
     <button type="button" class="btn sm danger" data-prop="del" title="Устгах (Delete)" aria-label="Устгах"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M6 6l1 11h6l1-11"/></svg></button>`}
 function drProp(btn){const d=DR.sel;if(!d)return;const k=btn.dataset.prop,v=btn.dataset.v;
   if(k==="del"){drDelete();return}
+  if(k==="fibset"){fibOpen(d);return}
   if(k==="toOrder"){CH.dir=d.type==="long"?"Buy":"Sell";if(CH.mode!=="replay"){CH.mkt=false;$("#opMkt").checked=false;$("#opEntry").value=(+d.a.p).toFixed(decOf(CH.inst))}
     $("#opSl").value=(+d.sl).toFixed(decOf(CH.inst));$("#opTp").value=(+d.tp).toFixed(decOf(CH.inst));if($("#chartRoot").classList.contains("wide"))chWide(false);chUpdate();toast("Захиалгын тооцоонд шилжүүллээ");return}
   drPush();
@@ -1601,6 +1624,48 @@ function drProp(btn){const d=DR.sel;if(!d)return;const k=btn.dataset.prop,v=btn.
   else if(k==="width")d.width=+v;else if(k==="dash")d.dash=!d.dash;else if(k==="ext")d.ext=v;
   drSave();drPropsUi();drDirty()}
 
+/* --- Фибоначчийн тохиргоо --- */
+let FIBED=null;
+function fibOpen(d){let dl=$("#fibDlg");
+  if(!dl){dl=document.createElement("dialog");dl.id="fibDlg";dl.className="fib-dlg";document.body.appendChild(dl);
+    dl.addEventListener("input",fibLive);dl.addEventListener("change",fibLive);
+    dl.addEventListener("click",e=>{const b=e.target.closest("[data-fib]");if(b)fibAct(b)});
+    dl.addEventListener("close",()=>{if(FIBED&&!FIBED.saved){const x=FIBED.d;x.levels=FIBED.orig.levels;x.fopt=FIBED.orig.fopt;drDirty()}FIBED=null})}
+  const F=fibOf(d);FIBED={d,orig:{levels:JSON.parse(JSON.stringify(F.levels)),fopt:Object.assign({},F.opt)},saved:false};
+  d.levels=JSON.parse(JSON.stringify(F.levels));d.fopt=Object.assign({},F.opt);fibRender();dl.showModal()}
+function fibRender(){const dl=$("#fibDlg"),d=FIBED.d,o=d.fopt;
+  const ck=(k,l)=>`<label class="chk fib-opt"><input type="checkbox" data-fopt="${k}"${o[k]?" checked":""}> ${l}</label>`;
+  dl.innerHTML=`<form method="dialog" class="dlg" onsubmit="return false">
+    <div class="dlg-h"><h2>Фибоначчийн түвшин</h2><button type="button" class="btn sm ghost" data-fib="cancel" aria-label="Хаах">✕</button></div>
+    <div class="dlg-b">
+      <div class="fib-grid">${d.levels.map((l,i)=>`<div class="fib-row${l.on?"":" off"}">
+        <input type="checkbox" data-lv="on" data-i="${i}"${l.on?" checked":""} aria-label="Түвшин ${l.v} асаах">
+        <input type="number" step="any" data-lv="v" data-i="${i}" value="${esc(l.v)}" aria-label="Түвшний утга">
+        <input type="color" data-lv="c" data-i="${i}" value="${esc(l.c||"#787B86")}" aria-label="Өнгө"${o.one?" disabled":""}>
+        <button type="button" class="btn sm ghost" data-fib="rm" data-i="${i}" aria-label="Түвшин устгах" title="Устгах">✕</button></div>`).join("")}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn sm" data-fib="add">+ Түвшин нэмэх</button>
+        <button type="button" class="btn sm ghost" data-fib="all">Бүгдийг асаах</button><button type="button" class="btn sm ghost" data-fib="none">Бүгдийг унтраах</button></div>
+      <fieldset><legend class="eyebrow">Харагдах байдал</legend><div class="fib-opts">
+        ${ck("values","Түвшний утга")}${ck("prices","Үнэ")}${ck("bg","Дэвсгэр өнгө")}${ck("one","Нэг өнгө (зургийн өнгө)")}
+        ${ck("extL","Зүүн тийш сунгах")}${ck("extR","Баруун тийш сунгах")}${ck("reverse","Эргүүлэх (0 ↔ 1)")}
+        <label class="chk fib-opt">Шошго <select data-fopt="side"><option value="left"${o.side==="left"?" selected":""}>Зүүн</option><option value="right"${o.side==="right"?" selected":""}>Баруун</option></select></label></div></fieldset>
+    </div>
+    <div class="dlg-f"><span class="sp" style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn sm" data-fib="savedef" title="Шинээр зурах Фибо энэ тохиргоог авна">Анхдагч болгож хадгалах</button><button type="button" class="btn sm ghost" data-fib="reset">Анхны утга</button></span>
+      <button type="button" class="btn" data-fib="cancel">Болих</button><button type="button" class="btn primary" data-fib="ok">Хадгалах</button></div></form>`}
+function fibLive(e){if(!FIBED)return;const d=FIBED.d,t=e.target;
+  if(t.dataset.lv){const l=d.levels[+t.dataset.i];if(!l)return;if(t.dataset.lv==="on"){l.on=t.checked;t.closest(".fib-row").classList.toggle("off",!t.checked)}else if(t.dataset.lv==="v"){const n=num(t.value);if(n!=null)l.v=n}else l.c=t.value}
+  else if(t.dataset.fopt){const k=t.dataset.fopt;d.fopt[k]=t.type==="checkbox"?t.checked:t.value;if(k==="one")$$('#fibDlg input[type=color]').forEach(x=>x.disabled=t.checked)}
+  drDirty()}
+function fibAct(b){const d=FIBED&&FIBED.d,k=b.dataset.fib;if(!d)return;
+  if(k==="cancel"){$("#fibDlg").close();return}
+  if(k==="ok"){d.levels=d.levels.filter(l=>isFinite(+l.v)).map(l=>({v:+l.v,on:!!l.on,c:l.c})).sort((a,b)=>a.v-b.v);
+    const cur=JSON.stringify({l:d.levels,o:d.fopt});d.levels=FIBED.orig.levels;d.fopt=FIBED.orig.fopt;drPush();const nv=JSON.parse(cur);d.levels=nv.l;d.fopt=nv.o;
+    FIBED.saved=true;drSave();drDirty();$("#fibDlg").close();toast("Фибо тохиргоо хадгалагдлаа");return}
+  if(k==="add"){const mx=Math.max(1,...d.levels.map(l=>+l.v||0));d.levels.push({v:+(mx+0.5).toFixed(3),on:true,c:d.color});fibRender();drDirty();const ins=$$('#fibDlg input[data-lv=v]');ins[ins.length-1].focus();return}
+  if(k==="rm"){d.levels.splice(+b.dataset.i,1);fibRender();drDirty();return}
+  if(k==="all"||k==="none"){d.levels.forEach(l=>l.on=k==="all");fibRender();drDirty();return}
+  if(k==="reset"){const f=JSON.parse(JSON.stringify(FIB_BASE));d.levels=f.levels;d.fopt=f.opt;fibRender();drDirty();return}
+  if(k==="savedef"){try{localStorage.setItem("alkham-fib-default",JSON.stringify({levels:d.levels,opt:d.fopt}))}catch(e){}toast("Шинэ Фибо энэ тохиргоогоор зурагдана");return}}
 /* --- зүүн хэрэгслийн самбар --- */
 function drBarHtml(){const ic=p=>`<svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
   return TOOLS.map(([k,n,sc,p])=>`<button type="button" data-tool="${k}" aria-pressed="${k===DR.tool}" title="${n} (${sc})" aria-label="${n}">${ic(p)}</button>`).join("")
@@ -1629,11 +1694,12 @@ function drInit(){
   bar.addEventListener("click",e=>{const b=e.target.closest("button");if(b)drBarClick(b)});
   $("#dtProps").addEventListener("click",e=>{const b=e.target.closest("[data-prop]");if(b)drProp(b)});
   w.addEventListener("pointerdown",drDown,true);
+  w.addEventListener("dblclick",e=>{if(!e.target.closest("#chChart"))return;const p=evPt(e,true);const h=p&&drHit(p.x,p.y);if(h&&h.d.type==="fib"){e.preventDefault();e.stopPropagation();DR.sel=h.d;drSelUi();fibOpen(h.d)}},true);
   w.addEventListener("contextmenu",e=>{if(e.target.closest("#chChart")){const p=evPt(e,true);if(p&&drHit(p.x,p.y))e.preventDefault()}});
   ["mousedown","touchstart"].forEach(ev=>w.addEventListener(ev,e=>{if(e.target.closest("#dtBar,#dtProps"))return;if(DR.intercept||DR.tool!=="cursor"){e.stopPropagation();if(ev==="touchstart"&&DR.tool!=="cursor")e.preventDefault()}},{capture:true,passive:false}));
   w.addEventListener("touchmove",e=>{if(DR.intercept||DR.draft){e.stopPropagation();e.preventDefault()}},{capture:true,passive:false});
   window.addEventListener("pointermove",drMove,{passive:false});window.addEventListener("pointerup",drUp);window.addEventListener("pointercancel",drUp);
-  document.addEventListener("keydown",e=>{if(S.view!=="chart"||!CH.active)return;const tag=(document.activeElement||{}).tagName;if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT")return;
+  document.addEventListener("keydown",e=>{if(S.view!=="chart"||!CH.active||(document.querySelector("dialog[open]")))return;const tag=(document.activeElement||{}).tagName;if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT")return;
     if(e.altKey&&!e.ctrlKey&&KEYMAP[e.key.toLowerCase()]){e.preventDefault();drSetTool(KEYMAP[e.key.toLowerCase()]);DR.sel=null;drSelUi();drDirty();return}
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){e.preventDefault();drUndo();return}
     if((e.key==="Delete"||e.key==="Backspace")&&DR.sel){e.preventDefault();drDelete()}
