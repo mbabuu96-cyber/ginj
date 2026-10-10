@@ -998,7 +998,8 @@ async function importJson(file){
 
 /* ---------------- График, захиалгын самбар, давтан тоглуулах ---------------- */
 const LWC_LIB="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js";
-const DERIV_WS="wss://ws.derivws.com/websockets/v3?app_id=1089";
+// Deriv-ийн шинэ нийтийн (нэвтрэлтгүй) хаяг эхэнд, дараа нь хуучин хаягууд нөөц болж оролдогдоно
+const DERIV_WS_LIST=["wss://api.derivws.com/trading/v1/options/ws/public","wss://ws.derivws.com/websockets/v3?app_id=1089","wss://ws.binaryws.com/websockets/v3?app_id=1089"];
 const TZ=-new Date().getTimezoneOffset()*60; // графикийг орон нутгийн цагаар харуулна
 const GRANS=[[60,"1м"],[300,"5м"],[900,"15м"],[3600,"1ц"],[14400,"4ц"],[86400,"1ө"]];
 const STEP_FALLBACK={100:"stpRNG",200:"stpRNG2",300:"stpRNG3",400:"stpRNG4",500:"stpRNG5"};
@@ -1008,19 +1009,27 @@ const CH={built:false,active:false,chart:null,series:null,lines:{},inst:null,sym
 
 /* --- Deriv WebSocket --- */
 const DV={ws:null,open:null,id:0,wait:new Map(),stream:new Map(),symbols:null,retry:0};
+function dvTryOpen(url){return new Promise((res,rej)=>{let ws,done=false;try{ws=new WebSocket(url)}catch(e){return rej(e)}
+  const to=setTimeout(()=>{if(done)return;done=true;try{ws.close()}catch(e){}rej(new Error("timeout"))},8000);
+  ws.onopen=()=>{if(done)return;done=true;clearTimeout(to);res(ws)};
+  ws.onerror=()=>{};
+  ws.onclose=()=>{if(done)return;done=true;clearTimeout(to);rej(new Error("closed"))}})}
 function dvConnect(){
   if(DV.open)return DV.open;
-  DV.open=new Promise((res,rej)=>{let ws;try{ws=new WebSocket(DERIV_WS)}catch(e){DV.open=null;return rej(e)}
-    DV.ws=ws;const to=setTimeout(()=>{try{ws.close()}catch(e){}rej(new Error("timeout"))},12000);
-    ws.onopen=()=>{clearTimeout(to);DV.retry=0;res(ws)};
-    ws.onclose=()=>{clearTimeout(to);const hadStream=DV.stream.size>0;DV.open=null;DV.ws=null;
+  DV.open=(async()=>{
+    let pref=null;try{pref=localStorage.getItem("alkham-deriv-url")}catch(e){}
+    const urls=pref&&DERIV_WS_LIST.includes(pref)?[pref].concat(DERIV_WS_LIST.filter(u=>u!==pref)):DERIV_WS_LIST;
+    let ws=null,lastErr=null;
+    for(const u of urls){try{ws=await dvTryOpen(u);DV.url=u;try{localStorage.setItem("alkham-deriv-url",u)}catch(e){}break}catch(e){lastErr=e}}
+    if(!ws){DV.open=null;throw lastErr||new Error("closed")}
+    DV.ws=ws;DV.retry=0;
+    ws.onclose=()=>{const hadStream=DV.stream.size>0;DV.open=null;DV.ws=null;
       DV.wait.forEach(w=>w.rej(new Error("closed")));DV.wait.clear();DV.stream.clear();CH.subId=null;
-      rej(new Error("closed"));
       if(hadStream&&CH.active&&CH.mode==="live"){const d=Math.min(30000,1000*2**DV.retry++);chStatus("Холболт тасарлаа. Дахин холбогдож байна…",true);setTimeout(()=>{if(CH.active&&CH.mode==="live"&&!DV.open)chLoadLive()},d)}};
     ws.onmessage=ev=>{let m;try{m=JSON.parse(ev.data)}catch(e){return}
-      if(m.msg_type==="ohlc"){const h=DV.stream.get(m.req_id)||(m.subscription&&DV.stream.get("s:"+m.subscription.id));if(h)h(m);return}
+      if(m.msg_type==="ohlc"||m.msg_type==="tick"){const h=DV.stream.get(m.req_id)||(m.subscription&&DV.stream.get("s:"+m.subscription.id));if(h)h(m);return}
       const w=DV.wait.get(m.req_id);if(w){DV.wait.delete(m.req_id);m.error?w.rej(m.error):w.res(m)}};
-  });
+    return ws})();
   return DV.open;
 }
 async function dvSend(req,onStream){const ws=await dvConnect();const id=++DV.id;req.req_id=id;
@@ -1028,7 +1037,10 @@ async function dvSend(req,onStream){const ws=await dvConnect();const id=++DV.id;
   return new Promise((res,rej)=>{DV.wait.set(id,{res:m=>{if(onStream&&m.subscription)DV.stream.set("s:"+m.subscription.id,onStream);res(m)},rej:e=>{DV.stream.delete(id);rej(e)}});
     ws.send(JSON.stringify(req));setTimeout(()=>{if(DV.wait.has(id)){DV.wait.delete(id);rej(new Error("timeout"))}},20000)})}
 setInterval(()=>{if(DV.ws&&DV.ws.readyState===1&&CH.active)try{DV.ws.send(JSON.stringify({ping:1}))}catch(e){}},30000);
-async function dvSymbols(){if(DV.symbols)return DV.symbols;try{const r=await dvSend({active_symbols:"brief"});DV.symbols=r.active_symbols||[]}catch(e){DV.symbols=[]}return DV.symbols}
+async function dvSymbols(){if(DV.symbols)return DV.symbols;
+  try{const r=await dvSend({active_symbols:"brief"});
+    DV.symbols=(r.active_symbols||[]).map(x=>({symbol:x.underlying_symbol||x.symbol||"",display_name:x.underlying_symbol_name||x.display_name||"",pip:x.pip_size||x.pip}))}
+  catch(e){DV.symbols=[]}return DV.symbols}
 async function derivSymbol(ins){
   if(ins.deriv)return ins.deriv;
   const list=await dvSymbols();
@@ -1045,7 +1057,7 @@ function dvErrMsg(e){const c=e&&e.code;
   if(c==="InvalidSymbol")return "Deriv дээр энэ хэрэгсэл олдсонгүй. Тохиргоо → Хэрэгслүүд дэх нэрийг шалгана уу.";
   if(c==="RateLimit")return "Хэт олон хүсэлт илгээлээ. Хэдэн секунд хүлээгээд дахин оролдоно уу.";
   if(e&&e.message==="timeout")return "Deriv сервер хариу өгсөнгүй. Интернэтээ шалгаад дахин оролдоно уу.";
-  if(e&&e.message==="closed"||e instanceof Event)return "Deriv сервертэй холбогдож чадсангүй.";
+  if(e&&e.message==="closed"||e instanceof Event)return "Deriv сервертэй холбогдож чадсангүй. Интернэт эсвэл VPN/firewall-ээ шалгаад хуудсаа дахин ачаална уу.";
   return (e&&e.message)||"Өгөгдөл ачаалж чадсангүй."}
 
 /* --- helpers --- */
@@ -1153,7 +1165,13 @@ async function chLoadLive(){
   const seq=++CH.loadSeq;rpPause();await chForget();if(seq!==CH.loadSeq||!CH.active)return;
   const ins=CH.inst;chStatus("Ачаалж байна…");if(!CH.series.data().length)chEmpty("График ачаалж байна…");
   try{const sym=await derivSymbol(ins);if(!sym)throw {code:"InvalidSymbol"};CH.sym=sym;
-    const onBar=m=>{const o=m.ohlc;if(!o||CH.mode!=="live"||seq!==CH.loadSeq)return;const bar={time:+o.open_time+TZ,open:+o.open,high:+o.high,low:+o.low,close:+o.close};
+    const g=CH.gran;
+    const onBar=m=>{if(CH.mode!=="live"||seq!==CH.loadSeq)return;let bar;
+      if(m.ohlc){const o=m.ohlc;const ot=o.open_time!=null?+o.open_time:Math.floor(+(o.epoch||Date.now()/1000)/g)*g;
+        bar={time:ot+TZ,open:+o.open,high:+o.high,low:+o.low,close:+o.close}}
+      else if(m.tick){const q=+m.tick.quote,t=Math.floor(+m.tick.epoch/g)*g+TZ;const data=CH.series.data();const lb=data.length?data[data.length-1]:null;
+        bar=lb&&lb.time===t?{time:t,open:lb.open,high:Math.max(lb.high,q),low:Math.min(lb.low,q),close:q}:{time:t,open:q,high:q,low:q,close:q}}
+      if(!bar||!isFinite(bar.close))return;
       try{CH.series.update(bar)}catch(e){}CH.last=bar.close;CH.lastTime=bar.time;chUpdate(true)};
     const req={ticks_history:sym,style:"candles",granularity:CH.gran,count:1000,end:"latest",adjust_start_time:1};
     let r,closed=false;
@@ -1163,7 +1181,7 @@ async function chLoadLive(){
     const bars=(r.candles||[]).map(toBar);CH.series.setData(bars);CH.series.setMarkers([]);
     CH.last=bars.length?bars[bars.length-1].close:null;CH.lastTime=bars.length?bars[bars.length-1].time:null;
     CH.chart.timeScale().scrollToRealTime();chEmpty(bars.length?"":"Энэ хэрэгсэлд өгөгдөл ирсэнгүй.");
-    chStatus(closed?"Зах зээл хаалттай · сүүлийн өгөгдөл":`Шууд · ${sym}`,closed);chUpdate(true);
+    chStatus(closed?"Зах зээл хаалттай · сүүлийн өгөгдөл":`Шууд · ${sym}${DV.url&&!/options\/ws\/public/.test(DV.url)?" · нөөц сервер":""}`,closed);chUpdate(true);
   }catch(e){if(seq!==CH.loadSeq)return;chStatus(dvErrMsg(e),true);if(!CH.series.data().length)chEmpty(esc(dvErrMsg(e)))}
 }
 
