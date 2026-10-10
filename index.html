@@ -952,7 +952,7 @@ document.addEventListener("click",async e=>{
   else if(act==="expJson")offer(`alkham-noots-${ymd(new Date())}.json`,JSON.stringify({app:"alkham",v:1,settings:S.settings,trades:S.trades,days:S.days,reviews:S.reviews,beliefs:S.beliefs},null,1));
   else if(act==="expCsv")offer(`alkham-ariljaa-${ymd(new Date())}.csv`,csv());
   else if(act==="impJson")$("#importFile").click();
-  else if(act==="sbSave"){const url=normUrl($("#sbUrl").value);const key=normKey($("#sbKey").value);SB.draft.url=$("#sbUrl").value;SB.draft.key=$("#sbKey").value;SB.err="";
+  else if(act==="sbSave"){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();const url=normUrl($("#sbUrl").value);const key=normKey($("#sbKey").value);SB.draft.url=$("#sbUrl").value;SB.draft.key=$("#sbKey").value;SB.err="";
     let role="";if(key.startsWith("eyJ")){try{role=JSON.parse(atob(key.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"))).role||""}catch(e){}}
     if(!url)SB.err="Project URL буруу байна. https://qnaxqushnfozblufimei.supabase.co хэлбэртэй байх ёстой.";
     else if(!key)SB.err="Түлхүүрээ оруулна уу. Supabase → Project Settings → API Keys → Publishable key-ийн хуулах товчийг дарж хуулна.";
@@ -961,7 +961,7 @@ document.addEventListener("click",async e=>{
     else if(/^sb_publishable_/i.test(key)&&key.length<40)SB.err="Түлхүүр дутуу хуулагдсан бололтой. Дэлгэц дээрээс гараар биш, хуулах товчоор хуулна уу.";
     if(SB.err){a.blur();render();return}
     try{localStorage.setItem(SUPA_CFG_KEY,JSON.stringify({url,key}))}catch(e){}a.blur();initSupa()}
-  else if(act==="sbIn"||act==="sbUp"){const email=($("#sbEmail").value||"").trim(),password=$("#sbPass").value||"";
+  else if(act==="sbIn"||act==="sbUp"){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();const email=($("#sbEmail").value||"").trim(),password=$("#sbPass").value||"";
     SB.draft.email=email;
     if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){SB.err="Имэйлээ зөв оруулна уу.";render();return}
     if(password.length<6){SB.err=password?"Нууц үг хамгийн багадаа 6 тэмдэгт байх ёстой.":"Нууц үгээ баруун талын талбарт бичнэ үү (6-аас дээш тэмдэгт).";render();setTimeout(()=>{const el=$("#sbPass");if(el)el.focus()},50);return}
