@@ -318,7 +318,8 @@ function saveSettings(o){S.settings=mergeSettings(o);render();if(S.mode==="cloud
 
 /* ---------------- Supabase сервер ---------------- */
 // Түлхүүрийг энд шууд бичвэл бүх төхөөрөмж дээр автоматаар холбогдоно. Хоосон бол Тохиргооноос оруулна.
-const SUPA_DEFAULT={url:"",key:""};
+// Нийтэд ил байж болох publishable түлхүүр. Хэрэглэгч бүрийн өгөгдлийг RLS хамгаална.
+const SUPA_DEFAULT={url:"https://qnaxqushnfozblufimei.supabase.co",key:"sb_publishable_VCL-qLAwZuMhmiT0HPMjDg_w0c7aIDM"};
 const SUPA_LIB="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js";
 const SUPA_CFG_KEY="alkham-supabase",SUPA_PENDING="alkham-pending";
 const SB={client:null,user:null,status:"off",cfg:null,loading:false,lastSync:null,err:"",busy:false,info:"",raw:"",recovery:false,pwOpen:false,
@@ -326,7 +327,7 @@ const SB={client:null,user:null,status:"off",cfg:null,loading:false,lastSync:nul
 function normUrl(v){v=String(v||"").trim();const m=v.match(/([a-z0-9]{20})(?:\.supabase\.(?:co|in))?/i);
   if(/^[a-z0-9]{20}$/i.test(v)||(m&&/supabase\.(co|in)/i.test(v)))return `https://${m[1].toLowerCase()}.supabase.co`;return null}
 function normKey(v){return String(v||"").replace(/\s+/g,"").replace(/^["']|["']$/g,"")}
-function supaCfg(){try{const o=JSON.parse(localStorage.getItem(SUPA_CFG_KEY)||"null");if(o&&o.url&&o.key)return o}catch(e){}return SUPA_DEFAULT.url&&SUPA_DEFAULT.key?SUPA_DEFAULT:null}
+function supaCfg(){if(SUPA_DEFAULT.url&&SUPA_DEFAULT.key)return SUPA_DEFAULT;try{const o=JSON.parse(localStorage.getItem(SUPA_CFG_KEY)||"null");if(o&&o.url&&o.key)return o}catch(e){}return SUPA_DEFAULT.url&&SUPA_DEFAULT.key?SUPA_DEFAULT:null}
 function loadScript(src){return new Promise((res,rej)=>{if(window.supabase&&window.supabase.createClient)return res();const el=document.createElement("script");el.src=src;el.onload=()=>res();el.onerror=()=>rej(new Error("Failed to fetch library"));document.head.appendChild(el)})}
 function pendingGet(){try{return JSON.parse(localStorage.getItem(SUPA_PENDING)||"[]")}catch(e){return []}}
 function pendingSet(a){try{localStorage.setItem(SUPA_PENDING,JSON.stringify(a))}catch(e){}}
@@ -762,7 +763,7 @@ function supaPanel(){
       <div class="f"><label for="sbEmail">Имэйл</label><input type="email" id="sbEmail" data-draft="email" value="${esc(SB.draft.email)}" autocomplete="email" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)"></div>
       <div class="f"><label for="sbPass">Нууц үг (6+ тэмдэгт)</label><div style="display:flex;gap:6px"><input type="password" id="sbPass" data-draft="pass" value="${esc(SB.draft.pass||"")}" autocomplete="current-password" placeholder="жишээ нь: alkham2026" style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)"><button type="button" class="btn sm" data-act="sbShow" aria-label="Нууц үг харуулах">Харах</button></div></div>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="sbIn"${SB.busy?" disabled":""}>Нэвтрэх</button><button class="btn" data-act="sbUp"${SB.busy?" disabled":""}>Бүртгүүлэх</button><button class="btn ghost" data-act="sbForgot"${SB.busy?" disabled":""}>Нууц үг мартсан</button><button class="btn" data-act="sbDiag"${SB.busy?" disabled":""}>Холболт шалгах</button><button class="btn ghost" data-act="sbForget">Холболтыг засах</button></div></section>`;
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="sbIn"${SB.busy?" disabled":""}>Нэвтрэх</button><button class="btn" data-act="sbUp"${SB.busy?" disabled":""}>Бүртгүүлэх</button><button class="btn ghost" data-act="sbForgot"${SB.busy?" disabled":""}>Нууц үг мартсан</button><button class="btn" data-act="sbDiag"${SB.busy?" disabled":""}>Холболт шалгах</button>${SUPA_DEFAULT.key?"":`<button class="btn ghost" data-act="sbForget">Холболтыг засах</button>`}</div></section>`;
   const pwForm=(title,hint)=>`<div class="panel" style="background:var(--surface-2);border-color:${SB.recovery?"var(--accent)":"var(--line)"}"><h2>${title}</h2>
       <p class="muted" style="margin:0;font-size:13px">${hint}</p>
       <div class="fg" style="grid-template-columns:repeat(2,minmax(0,1fr))">

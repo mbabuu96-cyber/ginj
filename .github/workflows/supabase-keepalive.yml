@@ -1,6 +1,6 @@
 # Supabase-ийн үнэгүй төсөл 7 хоног идэвхгүй бол зогсдог.
 # Энэ ажил 3 хоног тутам сервер рүү жижиг хүсэлт илгээж төслийг идэвхтэй байлгана.
-# Шаардлагатай: Settings → Secrets and variables → Actions → SUPABASE_KEY (publishable key)
+# Publishable түлхүүр нийтэд ил байж болно. SUPABASE_KEY secret тохируулбал түүнийг ашиглана.
 
 name: Supabase идэвхтэй байлгах
 
@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 5
     env:
       SUPABASE_URL: https://qnaxqushnfozblufimei.supabase.co
-      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY || 'sb_publishable_VCL-qLAwZuMhmiT0HPMjDg_w0c7aIDM' }}
     steps:
       - name: Түлхүүр байгаа эсэхийг шалгах
         run: |

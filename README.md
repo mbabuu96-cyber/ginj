@@ -27,8 +27,8 @@ GitHub Pages дээр нээгээд шууд ашиглана. Суулгах �
 1. [supabase.com/dashboard](https://supabase.com/dashboard) дээр **New project** үүсгэнэ. Бүс (Region): **Northeast Asia (Tokyo)** эсвэл **Southeast Asia (Singapore)**.
 2. **SQL Editor → New query** хэсэгт [`supabase/schema.sql`](supabase/schema.sql)-ийн агуулгыг бүтнээр нь хуулж тавиад **Run** дарна.
 3. **Authentication → URL Configuration** хэсгийн **Site URL**-д `https://mbabuu96-cyber.github.io/ginj/` гэж оруулаад хадгална.
-4. **Project Settings → API Keys** (эсвэл дээд талын **Connect** товч) хэсгээс **Project URL** болон **anon / publishable** түлхүүрийг хуулна.
-5. Программын **Тохиргоо → Сервер (Supabase)** хэсэгт хоёуланг нь оруулж **Холбох** дарна. Дараа нь **Бүртгүүлэх** → имэйлээ баталгаажуулах → **Нэвтрэх**.
+4. Project URL болон publishable түлхүүр `index.html` доторх `SUPA_DEFAULT`-д бичигдсэн тул ямар ч төхөөрөмж дээр шууд **Нэвтрэх** цонх нээгдэнэ. Өөр Supabase төсөлд шилжих бол энэ утгыг солино.
+5. Supabase → **Authentication → Users → Add user** хэсгээс хэрэглэгч нэмнэ, эсвэл бүртгэл нээлттэй үед программ дээр **Бүртгүүлэх** дарна.
 6. Хөтчид өмнө нь оруулсан арилжаа байвал **"…арилжааг серверт нэмэх"** товчоор серверт хуулна.
 
 `service_role` эсвэл `sb_secret_` гэж эхэлсэн нууц түлхүүрийг хэзээ ч программд бүү оруул. Мөр бүрийн хамгаалалт (RLS) асаалттай тул хэрэглэгч бүр зөвхөн өөрийн өгөгдлийг харна.
