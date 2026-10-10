@@ -211,16 +211,22 @@ svg text{font-family:var(--f-mono)}
 .swatches button{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
 .swatches button[aria-pressed="true"]{border-color:var(--ink)}
 #chChart{position:absolute;top:0;right:0;bottom:0;left:40px}
-.dt-bar{position:absolute;top:0;left:0;bottom:0;width:40px;z-index:6;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;border-right:1px solid var(--line);background:var(--surface);overflow-y:auto;scrollbar-width:none}
-.dt-bar::-webkit-scrollbar{display:none}
-.dt-bar button{width:32px;height:32px;flex:none;display:grid;place-items:center;border:0;border-radius:6px;background:none;color:var(--muted);cursor:pointer}
+.dt-bar{position:absolute;top:0;left:0;bottom:0;width:40px;z-index:6;display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 0;border-right:1px solid var(--line);background:var(--surface);overflow-y:auto;scrollbar-width:thin}
+.dt-bar::-webkit-scrollbar{width:3px}.dt-bar::-webkit-scrollbar-thumb{background:var(--line)}
+.dt-bar button{width:30px;height:26px;flex:none;display:grid;place-items:center;border:0;border-radius:6px;background:none;color:var(--muted);cursor:pointer}
 .dt-bar button:hover{background:var(--surface-2);color:var(--ink)}
 .dt-bar button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
 .dt-bar button.confirm{background:var(--loss-soft);color:var(--loss)}
 .dt-bar button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-.dt-bar .sep{width:22px;height:1px;background:var(--line);margin:4px 0;flex:none}
-.dt-props{position:absolute;top:8px;left:calc(50% + 20px);transform:translateX(-50%);z-index:7;display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:calc(100% - 60px);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 8px;box-shadow:var(--shadow)}
-.dt-props .seg button{padding:4px 8px;font-size:12px}
+.dt-bar .sep{width:22px;height:1px;background:var(--line);margin:3px 0;flex:none}
+.dt-bar svg{width:16px;height:16px}
+.dt-props{position:absolute;top:6px;left:48px;z-index:7;display:flex;gap:4px;align-items:center;flex-wrap:nowrap;max-width:calc(100% - 130px);overflow-x:auto;scrollbar-width:none;background:color-mix(in srgb,var(--surface) 94%,transparent);border:1px solid var(--line);border-radius:8px;padding:3px 5px;box-shadow:var(--shadow)}
+.dt-props::-webkit-scrollbar{display:none}
+.dt-props>*{flex:none}
+.dt-props .seg button{padding:2px 7px;font-size:11px}
+.dt-props .btn.sm{padding:2px 7px;font-size:11px;border-radius:6px}
+.dt-props .swatches button{width:16px;height:16px}
+.dt-props .vsep{width:1px;height:18px;background:var(--line);margin:0 2px}
 .zone{position:absolute;pointer-events:none;z-index:2}
 .zone.tp{background:color-mix(in srgb,var(--gain) 15%,transparent);border-top:1px dashed var(--gain);border-bottom:1px dashed var(--gain)}
 .zone.sl{background:color-mix(in srgb,var(--loss) 15%,transparent);border-top:1px dashed var(--loss);border-bottom:1px dashed var(--loss)}
@@ -1483,10 +1489,10 @@ function drShape(ctx,d,box,font,sel,hov){
   else if(d.type==="rect"&&xb!=null){ctx.fillStyle=rgba(d.color,0.12);ctx.fillRect(Math.min(xa,xb),Math.min(ya,yb),Math.abs(xb-xa),Math.abs(yb-ya));ctx.strokeRect(Math.min(xa,xb),Math.min(ya,yb),Math.abs(xb-xa),Math.abs(yb-ya))}
   else if(d.type==="fib"&&xb!=null){const L=Math.min(xa,xb),R=d.ext==="right"?box.w:Math.max(xa,xb,L+40),range=d.b.p-d.a.p;
     ctx.save();ctx.setLineDash([4,3]);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(xa,ya);ctx.lineTo(xb,yb);ctx.stroke();ctx.restore();ctx.textBaseline="bottom";
-    let prevY=null;FIB.forEach(f=>{const price=d.b.p-range*f,y=pY(price);if(y==null)return;
+    let prevY=null,lastLbl=-1e9;FIB.forEach(f=>{const price=d.b.p-range*f,y=pY(price);if(y==null)return;
       if(prevY!=null){ctx.fillStyle=rgba(d.color,f<=1?0.06:0.03);ctx.fillRect(L,Math.min(prevY,y),R-L,Math.abs(y-prevY))}prevY=y;
       ctx.fillStyle=d.color;ctx.globalAlpha=f===0||f===1?1:0.85;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(R,y);ctx.stroke();
-      if(R>4)ctx.fillText(`${f} (${price.toFixed(dec)})`,Math.max(L,0)+3,y-2)});ctx.globalAlpha=1}
+      const key=f===0||f===0.5||f===1;if(R>4&&(Math.abs(y-lastLbl)>=12||key)){ctx.fillText(`${f} (${price.toFixed(dec)})`,Math.max(L,0)+3,y-2);lastLbl=y}});ctx.globalAlpha=1}
   else if((d.type==="long"||d.type==="short")&&d.t2!=null){const x2=dX(d.t2),ys=pY(d.sl),yt=pY(d.tp);if(x2==null||ys==null||yt==null)return;
     const L=Math.min(xa,x2),W=Math.abs(x2-xa),gain=cssVar("--gain")||"#1C7449",loss=cssVar("--loss")||"#B13636",gx=gain.startsWith("#"),lx=loss.startsWith("#");
     ctx.setLineDash([]);ctx.fillStyle=gx?rgba(gain,0.18):gain;ctx.fillRect(L,Math.min(ya,yt),W,Math.abs(yt-ya));
@@ -1579,12 +1585,12 @@ function drDirty(){DR.dirty=true}
 function drPropsUi(){const el=$("#dtProps");if(!el)return;const d=DR.sel;if(!d){el.hidden=true;return}el.hidden=false;
   const pos=d.type==="long"||d.type==="short",lineish=d.type==="trend"||d.type==="fib";
   el.innerHTML=`${pos?"":`<div class="swatches">${DCOLORS.map(c=>`<button type="button" data-prop="color" data-v="${c}" style="background:${c}" aria-label="Өнгө" aria-pressed="${c===d.color}"></button>`).join("")}</div>
-    <div class="seg" role="group" aria-label="Зузаан">${[1,1.5,2.5].map((w,i)=>`<button type="button" data-prop="width" data-v="${w}" aria-pressed="${(d.width||1.5)===w}">${["Нимгэн","Дунд","Зузаан"][i]}</button>`).join("")}</div>
-    <button type="button" class="btn sm" data-prop="dash" aria-pressed="${!!d.dash}">${d.dash?"Тасархай":"Үргэлжилсэн"}</button>`}
-    ${lineish?`<div class="seg" role="group" aria-label="Сунгах">${(d.type==="fib"?[["none","Богино"],["right","Баруун тийш"]]:[["none","Сунгахгүй"],["right","Баруун"],["both","Хоёр тал"]]).map(([v,l])=>`<button type="button" data-prop="ext" data-v="${v}" aria-pressed="${(d.ext||"none")===v}">${l}</button>`).join("")}</div>`:""}
-    ${pos?`<span class="muted" style="font-size:12px">${d.type==="long"?"Long":"Short"} позиц — бүсийг чирж зөөнө, бариулаар SL/TP-г өөрчилнө</span><button type="button" class="btn sm primary" data-prop="toOrder">Захиалгын тооцоонд ашиглах</button>`:""}
-    <button type="button" class="btn sm" data-prop="clone" title="Хуулбарлах">Хуулбар</button>
-    <button type="button" class="btn sm danger" data-prop="del" title="Устгах (Delete)">Устгах</button>`}
+    <div class="seg" role="group" aria-label="Зузаан">${[1,1.5,2.5].map((w,i)=>`<button type="button" data-prop="width" data-v="${w}" aria-pressed="${(d.width||1.5)===w}" title="${["Нимгэн","Дунд","Зузаан"][i]}" aria-label="${["Нимгэн","Дунд","Зузаан"][i]}"><svg width="16" height="10" viewBox="0 0 16 10" aria-hidden="true"><path d="M1 5h14" stroke="currentColor" stroke-width="${[1,2,3.5][i]}"/></svg></button>`).join("")}</div>
+    <button type="button" class="btn sm" data-prop="dash" aria-pressed="${!!d.dash}" title="${d.dash?"Тасархай":"Үргэлжилсэн"} (солих)" aria-label="Шугамын хэв маяг"><svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true"><path d="M1 5h16" stroke="currentColor" stroke-width="2" ${d.dash?'stroke-dasharray="4 3"':""}/></svg></button><span class="vsep"></span>`}
+    ${lineish?`<div class="seg" role="group" aria-label="Сунгах">${(d.type==="fib"?[["none","Богино"],["right","Сунгах →"]]:[["none","—"],["right","→"],["both","↔"]]).map(([v,l])=>`<button type="button" data-prop="ext" data-v="${v}" aria-pressed="${(d.ext||"none")===v}" title="${{none:"Сунгахгүй",right:"Баруун тийш сунгах",both:"Хоёр тийш сунгах"}[v]}">${l}</button>`).join("")}</div><span class="vsep"></span>`:""}
+    ${pos?`<button type="button" class="btn sm primary" data-prop="toOrder" title="Орох, SL, TP-г захиалгын тооцоо руу шилжүүлэх">Захиалгад ашиглах</button>`:""}
+    <button type="button" class="btn sm" data-prop="clone" title="Хуулбарлах" aria-label="Хуулбарлах"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M13 4H4.5A1.5 1.5 0 003 5.5V13"/></svg></button>
+    <button type="button" class="btn sm danger" data-prop="del" title="Устгах (Delete)" aria-label="Устгах"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M6 6l1 11h6l1-11"/></svg></button>`}
 function drProp(btn){const d=DR.sel;if(!d)return;const k=btn.dataset.prop,v=btn.dataset.v;
   if(k==="del"){drDelete();return}
   if(k==="toOrder"){CH.dir=d.type==="long"?"Buy":"Sell";if(CH.mode!=="replay"){CH.mkt=false;$("#opMkt").checked=false;$("#opEntry").value=(+d.a.p).toFixed(decOf(CH.inst))}
