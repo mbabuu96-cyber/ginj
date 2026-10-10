@@ -1,0 +1,50 @@
+# Supabase-ийн үнэгүй төсөл 7 хоног идэвхгүй бол зогсдог.
+# Энэ ажил 3 хоног тутам сервер рүү жижиг хүсэлт илгээж төслийг идэвхтэй байлгана.
+# Шаардлагатай: Settings → Secrets and variables → Actions → SUPABASE_KEY (publishable key)
+
+name: Supabase идэвхтэй байлгах
+
+on:
+  schedule:
+    - cron: "17 2 */3 * *"   # 3 хоног тутам, UTC 02:17 (Улаанбаатарын 10:17)
+  workflow_dispatch:          # Actions табаас гараар ажиллуулах боломж
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_URL: https://qnaxqushnfozblufimei.supabase.co
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - name: Түлхүүр байгаа эсэхийг шалгах
+        run: |
+          if [ -z "$SUPABASE_KEY" ]; then
+            echo "::error::SUPABASE_KEY secret алга. Settings → Secrets and variables → Actions дээр нэмнэ үү."
+            exit 1
+          fi
+          case "$SUPABASE_KEY" in
+            sb_secret_*) echo "::error::Энэ бол нууц түлхүүр. Publishable key ашиглана уу."; exit 1;;
+          esac
+
+      - name: Auth сервер рүү хүсэлт
+        run: |
+          code=$(curl -s -o /tmp/auth.txt -w "%{http_code}" \
+            -H "apikey: $SUPABASE_KEY" "$SUPABASE_URL/auth/v1/health")
+          echo "auth/v1/health → $code"; cat /tmp/auth.txt; echo
+          if [ "$code" = "401" ]; then echo "::error::Түлхүүр буруу байна."; exit 1; fi
+          if [ "$code" -ge 500 ] || [ "$code" = "000" ]; then
+            echo "::warning::Сервер хариу өгсөнгүй. Төсөл зогссон байж магадгүй. Supabase dashboard → Restore project."
+            exit 1
+          fi
+
+      - name: Өгөгдлийн сан руу хүсэлт
+        run: |
+          code=$(curl -s -o /tmp/db.txt -w "%{http_code}" \
+            -H "apikey: $SUPABASE_KEY" \
+            "$SUPABASE_URL/rest/v1/journal_docs?select=id&limit=1")
+          # Нэвтрээгүй хүсэлт тул хоосон эсвэл эрхгүй гэсэн хариу ирэх нь хэвийн.
+          # Хамгийн гол нь хүсэлт өгөгдлийн санд хүрэх.
+          echo "rest/v1/journal_docs → $code"; cat /tmp/db.txt; echo
+          if [ "$code" -ge 500 ] || [ "$code" = "000" ]; then exit 1; fi
+          echo "Амжилттай: $(date -u)"
