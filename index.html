@@ -321,7 +321,7 @@ function saveSettings(o){S.settings=mergeSettings(o);render();if(S.mode==="cloud
 const SUPA_DEFAULT={url:"",key:""};
 const SUPA_LIB="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js";
 const SUPA_CFG_KEY="alkham-supabase",SUPA_PENDING="alkham-pending";
-const SB={client:null,user:null,status:"off",cfg:null,loading:false,lastSync:null,err:"",busy:false,info:"",raw:"",
+const SB={client:null,user:null,status:"off",cfg:null,loading:false,lastSync:null,err:"",busy:false,info:"",raw:"",recovery:false,pwOpen:false,
   draft:{url:"https://qnaxqushnfozblufimei.supabase.co",key:"",email:""}};
 function normUrl(v){v=String(v||"").trim();const m=v.match(/([a-z0-9]{20})(?:\.supabase\.(?:co|in))?/i);
   if(/^[a-z0-9]{20}$/i.test(v)||(m&&/supabase\.(co|in)/i.test(v)))return `https://${m[1].toLowerCase()}.supabase.co`;return null}
@@ -341,7 +341,11 @@ function supaMsg(e){const m=String((e&&(e.message||e.error_description||e.msg))|
   if(/Invalid login credentials/i.test(m))return "Имэйл эсвэл нууц үг буруу байна.";
   if(/Email not confirmed/i.test(m))return "Имэйлээ баталгаажуулаагүй байна. Ирсэн захидлын холбоос дээр дарна уу.";
   if(/already registered|already been registered/i.test(m))return "Энэ имэйлээр бүртгэл аль хэдийн бий. Нэвтрэх товчийг дарна уу.";
-  if(/Password should be|at least 6/i.test(m))return "Нууц үг хамгийн багадаа 6 тэмдэгт байна.";
+  if(/should be different from the old|same_password/i.test(m))return "Шинэ нууц үг хуучнаасаа өөр байх ёстой.";
+  if(/Password should be at least|at least 6/i.test(m))return "Нууц үг хамгийн багадаа 6 тэмдэгт байна.";
+  if(/only request this after|security purposes/i.test(m))return "Аюулгүй байдлын үүднээс дахин хүсэлт илгээхээс өмнө 1 минут орчим хүлээнэ үү.";
+  if(/should be different from the old/i.test(m))return "Шинэ нууц үг хуучнаасаа өөр байх ёстой.";
+  if(/session missing|Auth session|not authenticated/i.test(m))return "Нэвтрэлтийн хугацаа дууссан байна. Дахин нэвтэрч эсвэл шинэ сэргээх холбоос авна уу.";
   if(/Signups not allowed|signup.*disabled/i.test(m))return "Шинэ бүртгэл хаалттай байна. Supabase → Authentication → Sign In / Providers → Allow new users to sign up-ийг асаагаад дахин оролдоно уу.";
   if(/rate limit|too many/i.test(m))return "Хэт олон оролдлого хийсэн байна. Хэдэн минут хүлээгээд дахин оролдоно уу.";
   if(/weak|pwned|leaked/i.test(m))return "Нууц үг хэт сул байна. Үсэг, тоо холилдсон, илүү урт нууц үг сонгоно уу.";
@@ -351,12 +355,20 @@ function supaMsg(e){const m=String((e&&(e.message||e.error_description||e.msg))|
 async function initSupa(){
   SB.cfg=supaCfg();if(!SB.cfg){SB.status="off";setMode();render();return}
   SB.status="connecting";SB.err="";setMode();render();
+  // Нууц үг сэргээх холбоосоор орж ирсэн эсэхийг Supabase хаягийг цэвэрлэхээс өмнө шалгана
+  const linkInfo=location.hash+"&"+location.search;
+  if(/type=recovery/.test(linkInfo))SB.recovery=true;
+  const linkErr=(linkInfo.match(/error_description=([^&]+)/)||[])[1];
   try{await loadScript(SUPA_LIB);
     SB.client=window.supabase.createClient(SB.cfg.url,SB.cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:"alkham-auth"}});
+    SB.client.auth.onAuthStateChange((ev,session)=>{const u=session?session.user:null;const prev=SB.user&&SB.user.id;SB.user=u;
+      if(ev==="PASSWORD_RECOVERY"){SB.recovery=true;SB.err="";S.view="settings";setTimeout(render,0)}
+      if((u&&u.id)!==prev){setTimeout(()=>{u?enterSupa():leaveSupa()},0)}});
     const {data}=await SB.client.auth.getSession();
     SB.user=data&&data.session?data.session.user:null;
-    SB.client.auth.onAuthStateChange((ev,session)=>{const u=session?session.user:null;const prev=SB.user&&SB.user.id;SB.user=u;
-      if((u&&u.id)!==prev){setTimeout(()=>{u?enterSupa():leaveSupa()},0)}});
+    if(linkErr){SB.err="Имэйлийн холбоос хүчингүй эсвэл хугацаа нь дууссан байна. Нууц үг мартсан товчоор шинэ холбоос авна уу.";SB.raw=decodeURIComponent(linkErr.replace(/\+/g," "));SB.recovery=false;S.view="settings"}
+    if(SB.recovery&&SB.user)S.view="settings";
+    if(/access_token|type=recovery|error_description/.test(location.hash))try{history.replaceState(null,"",location.pathname)}catch(e){}
     if(SB.user)await enterSupa();else{SB.status="signedout";setMode();render()}
   }catch(e){SB.status="error";SB.err=supaMsg(e);setMode();render()}
 }
@@ -747,14 +759,24 @@ function supaPanel(){
       <div class="f"><label for="sbEmail">Имэйл</label><input type="email" id="sbEmail" data-draft="email" value="${esc(SB.draft.email)}" autocomplete="email" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)"></div>
       <div class="f"><label for="sbPass">Нууц үг (6+ тэмдэгт)</label><div style="display:flex;gap:6px"><input type="password" id="sbPass" data-draft="pass" value="${esc(SB.draft.pass||"")}" autocomplete="current-password" placeholder="жишээ нь: alkham2026" style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)"><button type="button" class="btn sm" data-act="sbShow" aria-label="Нууц үг харуулах">Харах</button></div></div>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="sbIn"${SB.busy?" disabled":""}>Нэвтрэх</button><button class="btn" data-act="sbUp"${SB.busy?" disabled":""}>Бүртгүүлэх</button><button class="btn" data-act="sbDiag"${SB.busy?" disabled":""}>Холболт шалгах</button><button class="btn ghost" data-act="sbForget">Холболтыг засах</button></div></section>`;
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="sbIn"${SB.busy?" disabled":""}>Нэвтрэх</button><button class="btn" data-act="sbUp"${SB.busy?" disabled":""}>Бүртгүүлэх</button><button class="btn ghost" data-act="sbForgot"${SB.busy?" disabled":""}>Нууц үг мартсан</button><button class="btn" data-act="sbDiag"${SB.busy?" disabled":""}>Холболт шалгах</button><button class="btn ghost" data-act="sbForget">Холболтыг засах</button></div></section>`;
+  const pwForm=(title,hint)=>`<div class="panel" style="background:var(--surface-2);border-color:${SB.recovery?"var(--accent)":"var(--line)"}"><h2>${title}</h2>
+      <p class="muted" style="margin:0;font-size:13px">${hint}</p>
+      <div class="fg" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+        <div class="f"><label for="sbNew1">Шинэ нууц үг (6+ тэмдэгт)</label><input type="password" id="sbNew1" autocomplete="new-password" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)"></div>
+        <div class="f"><label for="sbNew2">Шинэ нууц үгээ давтах</label><input type="password" id="sbNew2" autocomplete="new-password" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="sbSetPw"${SB.busy?" disabled":""}>Нууц үг хадгалах</button>${SB.recovery?"":`<button class="btn ghost" data-act="sbPwToggle">Болих</button>`}</div></div>`;
+  if(SB.recovery)return `<section class="panel c12">${head}${err}${pwForm("Шинэ нууц үг тохируулах",`Та <b>${esc(SB.user.email||"")}</b> бүртгэлийн нууц үгийг сэргээх холбоосоор орж ирлээ. Шинэ нууц үгээ хоёр удаа бичээд хадгална уу.`)}</section>`;
   const local=lsLoad();const ln=local&&local.trades?Object.keys(local.trades).length:0;const n=pendingGet().length;
   return `<section class="panel c12">${head}${err}
     <div class="muted" style="font-size:13px">Нэвтэрсэн: <b>${esc(SB.user.email||"")}</b> · ${Object.keys(S.trades).length} арилжаа серверт${SB.lastSync?` · сүүлд синк ${pad(SB.lastSync.getHours())}:${pad(SB.lastSync.getMinutes())}`:""}${n?` · <span class="neg">${n} өөрчлөлт илгээгдэхийг хүлээж байна</span>`:""}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" data-act="sbSync">Одоо синк хийх</button>
       ${ln?`<button class="btn primary" data-act="sbMigrate"${SB.busy?" disabled":""}>Энэ хөтчид хадгалсан ${ln} арилжааг серверт нэмэх</button>`:""}
-      <button class="btn ghost" data-act="sbOut">Гарах</button></div></section>`;
+      <button class="btn" data-act="sbPwToggle">Нууц үг солих</button>
+      <button class="btn ghost" data-act="sbOut">Гарах</button></div>
+    ${SB.pwOpen?pwForm("Нууц үг солих","Шинэ нууц үгээ хоёр удаа бичнэ. Бусад төхөөрөмж дээр дараагийн удаа шинэ нууц үгээр нэвтэрнэ."):""}</section>`;
 }
 function viewSettings(){
   const s=S.settings;
@@ -996,6 +1018,24 @@ document.addEventListener("click",async e=>{
       else{const j=JSON.parse(txt);const rows=[["Сервертэй холболт","✓ Хэвийн"],["Шинэ бүртгэл",j.disable_signup?"✗ Хаалттай — Allow new users to sign up-ийг асаана уу":"✓ Нээлттэй"],
           ["Имэйл баталгаажуулалт",j.mailer_autoconfirm?"✓ Шаардлагагүй (шууд нэвтэрнэ)":"Шаардлагатай — бүртгүүлсний дараа имэйлээ баталгаажуулна"],["Имэйлээр нэвтрэх",j.external&&j.external.email===false?"✗ Унтраалттай":"✓ Идэвхтэй"]];
         SB.info=rows.map(([k,v])=>`<b>${k}:</b> ${esc(v)}`).join("<br>")}}
+    catch(e){SB.info="";SB.err=supaMsg(e)}
+    SB.busy=false;render()}
+  else if(act==="sbForgot"){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+    const email=($("#sbEmail").value||"").trim();SB.draft.email=email;SB.err="";SB.raw="";SB.info="";
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){SB.err="Нууц үг сэргээх имэйл хаягаа Имэйл талбарт бичээд дахин дарна уу.";render();return}
+    SB.busy=true;SB.info="Сэргээх холбоос илгээж байна…";render();
+    try{const {error}=await withTimeout(SB.client.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname}),20000);if(error)throw error;
+      SB.info=`<b>${esc(email)}</b> хаяг руу нууц үг сэргээх холбоос илгээлээ. Gmail-ээ (Spam хавтсыг ч) шалгаад холбоос дээр дарна уу. Энэ хуудас нээгдэж, шинэ нууц үг тохируулах цонх гарна. Хэдэн минутын дотор ирэхгүй бол Supabase → Authentication → URL Configuration-д Site URL зөв эсэхийг шалгана уу.`}
+    catch(e){SB.info="";SB.err=supaMsg(e)}
+    SB.busy=false;render()}
+  else if(act==="sbPwToggle"){SB.pwOpen=!SB.pwOpen;SB.err="";SB.info="";render();if(SB.pwOpen)setTimeout(()=>{const el=$("#sbNew1");if(el)el.focus()},50)}
+  else if(act==="sbSetPw"){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+    const p1=$("#sbNew1").value||"",p2=$("#sbNew2").value||"";SB.err="";SB.raw="";SB.info="";
+    if(p1.length<6){SB.err="Шинэ нууц үг хамгийн багадаа 6 тэмдэгт байх ёстой.";render();return}
+    if(p1!==p2){SB.err="Хоёр нууц үг таарахгүй байна. Дахин бичнэ үү.";render();return}
+    SB.busy=true;SB.info="Хадгалж байна…";render();
+    try{const {error}=await withTimeout(SB.client.auth.updateUser({password:p1}),20000);if(error)throw error;
+      SB.info="";SB.recovery=false;SB.pwOpen=false;toast("Нууц үг шинэчлэгдлээ");}
     catch(e){SB.info="";SB.err=supaMsg(e)}
     SB.busy=false;render()}
   else if(act==="sbShow"){const el=$("#sbPass");if(el){el.type=el.type==="password"?"text":"password";a.textContent=el.type==="password"?"Харах":"Нуух"}}
