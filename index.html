@@ -339,6 +339,9 @@ function supaMsg(e){const m=String((e&&(e.message||e.error_description))||e||"")
   if(/Email not confirmed/i.test(m))return "Имэйлээ баталгаажуулаагүй байна. Ирсэн захидлын холбоос дээр дарна уу.";
   if(/already registered|already been registered/i.test(m))return "Энэ имэйлээр бүртгэл аль хэдийн бий. Нэвтрэх товчийг дарна уу.";
   if(/Password should be|at least 6/i.test(m))return "Нууц үг хамгийн багадаа 6 тэмдэгт байна.";
+  if(/Signups not allowed|signup.*disabled/i.test(m))return "Шинэ бүртгэл хаалттай байна. Supabase → Authentication → Sign In / Providers → Allow new users to sign up-ийг асаагаад дахин оролдоно уу.";
+  if(/rate limit|too many/i.test(m))return "Хэт олон оролдлого хийсэн байна. Хэдэн минут хүлээгээд дахин оролдоно уу.";
+  if(/weak|pwned|leaked/i.test(m))return "Нууц үг хэт сул байна. Үсэг, тоо холилдсон, илүү урт нууц үг сонгоно уу.";
   if(/Invalid API key|No API key|JWT/i.test(m))return "Түлхүүр буруу байна. Supabase-ийн anon эсвэл publishable түлхүүрийг шалгана уу.";
   if(/fetch|network|Failed|Load failed/i.test(m))return "Сервертэй холбогдож чадсангүй. Интернэт эсвэл Project URL-ээ шалгана уу.";
   return m.slice(0,180)}
@@ -738,7 +741,7 @@ function supaPanel(){
     <p class="muted" style="margin:0;font-size:13px">Анх удаа бол <b>Бүртгүүлэх</b> дарна. Supabase-ээс ирсэн баталгаажуулах имэйлийн холбоос дээр дарсны дараа <b>Нэвтрэх</b> товчоор орно. Бусад төхөөрөмж дээр ижил имэйл, нууц үгээр нэвтэрнэ.</p>
     <div class="fg" style="grid-template-columns:repeat(2,minmax(0,1fr))">
       <div class="f"><label for="sbEmail">Имэйл</label><input type="email" id="sbEmail" data-draft="email" value="${esc(SB.draft.email)}" autocomplete="email" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)"></div>
-      <div class="f"><label for="sbPass">Нууц үг (6+ тэмдэгт)</label><input type="password" id="sbPass" autocomplete="current-password" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)"></div>
+      <div class="f"><label for="sbPass">Нууц үг (6+ тэмдэгт)</label><div style="display:flex;gap:6px"><input type="password" id="sbPass" autocomplete="current-password" placeholder="жишээ нь: alkham2026" style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)"><button type="button" class="btn sm" data-act="sbShow" aria-label="Нууц үг харуулах">Харах</button></div></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="sbIn"${SB.busy?" disabled":""}>Нэвтрэх</button><button class="btn" data-act="sbUp"${SB.busy?" disabled":""}>Бүртгүүлэх</button><button class="btn ghost" data-act="sbForget">Холболтыг засах</button></div></section>`;
   const local=lsLoad();const ln=local&&local.trades?Object.keys(local.trades).length:0;const n=pendingGet().length;
@@ -959,20 +962,23 @@ document.addEventListener("click",async e=>{
     if(SB.err){a.blur();render();return}
     try{localStorage.setItem(SUPA_CFG_KEY,JSON.stringify({url,key}))}catch(e){}a.blur();initSupa()}
   else if(act==="sbIn"||act==="sbUp"){const email=($("#sbEmail").value||"").trim(),password=$("#sbPass").value||"";
-    if(!email||!password){toast("Имэйл, нууц үгээ оруулна уу.");return}
+    SB.draft.email=email;
+    if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){SB.err="Имэйлээ зөв оруулна уу.";render();return}
+    if(password.length<6){SB.err=password?"Нууц үг хамгийн багадаа 6 тэмдэгт байх ёстой.":"Нууц үгээ баруун талын талбарт бичнэ үү (6-аас дээш тэмдэгт).";render();setTimeout(()=>{const el=$("#sbPass");if(el)el.focus()},50);return}
     SB.draft.email=email;SB.busy=true;SB.err="";a.blur();render();
     try{if(act==="sbIn"){const {error}=await SB.client.auth.signInWithPassword({email,password});if(error)throw error;toast("Нэвтэрлээ")}
       else{const {data,error}=await SB.client.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname}});if(error)throw error;
         if(!data.session)toast("Бүртгэл үүслээ. Имэйлээ шалгаж баталгаажуулаад Нэвтрэх дарна уу.");else toast("Бүртгэл үүсч, нэвтэрлээ")}}
     catch(e){SB.err=supaMsg(e)}
     SB.busy=false;render()}
+  else if(act==="sbShow"){const el=$("#sbPass");if(el){el.type=el.type==="password"?"text":"password";a.textContent=el.type==="password"?"Харах":"Нуух"}}
   else if(act==="sbOut"){await SB.client.auth.signOut();toast("Гарлаа")}
   else if(act==="sbSync"){await flushPending();await pullAll();toast(SB.status==="ok"?"Синк хийлээ":SB.err||"Синк хийж чадсангүй")}
   else if(act==="sbMigrate")supaMigrateLocal();
   else if(act==="sbForget"){try{localStorage.removeItem(SUPA_CFG_KEY)}catch(e){}if(SB.cfg){SB.draft.url=SB.cfg.url;SB.draft.key=SB.cfg.key}SB.cfg=null;SB.client=null;SB.status="off";SB.err="";setMode();render()}
   else if(act==="migrate"){const lc=S.localCache;for(const coll of ["trades","days","reviews","beliefs"]){for(const [k,v] of Object.entries(lc[coll]||{}))await put(coll,k,v)}if(lc.settings)await saveSettings(lc.settings);toast("Шилжүүллээ")}
 });
-document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.matches("tr[data-edit]")){e.preventDefault();openForm(e.target.dataset.edit)}});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="sbPass"){e.preventDefault();const b=$("[data-act=sbIn]");if(b)b.click();return}if((e.key==="Enter"||e.key===" ")&&e.target.matches("tr[data-edit]")){e.preventDefault();openForm(e.target.dataset.edit)}});
 function collectSettings(){const s=clone(S.settings);const g=id=>{const el=$("#"+id);return el?el.value:null};
   if(g("sCur")!=null){s.currency=g("sCur")||"$";s.startBalance=num(g("sBal"))??0;s.riskPct=num(g("sRisk"))??1;s.maxRiskPct=num(g("sMaxRisk"))??2;s.dailyLossPct=num(g("sDaily"))??3;s.maxTradesDay=num(g("sMaxT"))??5;
     s.setups=g("sSetups").split("\n").map(x=>x.trim()).filter(Boolean);
