@@ -237,6 +237,25 @@ svg text{font-family:var(--f-mono)}
 .pat-bar.base{height:18px;font-size:11px;opacity:.75}
 .pat-bar .pb{display:flex;align-items:center;justify-content:center;color:#fff;white-space:nowrap;overflow:hidden;min-width:0}
 .pat-bar .buy{background:var(--gain)}.pat-bar .sell{background:var(--loss)}
+.pat-tabs button{font-weight:600}
+.np-explain{font-size:12px;margin:0}
+.np-groups{align-self:flex-start;flex-wrap:wrap}
+.np-base{display:grid;grid-template-columns:auto minmax(120px,1fr) auto;gap:10px;align-items:center;font-size:12px}
+.np-bar{display:flex;height:20px;border-radius:5px;overflow:hidden;font-weight:600;font-size:11px;background:var(--surface-2)}
+.np-bar.big{height:28px;font-size:13px}.np-bar.nil{justify-content:center;align-items:center;color:var(--muted);font-weight:400;font-size:11px}
+.np-bar .pb{display:flex;align-items:center;justify-content:center;color:#fff;white-space:nowrap;overflow:hidden;min-width:0}
+.np-bar .buy{background:#089981}.np-bar .sell{background:#F23645}
+.np-dir{font-size:11px;font-weight:700;white-space:nowrap}.np-dir.up{color:#089981}.np-dir.dn{color:#F23645}
+.np-now{display:flex;flex-direction:column;gap:6px}
+.np-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.np-card{display:flex;flex-direction:column;gap:5px;text-align:left;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer;color:var(--ink);font:inherit}
+.np-card:hover{border-color:#2962FF}.np-card.now{border-left:3px solid #2962FF}.np-card.form{border-left:3px dashed #FF9800}
+.np-card-h{display:flex;gap:8px;align-items:center;font-size:13px}
+.np-tw{max-height:420px;overflow-y:auto}
+.np-table tr.on td{background:color-mix(in srgb,#2962FF 9%,transparent)}
+.np-table tr.dim td{opacity:.55}
+.np-nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+.np-nav .sp{flex:1}
 .fib-dlg{width:min(560px,calc(100vw - 24px))}
 .fib-dlg .dlg-f{flex-wrap:wrap;gap:8px;align-items:center}.fib-dlg .dlg-f .sp{flex:1 1 auto;min-width:0}.fib-dlg .fib-ok{display:flex;gap:8px;margin-left:auto;flex:0 0 auto}
 .fib-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px}
@@ -1146,7 +1165,7 @@ function chBuild(){
       <select id="chInst" aria-label="Хэрэгсэл"></select>
       <div class="seg" id="chGran" role="group" aria-label="Хугацааны интервал">${GRANS.map(([g,l])=>`<button type="button" data-v="${g}" aria-pressed="${g===CH.gran}">${l}</button>`).join("")}</div>
       <div class="seg" id="chMode" role="group" aria-label="Горим"><button type="button" data-v="live" aria-pressed="true">Шууд</button><button type="button" data-v="replay" aria-pressed="false">Давтан тоглуулах</button></div>
-      <div class="ch-view"><button type="button" class="btn sm" data-ch="zoom" data-v="-1" title="Лааг жижигрүүлэх" aria-label="Лааг жижигрүүлэх">−</button><button type="button" class="btn sm" data-ch="zoom" data-v="1" title="Лааг томруулах" aria-label="Лааг томруулах">＋</button><button type="button" class="btn sm" data-ch="patOpen" id="btnPat" title="Одоогийн хөдөлгөөнтэй төстэй өнгөрсний хэв маягийг олох">Хэв маяг</button><button type="button" class="btn sm" data-ch="wide" id="btnWide" title="Захиалгын самбарыг нууж графикийг өргөсгөх">Өргөн</button><button type="button" class="btn sm" data-ch="full" id="btnFull" title="Бүтэн дэлгэцээр харах (Esc гарах)">⛶ Бүтэн дэлгэц</button></div>
+      <div class="ch-view"><button type="button" class="btn sm" data-ch="zoom" data-v="-1" title="Лааг жижигрүүлэх" aria-label="Лааг жижигрүүлэх">−</button><button type="button" class="btn sm" data-ch="zoom" data-v="1" title="Лааг томруулах" aria-label="Лааг томруулах">＋</button><button type="button" class="btn sm" data-ch="patOpen" id="btnPat" title="Нэртэй хэв маяг (гурвалжин, толгой мөр, BOS…) болон төстэй хөдөлгөөний өмнөх Buy/Sell хувь">Хэв маяг</button><button type="button" class="btn sm" data-ch="wide" id="btnWide" title="Захиалгын самбарыг нууж графикийг өргөсгөх">Өргөн</button><button type="button" class="btn sm" data-ch="full" id="btnFull" title="Бүтэн дэлгэцээр харах (Esc гарах)">⛶ Бүтэн дэлгэц</button></div>
       <span class="ch-status" id="chStatus" role="status"></span>
     </div>
     <div class="ch-tools" id="chTools">
@@ -1187,12 +1206,14 @@ function chBuild(){
   root.addEventListener("click",chClick);
   root.addEventListener("input",e=>{if(e.target.id==="opRiskIn"){const v=num(e.target.value);if(v)CH.risk=v}chUpdate()});
   root.addEventListener("change",e=>{const id=e.target.id;
-    if(id==="chInst"){chSetInst(e.target.value);PAT.lastN=0;PAT.res=null;PAT.focus=null;chReload()}
+    if(id==="chInst"){chSetInst(e.target.value);PAT.lastN=0;PAT.res=null;PAT.focus=null;NP.res=null;NP.lastN=0;NP.sel=null;NP.idx=null;chReload()}
     else if(id==="opMkt"){CH.mkt=e.target.checked;chUpdate()}
     else if(id==="rpStart"){CH.rpStart=e.target.value;drOptsSave()}
     else if(id==="rpSpeed"){CH.rp.speed=+e.target.value;drOptsSave();if(CH.rp.timer){rpPause();rpPlay()}}
     else if(id==="patW"||id==="patH"||id==="patK"){PAT[id.slice(3).toLowerCase()]=+e.target.value;PAT.focus=null;patGo()}
     else if(id==="patShow"){PAT.show=e.target.checked;drDirty()}
+    else if(id==="npK"||id==="npM"||id==="npH"){NP[id.slice(2).toLowerCase()]=+e.target.value;npSave();npGo()}
+    else if(id==="npShow"){NP.show=e.target.checked;npSave();drDirty()}
     else if(id==="mtfSel"){DR.mtf=+e.target.value;drOptsSave();drDirty();MTF.key="";MTF.check=null;mtfStatus();mtfLoadReal();if(DR.mtf&&DR.mtf<=CH.gran)toast("Дээд интервал нь графикийн интервалаас их байх ёстой.")}
     else if(id==="sessChk"){DR.sess=e.target.checked;drOptsSave();drDirty();if(DR.sess&&CH.gran>3600)toast("Сешний бүс 1 цагаас бага интервал дээр харагдана.")}});
   const d=new Date(Date.now()-3*864e5);d.setHours(9,0,0,0);$("#rpStart").value=CH.rpStart||`${ymd(d)}T09:00`;$("#rpSpeed").value=String(CH.rp.speed||2);
@@ -1810,7 +1831,7 @@ function drInit(){
 }
 
 /* ---------------- Төстэй хэв маяг (өнгөрсөнд давтагдсан хөдөлгөөн) ---------------- */
-const PAT={open:false,res:null,w:30,h:20,k:20,show:true,focus:null,t:0,lastN:0,lastClose:null};
+const PAT={open:false,res:null,w:30,h:20,k:20,show:true,focus:null,t:0,lastN:0,lastClose:null,tab:(()=>{try{return localStorage.getItem("alkham-pat-tab")||"np"}catch(e){return "np"}})()};
 function patStats(a){const n=a.length;if(!n)return {mean:0,med:0};const s=a.slice().sort((x,y)=>x-y);return {mean:a.reduce((x,y)=>x+y,0)/n,med:n%2?s[(n-1)/2]:(s[n/2-1]+s[n/2])/2,p25:s[Math.floor(n*0.25)],p75:s[Math.min(n-1,Math.floor(n*0.75))]}}
 function patRun(){
   const data=CH.series?CH.series.data():[];const n=data.length,w=PAT.w,h=PAT.h,K=PAT.k;
@@ -1863,8 +1884,11 @@ function patSvg(R){const W=640,H=230,padL=8,padR=56,padT=12,padB=22,w=R.w,h=R.h;
     <circle cx="${x0}" cy="${Y(base)}" r="3.5" fill="var(--ink)"/></svg>`}
 function patRender(){const box=$("#patBox");if(!box)return;box.hidden=!PAT.open;if(!PAT.open)return;const R=PAT.res;
   const sel=(id,vals,cur,suf)=>`<select id="${id}">${vals.map(v=>`<option value="${v}"${v===cur?" selected":""}>${v} ${suf}</option>`).join("")}</select>`;
-  let h=`<div class="panel-h"><h2>Төстэй хэв маяг</h2><span class="muted" style="font-size:12px">${CH.mode==="replay"?"давтан тоглуулалтын харагдаж буй лаагаар":"ачаалсан түүхээр"}</span>
-    <button type="button" class="btn sm ghost" data-ch="patClose" aria-label="Хаах">✕</button></div>
+  let h=`<div class="panel-h"><div class="seg pat-tabs" role="tablist" aria-label="Хэв маягийн төрөл"><button type="button" role="tab" data-ch="patTab" data-v="np" aria-pressed="${PAT.tab==="np"}">Нэртэй хэв маяг</button><button type="button" role="tab" data-ch="patTab" data-v="sim" aria-pressed="${PAT.tab==="sim"}">Төстэй хөдөлгөөн</button></div>
+    <span class="muted" style="font-size:12px">${CH.mode==="replay"?"давтан тоглуулалтын харагдаж буй лаагаар":`ачаалсан ${(CH.series?CH.series.data().length:0).toLocaleString("en-US")} лаагаар`}</span>
+    <button type="button" class="btn sm ghost" data-ch="patClose" aria-label="Хаах">✕</button></div>`;
+  if(PAT.tab==="np"){box.innerHTML=h+npHtml();return}
+  h+=`
     <div class="ch-tools"><label class="lbl" for="patW">Харьцуулах</label>${sel("patW",[15,20,30,50,80],PAT.w,"лаа")}
       <label class="lbl" for="patH">Урагш</label>${sel("patH",[5,10,20,30,50],PAT.h,"лаа")}
       <label class="lbl" for="patK">Хамгийн төстэй</label>${sel("patK",[10,20,30,50],PAT.k,"")}
@@ -1890,12 +1914,13 @@ function patRender(){const box=$("#patBox");if(!box)return;box.hidden=!PAT.open;
       ${PAT.focus!=null?`<div><button type="button" class="btn sm" data-ch="patBack">← Одоогийн үнэ рүү буцах</button></div>`:""}`}
   h+=`<p class="muted" style="font-size:11px;margin:0">Step Index нь Deriv-ийн тодорхойлолтоор дээш, доош алхах магадлал тэнцүү санамсаргүй процесс. Энэ хэрэгсэл зөвхөн судалгаа, сэтгэл зүйн дасгалд зориулагдсан; арилжааны дохио биш.</p>`;
   box.innerHTML=h}
-function patGo(){PAT.res=null;patRender();setTimeout(()=>{try{patRun()}catch(e){PAT.res={err:"Шинжилгээ амжилтгүй: "+e.message}}patRender();drDirty()},20)}
+function patGo(){if(PAT.tab==="np"){npGo();return}PAT.res=null;patRender();setTimeout(()=>{try{patRun()}catch(e){PAT.res={err:"Шинжилгээ амжилтгүй: "+e.message}}patRender();drDirty()},20)}
 function patAuto(){if(!PAT.open||!CH.series)return;const d=CH.series.data();if(!d.length)return;
+  if(PAT.tab==="np"){if(d.length!==NP.lastN||(NP.res&&!NP.res.err&&NP.res.t0!==d[0].time)){clearTimeout(NP.t);NP.lastN=d.length;NP.t=setTimeout(()=>{try{npCompute()}catch(e){}patRender();drDirty()},400)}return}
   if(d.length!==PAT.lastN&&PAT.focus==null){clearTimeout(PAT.t);PAT.t=setTimeout(()=>{try{patRun()}catch(e){}patRender();drDirty()},400)}}
 function patJump(i){const R=PAT.res;if(!R||!R.matches[i])return;const m=R.matches[i];PAT.focus=i;
   CH.chart.timeScale().setVisibleLogicalRange({from:m.s-R.w,to:m.e+R.h+R.w});patRender();drDirty()}
-function patDraw(ctx,box){const R=PAT.res;if(!PAT.open||!R||R.err)return;
+function patDraw(ctx,box){if(PAT.tab==="np"){npDraw(ctx,box);return}const R=PAT.res;if(!PAT.open||!R||R.err)return;
   if(PAT.focus!=null){const m=R.matches[PAT.focus];const data=CH.series.data();if(!data[m.s]||!data[m.e+R.h])return;
     const x1=dX(data[m.s].time-TZ),x2=dX(data[m.e].time-TZ),x3=dX(data[m.e+R.h].time-TZ);if(x1==null||x3==null)return;
     ctx.fillStyle=rgba("#2F6FDE",0.10);ctx.fillRect(x1,0,x2-x1,box.h);ctx.fillStyle=m.raw>=0?rgba("#16936A",0.12):rgba("#C43D3D",0.12);ctx.fillRect(x2,0,x3-x2,box.h);
@@ -1909,12 +1934,222 @@ function patDraw(ctx,box){const R=PAT.res;if(!PAT.open||!R||R.err)return;
   const e=mn[mn.length-1];ctx.font=`600 11px ${cssVar("--f-body")||"sans-serif"}`;ctx.fillStyle="#C8961E";ctx.textBaseline="middle";
   const t=`Buy ${(R.buy*100).toFixed(0)}% · Sell ${(R.sell*100).toFixed(0)}%`;ctx.fillText(t,Math.min(e[0]+6,box.w-ctx.measureText(t).width-4),e[1]-12)}
 
+/* --- Нэртэй хэв маяг: илрүүлэх + өмнөх тохиолдлын Buy/Sell статистик (ирээдүйг харахгүй) --- */
+const NP_DEFS=[
+ ["dtop","Давхар оргил","Double top","rev",-1],["dbot","Давхар ёроол","Double bottom","rev",1],
+ ["ttop","Гурвалсан оргил","Triple top","rev",-1],["tbot","Гурвалсан ёроол","Triple bottom","rev",1],
+ ["hs","Толгой мөр","Head & shoulders","rev",-1],["ihs","Урвуу толгой мөр","Inverse head & shoulders","rev",1],
+ ["rwedge","Өгсөх шаантаг","Rising wedge","rev",-1],["fwedge","Уруудах шаантаг","Falling wedge","rev",1],
+ ["atri","Өгсөх гурвалжин","Ascending triangle","cont",1],["dtri","Уруудах гурвалжин","Descending triangle","cont",-1],
+ ["stri_u","Тэгш хэмт гурвалжин ↑","Symmetrical triangle ↑","cont",1],["stri_d","Тэгш хэмт гурвалжин ↓","Symmetrical triangle ↓","cont",-1],
+ ["rect_u","Хүрээ (range) ↑ задрал","Rectangle breakout ↑","cont",1],["rect_d","Хүрээ (range) ↓ задрал","Rectangle breakout ↓","cont",-1],
+ ["bflag","Өсөлтийн туг","Bull flag","cont",1],["sflag","Уналтын туг","Bear flag","cont",-1],
+ ["bos_u","BOS ↑ бүтэц эвдрэх","Break of structure ↑","str",1],["bos_d","BOS ↓ бүтэц эвдрэх","Break of structure ↓","str",-1],
+ ["choch_u","CHoCH ↑ чиглэл солигдох","Change of character ↑","str",1],["choch_d","CHoCH ↓ чиглэл солигдох","Change of character ↓","str",-1],
+ ["sweep_h","Liquidity sweep дээд","Sweep of swing high","str",-1],["sweep_l","Liquidity sweep доод","Sweep of swing low","str",1],
+ ["fvg_u","FVG өсөлтийн","Bullish fair value gap","str",1],["fvg_d","FVG уналтын","Bearish fair value gap","str",-1],
+ ["eng_u","Engulfing өсөлтийн","Bullish engulfing","cdl",1],["eng_d","Engulfing уналтын","Bearish engulfing","cdl",-1],
+ ["pin_u","Hammer / pin bar ↑","Hammer","cdl",1],["pin_d","Shooting star / pin bar ↓","Shooting star","cdl",-1],
+ ["mstar","Өглөөний од","Morning star","cdl",1],["estar","Оройн од","Evening star","cdl",-1],
+ ["ib_u","Inside bar ↑ задрал","Inside bar breakout ↑","cdl",1],["ib_d","Inside bar ↓ задрал","Inside bar breakout ↓","cdl",-1]];
+const NP_DEF=Object.fromEntries(NP_DEFS.map(([id,mn,en,g,dir])=>[id,{id,mn,en,g,dir}]));
+const NP_GROUPS=[["all","Бүгд"],["rev","Эргэх"],["cont","Үргэлжлэх"],["str","Бүтэц / liquidity"],["cdl","Лаа"]];
+
+function npATR(h,l,c,p){const n=c.length,a=new Float64Array(n);let s=0;
+  for(let i=0;i<n;i++){const tr=i?Math.max(h[i]-l[i],Math.abs(h[i]-c[i-1]),Math.abs(l[i]-c[i-1])):h[i]-l[i];
+    if(i<p){s+=tr;a[i]=s/(i+1)}else a[i]=(a[i-1]*(p-1)+tr)/p}return a}
+// Фрактал оргил/ёроол: i-ийн өмнө, хойно k лаа. Баталгаажих мөч = i+k (тэр лаа хаагдсаны дараа л мэдэгдэнэ)
+function npRawPivots(h,l,k){const n=h.length,out=[];
+  for(let i=k;i<n-k;i++){let isH=true,isL=true;
+    for(let j=i-k;j<=i+k&&(isH||isL);j++){if(j===i)continue;if(h[j]>h[i]||(h[j]===h[i]&&j<i))isH=false;if(l[j]<l[i]||(l[j]===l[i]&&j<i))isL=false}
+    if(isH)out.push({i,p:h[i],t:1,conf:i+k});if(isL)out.push({i,p:l[i],t:-1,conf:i+k})}
+  return out}
+const npLine=(a,b)=>j=>a.p+(b.p-a.p)*(j-a.i)/((b.i-a.i)||1);
+const npSlope=(a,b)=>(b.p-a.p)/((b.i-a.i)||1);
+
+// Тухайн мөчийн оргил/ёроолын жагсаалтын сүүлээс хэв маяг бүрэлдсэн эсэхийг шалгана → хүлээгдэж буй задрал
+function npForm(P,atr,k){const out=[];const m=P.length;if(m<3)return out;const A=atr;
+  const L=x=>P[m-x];// L(1)=сүүлийнх
+  const p1=L(1),p2=L(2),p3=L(3),a=A[p1.i]||A[p1.conf]||0;if(!(a>0))return out;const tol=0.5*a;
+  // Давхар оргил / ёроол
+  if(p1.t===1&&p2.t===-1&&p3.t===1){const hi=Math.max(p1.p,p3.p);if(Math.abs(p1.p-p3.p)<=tol&&Math.min(p1.p,p3.p)-p2.p>=1.5*a&&p1.i-p3.i>=2*k)
+    out.push({key:"dtop|"+p3.i+"|"+p1.i,pts:[p3,p2,p1],up:()=>hi+tol,dn:()=>p2.p,idU:null,idD:"dtop"})}
+  if(p1.t===-1&&p2.t===1&&p3.t===-1){const lo=Math.min(p1.p,p3.p);if(Math.abs(p1.p-p3.p)<=tol&&p2.p-Math.max(p1.p,p3.p)>=1.5*a&&p1.i-p3.i>=2*k)
+    out.push({key:"dbot|"+p3.i+"|"+p1.i,pts:[p3,p2,p1],up:()=>p2.p,dn:()=>lo-tol,idU:"dbot",idD:null})}
+  // Туг: хүчтэй импульс (≥3 ATR), 15–50% ухралт
+  if(p1.t===-1&&p2.t===1&&p3.t===-1){const pole=p2.p-p3.p,rt=(p2.p-p1.p)/(pole||1);if(pole>=3*a&&p2.i-p3.i<=6*k&&rt>=0.15&&rt<=0.5)
+    out.push({key:"bflag|"+p2.i+"|"+p1.i,pts:[p3,p2,p1],up:()=>p2.p,dn:()=>p1.p,idU:"bflag",idD:null})}
+  if(p1.t===1&&p2.t===-1&&p3.t===1){const pole=p3.p-p2.p,rt=(p1.p-p2.p)/(pole||1);if(pole>=3*a&&p2.i-p3.i<=6*k&&rt>=0.15&&rt<=0.5)
+    out.push({key:"sflag|"+p2.i+"|"+p1.i,pts:[p3,p2,p1],up:()=>p1.p,dn:()=>p2.p,idU:null,idD:"sflag"})}
+  if(m>=4){const q=[L(4),L(3),L(2),L(1)];const H=q.filter(x=>x.t===1),Lo=q.filter(x=>x.t===-1);
+    if(H.length===2&&Lo.length===2&&q[3].i-q[0].i>=3*k){const sH=npSlope(H[0],H[1]),sL=npSlope(Lo[0],Lo[1]),uL=npLine(H[0],H[1]),lL=npLine(Lo[0],Lo[1]);
+      const dH=H[1].p-H[0].p,dL=Lo[1].p-Lo[0].p,flatH=Math.abs(dH)<=tol,flatL=Math.abs(dL)<=tol,ht=Math.min(H[0].p,H[1].p)-Math.max(Lo[0].p,Lo[1].p);
+      const key=q.map(x=>x.i).join("|"),last=q[3];
+      if(ht>=1.0*a){
+        if(flatH&&flatL&&ht>=1.5*a){const top=Math.max(H[0].p,H[1].p),bot=Math.min(Lo[0].p,Lo[1].p);out.push({key:"rect|"+key,pts:q,lines:[[q[0].i,top],[bot]],up:()=>top,dn:()=>bot,idU:"rect_u",idD:"rect_d",flat:[top,bot]})}
+        else if(flatH&&dL>=0.35*a){const top=Math.max(H[0].p,H[1].p);out.push({key:"atri|"+key,pts:q,up:()=>top,dn:lL,idU:"atri",idD:null,ln:[[H[0],H[1]],[Lo[0],Lo[1]]]})}
+        else if(flatL&&dH<=-0.35*a){const bot=Math.min(Lo[0].p,Lo[1].p);out.push({key:"dtri|"+key,pts:q,up:uL,dn:()=>bot,idU:null,idD:"dtri",ln:[[H[0],H[1]],[Lo[0],Lo[1]]]})}
+        else if(dH<=-0.35*a&&dL>=0.35*a)out.push({key:"stri|"+key,pts:q,up:uL,dn:lL,idU:"stri_u",idD:"stri_d",ln:[[H[0],H[1]],[Lo[0],Lo[1]]]});
+        else if(dH>=0.35*a&&dL>=0.35*a&&sL>sH)out.push({key:"rw|"+key,pts:q,up:uL,dn:lL,idU:null,idD:"rwedge",ln:[[H[0],H[1]],[Lo[0],Lo[1]]]});
+        else if(dH<=-0.35*a&&dL<=-0.35*a&&sH<sL)out.push({key:"fw|"+key,pts:q,up:uL,dn:lL,idU:"fwedge",idD:null,ln:[[H[0],H[1]],[Lo[0],Lo[1]]]})}}}
+  if(m>=5){const [h1,l1,h2,l2,h3]=[L(5),L(4),L(3),L(2),L(1)];
+    if(h1.t===1&&h3.t===1){const hs=[h1.p,h2.p,h3.p],mx=Math.max(...hs),mn=Math.min(...hs),neckLo=Math.min(l1.p,l2.p);
+      if(mx-mn<=1.2*tol&&mn-neckLo>=1.5*a)out.push({key:"ttop|"+h1.i+"|"+h3.i,pts:[h1,l1,h2,l2,h3],up:()=>mx+tol,dn:()=>neckLo,idU:null,idD:"ttop"});
+      const sh=h2.p-Math.max(h1.p,h3.p),depth=h2.p-Math.min(l1.p,l2.p);
+      if(sh>=0.5*a&&Math.abs(h1.p-h3.p)<=0.6*depth*0.5&&depth>=2*a){const nk=npLine(l1,l2);out.push({key:"hs|"+h1.i+"|"+h3.i,pts:[h1,l1,h2,l2,h3],up:()=>h2.p,dn:nk,idU:null,idD:"hs",ln:[[l1,l2]]})}}
+    if(h1.t===-1&&h3.t===-1){const ls=[h1.p,h2.p,h3.p],mx=Math.max(...ls),mn=Math.min(...ls),neckHi=Math.max(l1.p,l2.p);
+      if(mx-mn<=1.2*tol&&neckHi-mx>=1.5*a)out.push({key:"tbot|"+h1.i+"|"+h3.i,pts:[h1,l1,h2,l2,h3],up:()=>neckHi,dn:()=>mn-tol,idU:"tbot",idD:null});
+      const sh=Math.min(h1.p,h3.p)-h2.p,depth=Math.max(l1.p,l2.p)-h2.p;
+      if(sh>=0.5*a&&Math.abs(h1.p-h3.p)<=0.6*depth*0.5&&depth>=2*a){const nk=npLine(l1,l2);out.push({key:"ihs|"+h1.i+"|"+h3.i,pts:[h1,l1,h2,l2,h3],up:nk,dn:()=>h2.p,idU:"ihs",idD:null,ln:[[l1,l2]]})}}}
+  return out}
+
+function npDetect(o,h,l,c,opt){const n=c.length,k=opt.k||5,W=opt.wait||Math.max(20,k*6);const atr=npATR(h,l,c,14);const occ=[],forming=[];
+  const raw=npRawPivots(h,l,k);
+  // 1) Графикийн хэв маяг: оргил/ёроол бүр баталгаажих мөчид тэр үеийн жагсаалтаар шалгана
+  const P=[],seen=new Set();
+  for(const q of raw){const last=P[P.length-1];let changed=false;
+    if(last&&last.t===q.t){if((q.t===1&&q.p>last.p)||(q.t===-1&&q.p<last.p)){P[P.length-1]=q;changed=true}}else{P.push(q);changed=true}
+    if(!changed)continue;
+    for(const f of npForm(P,atr,k)){if(seen.has(f.key))continue;seen.add(f.key);
+      let done=false;for(let j=q.conf+1;j<=q.conf+W;j++){if(j>=n){forming.push(Object.assign(f,{t0:q.conf}));done=true;break}
+        const u=f.up(j),d=f.dn(j);
+        if(c[j]>u){if(f.idU)occ.push({id:f.idU,b:j,pts:f.pts.map(x=>[x.i,x.p]),lv:u,ln:f.ln,flat:f.flat});done=true;break}
+        if(c[j]<d){if(f.idD)occ.push({id:f.idD,b:j,pts:f.pts.map(x=>[x.i,x.p]),lv:d,ln:f.ln,flat:f.flat});done=true;break}}
+      if(!done){}}}
+  // 2) Бүтэц ба liquidity: тухайн лааны үед баталгаажсан хамгийн сүүлийн оргил/ёроолоор
+  let ri=0,SH=null,SL=null,trend=0;
+  for(let j=0;j<n;j++){while(ri<raw.length&&raw[ri].conf<j){const q=raw[ri++];if(q.t===1)SH={...q};else SL={...q}}
+    if(SH&&!SH.done){if(c[j]>SH.p){SH.done=true;if(trend)occ.push({id:trend===1?"bos_u":"choch_u",b:j,pts:[[SH.i,SH.p]],lv:SH.p});trend=1}
+      else if(h[j]>SH.p&&c[j]<SH.p){SH.done=true;occ.push({id:"sweep_h",b:j,pts:[[SH.i,SH.p]],lv:SH.p})}}
+    if(SL&&!SL.done){if(c[j]<SL.p){SL.done=true;if(trend)occ.push({id:trend===-1?"bos_d":"choch_d",b:j,pts:[[SL.i,SL.p]],lv:SL.p});trend=-1}
+      else if(l[j]<SL.p&&c[j]>SL.p){SL.done=true;occ.push({id:"sweep_l",b:j,pts:[[SL.i,SL.p]],lv:SL.p})}}}
+  // 3) Лаа ба FVG
+  const lastAt={};const push=(id,j,pts,lv)=>{if(lastAt[id]!=null&&j-lastAt[id]<2)return;lastAt[id]=j;occ.push({id,b:j,pts,lv})};
+  for(let j=10;j<n;j++){const a=atr[j-1];if(!(a>0))continue;const bo=Math.abs(c[j]-o[j]),rg=h[j]-l[j];
+    if(l[j]-h[j-2]>=0.25*a)push("fvg_u",j,[[j-2,h[j-2]],[j,l[j]]]);
+    if(l[j-2]-h[j]>=0.25*a)push("fvg_d",j,[[j-2,l[j-2]],[j,h[j]]]);
+    if(c[j-1]<o[j-1]&&c[j]>o[j]&&c[j]>=o[j-1]&&o[j]<=c[j-1]&&bo>=0.5*a&&c[j-1]<c[j-6])push("eng_u",j,[[j-1,l[j-1]],[j,h[j]]]);
+    if(c[j-1]>o[j-1]&&c[j]<o[j]&&c[j]<=o[j-1]&&o[j]>=c[j-1]&&bo>=0.5*a&&c[j-1]>c[j-6])push("eng_d",j,[[j-1,h[j-1]],[j,l[j]]]);
+    const lw=Math.min(o[j],c[j])-l[j],uw=h[j]-Math.max(o[j],c[j]);let mnL=Infinity,mxH=-Infinity;for(let t=j-10;t<j;t++){if(l[t]<mnL)mnL=l[t];if(h[t]>mxH)mxH=h[t]}
+    if(rg>=0.8*a&&lw>=2*bo&&lw>=0.6*rg&&l[j]<=mnL)push("pin_u",j,[[j,l[j]]]);
+    if(rg>=0.8*a&&uw>=2*bo&&uw>=0.6*rg&&h[j]>=mxH)push("pin_d",j,[[j,h[j]]]);
+    const b2=Math.abs(c[j-2]-o[j-2]),b1=Math.abs(c[j-1]-o[j-1]);
+    if(c[j-2]<o[j-2]&&b2>=0.7*a&&b1<=0.3*a&&c[j]>o[j]&&bo>=0.5*a&&c[j]>(o[j-2]+c[j-2])/2)push("mstar",j,[[j-2,h[j-2]],[j-1,l[j-1]],[j,h[j]]]);
+    if(c[j-2]>o[j-2]&&b2>=0.7*a&&b1<=0.3*a&&c[j]<o[j]&&bo>=0.5*a&&c[j]<(o[j-2]+c[j-2])/2)push("estar",j,[[j-2,l[j-2]],[j-1,h[j-1]],[j,l[j]]]);
+    if(h[j-1]<h[j-2]&&l[j-1]>l[j-2]){if(c[j]>h[j-2])push("ib_u",j,[[j-2,h[j-2]],[j-2,l[j-2]]],h[j-2]);else if(c[j]<l[j-2])push("ib_d",j,[[j-2,h[j-2]],[j-2,l[j-2]]],l[j-2])}}
+  // ижил төрлийн хэт ойр давхардлыг (k лаанаас бага зайтай) хасна
+  occ.sort((x,y)=>x.b-y.b);const lastB={};const occ2=[];
+  for(const x of occ){const g=NP_DEF[x.id].g;const gap=g==="rev"||g==="cont"?k:0;if(gap&&lastB[x.id]!=null&&x.b-lastB[x.id]<gap)continue;lastB[x.id]=x.b;occ2.push(x)}
+  return {occ:occ2,forming,atr}}
+
+// Үр дүн: орох үнээс ±m·ATR-ын аль нь түрүүлж хүрсэн бэ (тэнцүү SL/TP-тэй Buy ба Sell)
+function npOutcome(h,l,c,atr,b,m,H){const E=c[b],X=m*atr[b],n=c.length;if(!(X>0))return {res:"na"};
+  for(let j=b+1;j<=b+H;j++){if(j>=n)return {res:"open"};const up=h[j]>=E+X,dn=l[j]<=E-X;
+    if(up&&dn)return {res:"both",j,E,X};if(up)return {res:"up",j,E,X};if(dn)return {res:"dn",j,E,X}}
+  return {res:"none",j:b+H,E,X}}
+function npRun(o,h,l,c,opt){const m=opt.m||1.5,H=opt.h||50;const D=npDetect(o,h,l,c,opt);const atr=D.atr,n=c.length;
+  const st={};NP_DEFS.forEach(([id])=>st[id]={id,list:[],up:0,dn:0,none:0,both:0,open:0});
+  D.occ.forEach(x=>{const r=npOutcome(h,l,c,atr,x.b,m,H);x.out=r;const s=st[x.id];s.list.push(x);if(s[r.res]!=null)s[r.res]++});
+  let bu=0,bd=0;const step=n>20000?3:1;for(let b=15;b<n;b+=step){const r=npOutcome(h,l,c,atr,b,m,H);if(r.res==="up")bu++;else if(r.res==="dn")bd++}
+  const base=bu/((bu+bd)||1);
+  Object.values(st).forEach(s=>{const N=s.up+s.dn;s.N=N;s.buy=N?s.up/N:0;s.sell=N?s.dn/N:0;
+    const se=Math.sqrt(base*(1-base)/(N||1));s.z=N?(s.buy-base)/se:0;s.signif=N>=20&&Math.abs(s.z)>1.96});
+  const now=D.occ.filter(x=>x.b>=n-3);
+  return {st,base:{buy:base,sell:1-base,n:bu+bd},forming:D.forming,now,n,m,H,k:opt.k||5}}
+const NP=(()=>{let s={};try{s=JSON.parse(localStorage.getItem("alkham-np")||"{}")}catch(e){}
+  return {res:null,k:s.k||5,m:s.m||1.5,h:s.h||50,g:s.g||"all",sel:null,idx:null,lastN:0,t:0,show:s.show!==false}})();
+function npSave(){try{localStorage.setItem("alkham-np",JSON.stringify({k:NP.k,m:NP.m,h:NP.h,g:NP.g,show:NP.show}))}catch(e){}}
+function npCompute(){const data=CH.series?CH.series.data():[];const n=data.length;
+  if(n<300){NP.res={err:`Хангалттай өгөгдөл алга (${n} лаа). Дор хаяж 300 лаа хэрэгтэй.`};NP.lastN=n;return}
+  const o=new Float64Array(n),h=new Float64Array(n),l=new Float64Array(n),c=new Float64Array(n);
+  for(let i=0;i<n;i++){const b=data[i];o[i]=b.open;h[i]=b.high;l[i]=b.low;c[i]=b.close}
+  const R=npRun(o,h,l,c,{k:NP.k,m:NP.m,h:NP.h});R.t0=data[0].time;R.tN=data[n-1].time;R.c=c;NP.res=R;NP.lastN=n;
+  if(NP.sel&&R.st[NP.sel]){const L=R.st[NP.sel].list;if(NP.idx==null||NP.idx>=L.length)NP.idx=L.length?L.length-1:null}}
+const npPc=v=>(v*100).toFixed(0)+"%";
+function npBar(s,big){if(!s.N)return `<div class="np-bar nil">өмнө нь тохиолдоогүй</div>`;
+  return `<div class="np-bar${big?" big":""}" title="Buy ${s.up} · Sell ${s.dn}"><div class="pb buy" style="width:${s.buy*100}%">${s.buy>=0.18?"Buy "+npPc(s.buy):""}</div><div class="pb sell" style="width:${s.sell*100}%">${s.sell>=0.18?"Sell "+npPc(s.sell):""}</div></div>`}
+function npVerdict(s,base){if(s.N<20)return `<span class="muted">цөөн (${s.N})</span>`;
+  const d=(s.buy-base.buy)*100;const t=`${d>=0?"+":""}${d.toFixed(0)} пункт`;
+  return s.signif?`<b class="${d>0?"pos":"neg"}">${t} · ялгаатай</b>`:`<span class="muted">${t} · ялгаагүй</span>`}
+function npDate(R,i){const data=CH.series.data();const b=data[i];return b?new Date((b.time-TZ)*1000).toLocaleString("en-GB",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}):""}
+function npDirTag(dir){return dir>0?`<span class="np-dir up">▲ Buy</span>`:`<span class="np-dir dn">▼ Sell</span>`}
+function npHtml(){const R=NP.res;const sel=(id,vals,cur,fmt)=>`<select id="${id}">${vals.map(v=>`<option value="${v}"${v===cur?" selected":""}>${fmt(v)}</option>`).join("")}</select>`;
+  let h=`<div class="ch-tools">
+      <label class="lbl" for="npK" title="Оргил/ёроол тодорхойлох: өмнө, хойно хэдэн лаанаас өндөр/нам байх">Оргил/ёроол</label>${sel("npK",[3,5,8,13],NP.k,v=>v+" лаа")}
+      <label class="lbl" for="npM" title="Орох үнээс дээш, доош тэнцүү зай (ATR-ийн үржвэр)">SL = TP</label>${sel("npM",[1,1.5,2,3],NP.m,v=>v+"× ATR")}
+      <label class="lbl" for="npH">Хүлээх</label>${sel("npH",[20,50,100,200],NP.h,v=>v+" лаа")}
+      <label class="chk"><input type="checkbox" id="npShow"${NP.show?" checked":""}> Графикт</label>
+      <button type="button" class="btn sm primary" data-ch="npRun">Дахин шинжлэх</button></div>
+    <div class="seg np-groups" role="group" aria-label="Бүлэг">${NP_GROUPS.map(([g,t])=>`<button type="button" data-npg="${g}" aria-pressed="${NP.g===g}">${t}</button>`).join("")}</div>`;
+  if(!R)return h+`<div class="muted">Шинжилж байна…</div>`;
+  if(R.err)return h+`<div class="warns"><div>${esc(R.err)}</div></div>`;
+  const B=R.base;
+  h+=`<p class="muted np-explain">Хэв маяг илэрсэн (задарсан) лааны хаалтаар орж, SL ба TP-г <b>±${R.m}×ATR</b> тэнцүү тавьсан гэж үзээд, ${R.H} лааны дотор аль нь түрүүлж хүрснийг өнгөрсөн бүх тохиолдлоор тоолов. <b>Buy %</b> = дээшээ түрүүлж хүрсэн, <b>Sell %</b> = доошоо. Ирээдүйн лааг ашиглаагүй.</p>
+    <div class="np-base"><span class="lbl">Суурь (бүх лаа, санамсаргүй орсон бол)</span>${npBar({N:B.n,buy:B.buy,sell:B.sell,up:"",dn:""})}<span class="muted">${B.n.toLocaleString("en-US")} тохиолдол</span></div>`;
+  // Одоо илэрсэн ба бүрэлдэж буй
+  const cards=[];
+  R.now.forEach(x=>cards.push({id:x.id,txt:`${npDate(R,x.b)}-д илэрсэн`,cls:"now"}));
+  const seenF=new Set();R.forming.forEach(f=>{const ids=[f.idU,f.idD].filter(Boolean);ids.forEach(id=>{if(seenF.has(id))return;seenF.add(id);
+    const lv=id===f.idU?f.up(R.n-1):f.dn(R.n-1);cards.push({id,txt:`бүрэлдэж байна — ${fmtP(lv)} ${id===f.idU?"дээш":"доош"} хаагдвал`,cls:"form"})})});
+  if(cards.length)h+=`<div class="np-now"><div class="lbl">Одоо графикт</div><div class="np-cards">${cards.map(cd=>{const s=R.st[cd.id],D=NP_DEF[cd.id];
+      return `<button type="button" class="np-card ${cd.cls}" data-np="${cd.id}"><div class="np-card-h">${npDirTag(D.dir)}<b>${esc(D.mn)}</b></div><div class="muted" style="font-size:11px">${esc(cd.txt)}</div>${npBar(s)}<div class="muted" style="font-size:11px">Өмнө нь ${s.N} удаа · ${npVerdict(s,B)}</div></button>`}).join("")}</div></div>`;
+  else h+=`<div class="muted" style="font-size:12px">Одоогийн сүүлийн лаанууд дээр хэв маяг илрээгүй, бүрэлдэж буй хэв маяг алга.</div>`;
+  if(NP.sel&&R.st[NP.sel]){const s=R.st[NP.sel],L=s.list,D=NP_DEF[NP.sel];
+    if(L.length&&NP.idx!=null){const x=L[NP.idx],r=x.out||{};const resTxt={up:"дээш (Buy) түрүүлж хүрсэн",dn:"доош (Sell) түрүүлж хүрсэн",none:`${R.H} лаанд аль нь ч хүрээгүй`,both:"нэг лаанд хоёуланд хүрсэн",open:"одоо ч үргэлжилж байна",na:"—"}[r.res]||"";
+      h+=`<div class="np-nav"><b>${esc(D.mn)}</b><span class="muted">${NP.idx+1}/${L.length} · ${npDate(R,x.b)} · орох ${fmtP(R.c[x.b])} · <span class="${r.res==="up"?"pos":r.res==="dn"?"neg":""}">${resTxt}</span></span>
+        <span class="sp"></span><button type="button" class="btn sm" data-ch="npPrev" ${NP.idx>0?"":"disabled"}>◀ Өмнөх</button><button type="button" class="btn sm" data-ch="npNext" ${NP.idx<L.length-1?"":"disabled"}>Дараах ▶</button><button type="button" class="btn sm ghost" data-ch="npLast">Сүүлийнх</button><button type="button" class="btn sm ghost" data-ch="npNow">Одоо руу</button></div>`}
+    else h+=`<div class="np-nav muted">${esc(D.mn)}: энэ түүхэнд олдсонгүй. Илүү урт түүх ачаалах эсвэл «Оргил/ёроол»-ыг багасгаж үзнэ үү.</div>`}
+  // Хүснэгт
+  const order={rev:0,cont:1,str:2,cdl:3};
+  const rows=NP_DEFS.map(d=>R.st[d[0]]).filter(s=>NP.g==="all"||NP_DEF[s.id].g===NP.g).sort((a,b)=>(a.N?0:1)-(b.N?0:1)||order[NP_DEF[a.id].g]-order[NP_DEF[b.id].g]||b.N-a.N);
+  h+=`<div class="tw np-tw"><table class="np-table"><thead><tr><th>Хэв маяг</th><th>Хүлээлт</th><th class="r">Тоо</th><th style="min-width:160px">Өмнө нь явсан: Buy / Sell</th><th class="r">Суурьтай зөрүү</th><th class="r">Сүүлд</th></tr></thead><tbody>
+    ${rows.map(s=>{const D=NP_DEF[s.id],last=s.list[s.list.length-1],on=NP.sel===s.id;
+      return `<tr class="click${on?" on":""}${s.N?"":" dim"}" data-np="${s.id}" tabindex="0"><td><b>${esc(D.mn)}</b><div class="muted" style="font-size:11px">${esc(D.en)}</div></td><td>${npDirTag(D.dir)}</td>
+        <td class="r num">${s.N}</td><td>${npBar(s)}</td><td class="r num">${npVerdict(s,B)}</td><td class="r num muted">${last?npDate(R,last.b):"—"}</td></tr>`}).join("")}</tbody></table></div>`;
+  const nSig=rows.filter(s=>s.signif).length;
+  h+=`<p class="muted" style="font-size:11px;margin:0">«Ялгаатай» = суурь хувиас 95%-ийн итгэлтэйгээр зөрсөн. ${NP_DEFS.length} хэв маягийг зэрэг шалгахад санамсаргүйгээр 1–2 нь «ялгаатай» гарч болно (энэ удаа ${nSig}). Тиймээс дор хаяж хэдэн зуун тохиолдолтой, өөр хугацааны интервал дээр ч давтагддаг үр дүнд л итгэнэ үү. ${CH.inst.kind==="step"?"<b>Step Index</b> нь санамсаргүй тул бүх хэв маяг 50/50 орчим гарах ёстой.":"Алтны spread, мэдээний огцом хөдөлгөөнийг тооцоогүй."}</p>`;
+  return h}
+function npGo(){NP.res=null;patRender();setTimeout(()=>{try{npCompute()}catch(e){NP.res={err:"Шинжилгээ амжилтгүй: "+e.message}}patRender();drDirty()},20)}
+function npSelect(id,jump){NP.sel=id;const L=NP.res&&NP.res.st[id]?NP.res.st[id].list:[];NP.idx=L.length?L.length-1:null;patRender();if(jump!==false)npJump();drDirty()}
+function npJump(){const R=NP.res;if(!R||!NP.sel||NP.idx==null)return;const x=R.st[NP.sel].list[NP.idx];if(!x)return;
+  const i0=Math.min(...x.pts.map(p=>p[0]),x.b),i1=Math.max(x.b,(x.out&&x.out.j)||x.b);const pad=Math.max(15,(i1-i0)*0.4);
+  CH.chart.timeScale().setVisibleLogicalRange({from:i0-pad,to:i1+pad})}
+function npDraw(ctx,box){const R=NP.res;if(!PAT.open||PAT.tab!=="np"||!R||R.err||!NP.show)return;const data=CH.series.data();
+  if(!data.length||data[0].time!==R.t0||data.length!==R.n)return;
+  const X=i=>data[i]?dX(data[i].time-TZ):null,F=`11px ${TVF}`;
+  const used=[];const lab=(t,x,y,col)=>{for(let g=0;g<8&&used.some(u=>Math.abs(u-y)<19);g++)y+=19;used.push(y);ctx.font=`600 ${F}`;const w=ctx.measureText(t).width+8;x=Math.max(2,Math.min(x,box.w-w-2));ctx.fillStyle=col;ctx.fillRect(x,y-9,w,18);ctx.fillStyle="#fff";ctx.textBaseline="middle";ctx.fillText(t,x+4,y)};
+  const r0=CH.chart.timeScale().getVisibleLogicalRange();
+  // сонгосон хэв маягийн бүх тохиолдлын тэмдэг
+  if(NP.sel&&R.st[NP.sel]&&r0){const D=NP_DEF[NP.sel];R.st[NP.sel].list.forEach((x,k)=>{if(x.b<r0.from-2||x.b>r0.to+2)return;const xx=X(x.b);if(xx==null)return;
+      const res=x.out&&x.out.res,col=res==="up"?"#089981":res==="dn"?"#F23645":"#787B86";const y=D.dir>0?pY(data[x.b].low)+10:pY(data[x.b].high)-10;if(y==null)return;
+      ctx.fillStyle=col;ctx.beginPath();if(D.dir>0){ctx.moveTo(xx,y-5);ctx.lineTo(xx-5,y+4);ctx.lineTo(xx+5,y+4)}else{ctx.moveTo(xx,y+5);ctx.lineTo(xx-5,y-4);ctx.lineTo(xx+5,y-4)}ctx.closePath();ctx.fill();
+      if(k===NP.idx){ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();ctx.arc(xx,y,9,0,7);ctx.stroke()}});
+    const x=NP.idx!=null?R.st[NP.sel].list[NP.idx]:null;
+    if(x){const blue="#2962FF";ctx.lineWidth=2;ctx.setLineDash([]);ctx.strokeStyle=blue;
+      if(x.pts.length>1){ctx.beginPath();x.pts.forEach(([i,p],k)=>{const a=X(i),b=pY(p);if(a==null||b==null)return;k?ctx.lineTo(a,b):ctx.moveTo(a,b)});ctx.stroke()}
+      x.pts.forEach(([i,p])=>{const a=X(i),b=pY(p);if(a==null||b==null)return;ctx.fillStyle=blue;ctx.beginPath();ctx.arc(a,b,3,0,7);ctx.fill()});
+      ctx.strokeStyle="#FF9800";ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
+      (x.ln||[]).forEach(([a,b])=>{const xa=X(a.i),xb=X(x.b),f=npLine(a,b);const ya=pY(a.p),yb=pY(f(x.b));if(xa!=null&&xb!=null&&ya!=null&&yb!=null){ctx.beginPath();ctx.moveTo(xa,ya);ctx.lineTo(xb,yb);ctx.stroke()}});
+      if(x.lv!=null&&!(x.ln&&x.ln.length)){const xa=X(x.pts[0][0]),xb=X(x.b),y=pY(x.lv);if(xa!=null&&xb!=null&&y!=null){ctx.beginPath();ctx.moveTo(xa,y);ctx.lineTo(xb,y);ctx.stroke()}}
+      ctx.setLineDash([]);
+      const o=x.out||{};const xb=X(x.b),xe=X(Math.min(data.length-1,o.j||x.b+R.H));
+      if(o.X&&xb!=null&&xe!=null){const yE=pY(o.E),yU=pY(o.E+o.X),yD=pY(o.E-o.X);
+        ctx.fillStyle="rgba(8,153,129,0.13)";ctx.fillRect(xb,yU,xe-xb,yE-yU);ctx.fillStyle="rgba(242,54,69,0.13)";ctx.fillRect(xb,yE,xe-xb,yD-yE);
+        ctx.strokeStyle="#787B86";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(xb,yE);ctx.lineTo(xe,yE);ctx.stroke()}
+      if(xb!=null){const y=pY(R.c[x.b]);ctx.fillStyle="#131722";ctx.beginPath();ctx.arc(xb,y,4,0,7);ctx.fill();
+        const s=R.st[NP.sel];lab(`${NP_DEF[NP.sel].mn} · өмнө нь Buy ${npPc(s.buy)} / Sell ${npPc(s.sell)} (${s.N})`,xb+8,Math.max(14,(pY(o.E+(o.X||0))||y)-14),NP_DEF[NP.sel].dir>0?"#089981":"#F23645")}}}
+  // одоо бүрэлдэж буй: гох түвшин
+  const xl=X(R.n-1);if(xl==null)return;const shown=new Set();
+  R.forming.forEach(f=>{[f.idU,f.idD].filter(Boolean).forEach(id=>{if(shown.has(id))return;shown.add(id);const lv=id===f.idU?f.up(R.n-1):f.dn(R.n-1),y=pY(lv);if(y==null)return;
+    const xa=X(f.pts[0].i);ctx.strokeStyle=NP_DEF[id].dir>0?"#089981":"#F23645";ctx.lineWidth=1.5;ctx.setLineDash([6,4]);ctx.beginPath();ctx.moveTo(xa!=null?xa:0,y);ctx.lineTo(Math.min(box.w,xl+60),y);ctx.stroke();ctx.setLineDash([]);
+    const s=R.st[id];lab(`${NP_DEF[id].mn}? ${id===f.idU?"↑":"↓"} ${fmtP(lv)} · ${s.N?`өмнө нь Buy ${npPc(s.buy)} / Sell ${npPc(s.sell)} (${s.N})`:"өмнө нь тохиолдоогүй"}`,Math.min(xl+8,box.w-260),y-12,NP_DEF[id].dir>0?"#089981":"#F23645")})})}
+
 /* --- clicks inside chart tab --- */
 async function chClick(e){
   if(e.target.closest("#dtBar,#dtProps"))return;
-  const seg=e.target.closest(".seg button");
+  const seg=e.target.closest(".seg button:not([data-ch]):not([data-npg])");
   if(seg){const g=seg.parentElement;if(seg.disabled)return;$$("button",g).forEach(b=>b.setAttribute("aria-pressed",String(b===seg)));
-    if(g.id==="chGran"){CH.gran=+seg.dataset.v;drOptsSave();PAT.lastN=0;PAT.res=null;PAT.focus=null;chReload()}
+    if(g.id==="chGran"){CH.gran=+seg.dataset.v;drOptsSave();PAT.lastN=0;PAT.res=null;PAT.focus=null;NP.res=null;NP.lastN=0;NP.sel=null;NP.idx=null;chReload()}
     else if(g.id==="opDir"){CH.dir=seg.dataset.v;chUpdate()}
     else if(g.id==="chMode"){const m=seg.dataset.v;if(m===CH.mode)return;CH.mode=m;setTimeout(mtfStatus,0);$("#chReplay").hidden=m!=="replay";
       if(m==="live"){CH.rp.pos=null;chLoadLive()}else{rpPause();await chForget();CH.rp.balance=currentBalance(enriched(S.trades));
@@ -1923,6 +2158,8 @@ async function chClick(e){
     return}
   const rk=e.target.closest("#opRisk button");if(rk){CH.risk=+rk.dataset.v;drOptsSave();chUpdate();return}
   const pr=e.target.closest("tr[data-pat]");if(pr){patJump(+pr.dataset.pat);return}
+  const ng=e.target.closest("[data-npg]");if(ng){NP.g=ng.dataset.npg;npSave();patRender();return}
+  const npr=e.target.closest("[data-np]");if(npr){npSelect(npr.dataset.np);return}
   const b=e.target.closest("[data-ch]");if(!b||b.disabled)return;const act=b.dataset.ch;
   if(act==="pick"){CH.pick=CH.pick===b.dataset.k?null:b.dataset.k;const h=$("#chHint");h.hidden=!CH.pick;h.textContent=CH.pick==="sl"?"Stop-loss тавих үнэ дээр графикт дарна уу":"Зорилтот үнэ дээр графикт дарна уу";$("#chWrap").classList.toggle("picking",!!CH.pick)}
   else if(act==="rr"){const o=chCalc();if(o.entry==null||o.sl==null){toast("Эхлээд Stop-loss тавина уу.");return}const d=(CH.rp.pos?CH.rp.pos.dir:CH.dir)==="Sell"?-1:1;$("#opTp").value=fmtP(o.entry+d*Math.abs(o.entry-o.sl)*+b.dataset.v);chUpdate()}
@@ -1931,6 +2168,10 @@ async function chClick(e){
   else if(act==="patOpen"){PAT.open=!PAT.open;b.setAttribute("aria-pressed",String(PAT.open));PAT.focus=null;if(PAT.open)patGo();else{patRender();drDirty()}}
   else if(act==="patClose"){PAT.open=false;PAT.focus=null;$("#btnPat").setAttribute("aria-pressed","false");patRender();drDirty()}
   else if(act==="patRun"){PAT.focus=null;patGo()}
+  else if(act==="patTab"){PAT.tab=b.dataset.v;try{localStorage.setItem("alkham-pat-tab",PAT.tab)}catch(e){}PAT.focus=null;patGo()}
+  else if(act==="npRun")npGo();
+  else if(act==="npPrev"||act==="npNext"||act==="npLast"){const L=NP.res&&NP.sel?NP.res.st[NP.sel].list:[];if(!L.length)return;NP.idx=act==="npLast"?L.length-1:Math.max(0,Math.min(L.length-1,NP.idx+(act==="npNext"?1:-1)));patRender();npJump();drDirty()}
+  else if(act==="npNow"){CH.chart.timeScale().scrollToRealTime();drDirty()}
   else if(act==="patBack"){PAT.focus=null;CH.chart.timeScale().scrollToRealTime();patGo()}
   else if(act==="zoom"){const ts=CH.chart.timeScale();const cur=ts.options().barSpacing||CH.bs;const nx=Math.max(1,Math.min(60,+(cur*(+b.dataset.v>0?1.35:1/1.35)).toFixed(2)));
     ts.applyOptions({barSpacing:nx});CH.bs=nx;try{localStorage.setItem("alkham-chart-bs",String(nx))}catch(e){}ts.scrollToRealTime();drDirty();chZones()}
