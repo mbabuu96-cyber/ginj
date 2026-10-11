@@ -226,6 +226,7 @@ svg text{font-family:var(--f-mono)}
 .dt-props .seg button{padding:2px 7px;font-size:11px}
 .dt-props .btn.sm{padding:2px 7px;font-size:11px;border-radius:6px}
 .dt-props .swatches button{width:16px;height:16px}
+.mtf-check{font-size:12px;color:var(--muted)}.mtf-check.good{color:var(--gain)}.mtf-check.bad{color:var(--warn)}
 .pat-box{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:10px}
 .pat-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px}
 @media (max-width:900px){.pat-grid{grid-template-columns:1fr}}
@@ -1140,7 +1141,7 @@ function chBuild(){
     </div>
     <div class="ch-tools" id="chTools">
       <label class="lbl" for="mtfSel">Дээд интервалын лаа</label>
-      <select id="mtfSel"><option value="0">Үгүй</option><option value="900">15м</option><option value="3600">1ц</option><option value="14400">4ц</option><option value="86400">1ө</option><option value="604800">7 хоног</option></select>
+      <select id="mtfSel"><option value="0">Үгүй</option><option value="900">15м</option><option value="3600">1ц</option><option value="14400">4ц</option><option value="86400">1ө</option><option value="604800">7 хоног</option></select><span class="mtf-check" id="mtfCheck" role="status"></span>
       <label class="chk"><input type="checkbox" id="sessChk"> Сешн (Ази, Лондон, NY)</label>
     </div>
     <div class="ch-replay" id="chReplay" hidden>
@@ -1181,7 +1182,7 @@ function chBuild(){
     else if(id==="rpSpeed"){CH.rp.speed=+e.target.value;if(CH.rp.timer){rpPause();rpPlay()}}
     else if(id==="patW"||id==="patH"||id==="patK"){PAT[id.slice(3).toLowerCase()]=+e.target.value;PAT.focus=null;patGo()}
     else if(id==="patShow"){PAT.show=e.target.checked;drDirty()}
-    else if(id==="mtfSel"){DR.mtf=+e.target.value;drOptsSave();drDirty();if(DR.mtf&&DR.mtf<=CH.gran)toast("Дээд интервал нь графикийн интервалаас их байх ёстой.")}
+    else if(id==="mtfSel"){DR.mtf=+e.target.value;drOptsSave();drDirty();MTF.key="";MTF.check=null;mtfStatus();mtfLoadReal();if(DR.mtf&&DR.mtf<=CH.gran)toast("Дээд интервал нь графикийн интервалаас их байх ёстой.")}
     else if(id==="sessChk"){DR.sess=e.target.checked;drOptsSave();drDirty();if(DR.sess&&CH.gran>3600)toast("Сешний бүс 1 цагаас бага интервал дээр харагдана.")}});
   const d=new Date(Date.now()-3*864e5);d.setHours(9,0,0,0);$("#rpStart").value=`${ymd(d)}T09:00`;
   $("#mtfSel").value=String(DR.mtf);$("#sessChk").checked=DR.sess;drInit();
@@ -1245,6 +1246,7 @@ async function chOlder(){
     if(replay){CH.rp.all=add.concat(CH.rp.all);CH.rp.idx+=add.length;CH.series.setData(CH.rp.all.slice(0,CH.rp.idx))}
     else CH.series.setData(add.concat(CH.series.data()));
     if(vr)ts.setVisibleLogicalRange({from:vr.from+add.length,to:vr.to+add.length});
+    if(!replay){MTF.key="";mtfLoadReal()}
     chStatus(`${replay?"Давтан тоглуулах":"Шууд"} · ${CH.sym} · ${(replay?CH.rp.idx:CH.series.data().length).toLocaleString("en-US")} лаа`);drDirty();
   }catch(e){chStatus(dvErrMsg(e),true)}finally{CH.olderBusy=false}}
 /* --- live --- */
@@ -1268,6 +1270,7 @@ async function chLoadLive(){
     const bars=(r.candles||[]).map(toBar);CH.series.setData(bars);CH.series.setMarkers([]);
     CH.last=bars.length?bars[bars.length-1].close:null;CH.lastTime=bars.length?bars[bars.length-1].time:null;
     CH.chart.timeScale().scrollToRealTime();chEmpty(bars.length?"":"Энэ хэрэгсэлд өгөгдөл ирсэнгүй.");
+    MTF.key="";mtfLoadReal();
     chStatus(closed?"Зах зээл хаалттай · сүүлийн өгөгдөл":`Шууд · ${sym} · ${bars.length.toLocaleString("en-US")} лаа${DV.url&&!/options\/ws\/public/.test(DV.url)?" · нөөц сервер":""}`,closed);chUpdate(true);
   }catch(e){if(seq!==CH.loadSeq)return;chStatus(dvErrMsg(e),true);if(!CH.series.data().length)chEmpty(esc(dvErrMsg(e)))}
 }
@@ -1484,16 +1487,50 @@ function drSessions(ctx,box,font){const t0=xEp(0),t1=xEp(box.w);if(t0==null||t1=
     ctx.fillStyle=`rgba(${rgb},0.07)`;ctx.fillRect(x1,0,x2-x1,box.h);
     ctx.fillStyle=`rgba(${rgb},0.9)`;ctx.fillRect(x1,i*3,x2-x1,2);
     if(x2-x1>40)ctx.fillText(name,Math.max(x1,2)+3,8+i*13)})}
+// Дээд интервалын лааны эхлэл: UTC-д тулгуурласан, 7 хоног Даваа 00:00 UTC-ээс
+const WEEK_OFF=345600; // 1970-01-05 (Даваа)
+const htfKey=(ep,H)=>H===604800?Math.floor((ep-WEEK_OFF)/H)*H+WEEK_OFF:Math.floor(ep/H)*H;
+const MTF={real:null,key:"",busy:false,check:null};
+// Шууд горимд Deriv-ийн жинхэнэ лааг ачаална (15м, 1ц, 4ц, 1ө). 7 хоногийн лааг Deriv өгдөггүй тул нэгтгэж тооцно.
+async function mtfLoadReal(){const H=DR.mtf,data=CH.series?CH.series.data():[];
+  if(!H||H===604800||CH.mode!=="live"||!CH.sym||!data.length||H<=CH.gran){MTF.real=null;MTF.check=null;mtfStatus();return}
+  const key=CH.sym+"|"+H+"|"+CH.gran+"|"+data[0].time;if(MTF.key===key||MTF.busy)return;MTF.busy=true;
+  try{const start=data[0].time-TZ;const r=await dvSend({ticks_history:CH.sym,style:"candles",granularity:H,start,end:"latest",count:5000});
+    const m=new Map();(r.candles||[]).forEach(c=>m.set(+c.epoch,{o:+c.open,h:+c.high,l:+c.low,c:+c.close}));MTF.real=m;MTF.key=key;mtfVerify()}
+  catch(e){MTF.real=null;MTF.check={err:true}}finally{MTF.busy=false;mtfStatus();drDirty()}}
+function mtfGroups(data,H,i0,i1){let cur=null;const out=[];
+  for(let i=i0;i<=i1;i++){const b=data[i],ep=b.time-TZ,k=htfKey(ep,H);
+    if(!cur||cur.k!==k){cur={k,o:b.open,h:b.high,l:b.low,c:b.close,first:ep,i0:i,n:1};out.push(cur)}else{cur.h=Math.max(cur.h,b.high);cur.l=Math.min(cur.l,b.low);cur.c=b.close;cur.n++}}
+  // эхний бүлэг хугацааныхаа дундаас эхэлсэн бол дутуу тул хасна
+  if(out.length&&out[0].first!==out[0].k&&out[0].i0===0)out[0].partial=true;
+  return out}
+function mtfVerify(){const data=CH.series.data(),H=DR.mtf,g=CH.gran;if(!MTF.real||!data.length){MTF.check=null;return}
+  const groups=mtfGroups(data,H,0,data.length-1);const tol=(+CH.inst.tick||0.01)/2+1e-9;let ok=0,bad=0,ex=null;
+  groups.forEach((G,idx)=>{if(G.partial||idx===groups.length-1)return;const R=MTF.real.get(G.k);if(!R)return;
+    const same=Math.abs(R.o-G.o)<=tol&&Math.abs(R.h-G.h)<=tol&&Math.abs(R.l-G.l)<=tol&&Math.abs(R.c-G.c)<=tol;if(same)ok++;else{bad++;if(!ex)ex={k:G.k,G,R}}});
+  MTF.check={ok,bad,ex}}
+function mtfStatus(){const el=$("#mtfCheck");if(!el)return;const H=DR.mtf;
+  if(!H){el.textContent="";return}
+  if(H<=CH.gran){el.textContent="Графикийн интервалаас их байх ёстой";el.className="mtf-check bad";return}
+  if(CH.mode==="replay"){el.textContent="Давтан тоглуулалт: харагдаж буй лаагаар нэгтгэв (ирээдүйг харуулахгүй)";el.className="mtf-check";return}
+  if(H===604800){el.textContent="7 хоног: Даваа 00:00 UTC-ээс нэгтгэв (Deriv 7 хоногийн лаа өгдөггүй)";el.className="mtf-check";return}
+  const c=MTF.check;if(!c){el.textContent=MTF.busy?"Deriv-ийн лааг шалгаж байна…":"";el.className="mtf-check";return}
+  if(c.err){el.textContent="Deriv-ийн лааг татаж чадсангүй — нэгтгэсэн лаагаар харуулж байна";el.className="mtf-check bad";return}
+  const name={900:"15м",1800:"30м",3600:"1ц",14400:"4ц",86400:"1ө"}[H]||H+"с";
+  el.textContent=c.bad?`Шалгалт: ${c.ok}/${c.ok+c.bad} таарсан, ${c.bad} зөрсөн — Deriv-ийн жинхэнэ ${name} лааг харуулж байна`:`✓ Deriv-ийн ${name} лаатай ${c.ok}/${c.ok} яг таарч байна`;
+  el.className="mtf-check "+(c.bad?"bad":"good")}
 function drMtf(ctx,box){const data=CH.series.data();if(!data.length)return;const H=DR.mtf,g=CH.gran;
   const r=CH.chart.timeScale().getVisibleLogicalRange();if(!r)return;
-  const i0=Math.max(0,Math.floor(r.from)-Math.ceil(H/g)),i1=Math.min(data.length-1,Math.ceil(r.to));if(i1<i0)return;
+  const i0=Math.max(0,Math.floor(r.from)-Math.ceil(H/g)-1),i1=Math.min(data.length-1,Math.ceil(r.to));if(i1<i0)return;
   const up=cssVar("--gain")||"#1C7449",dn=cssVar("--loss")||"#B13636";
   const bs=Math.max(1,(dX(data[i1].time-TZ+g)||0)-(dX(data[i1].time-TZ)||0));
-  let cur=null;const groups=[];
-  for(let i=i0;i<=i1;i++){const b=data[i],k=Math.floor((b.time-TZ)/H)*H;
-    if(!cur||cur.k!==k){cur={k,o:b.open,h:b.high,l:b.low,c:b.close};groups.push(cur)}else{cur.h=Math.max(cur.h,b.high);cur.l=Math.min(cur.l,b.low);cur.c=b.close}}
+  const groups=mtfGroups(data,H,i0,i1);
+  // эхний бүлэг харагдах хүрээний зүүн захад тасарсан бол бүтэн бүлгийг эхнээс нь дахин тооцно
+  if(groups.length&&groups[0].first!==groups[0].k&&i0>0){let j=i0;while(j>0&&htfKey(data[j-1].time-TZ,H)===groups[0].k)j--;const full=mtfGroups(data,H,j,groups[0].i0+groups[0].n-1);if(full.length)groups[0]=full[full.length-1];if(j===0&&groups[0].first!==groups[0].k)groups[0].partial=true}
+  const useReal=MTF.real&&CH.mode==="live";const last=groups.length?groups[groups.length-1].k:null;
   ctx.lineWidth=1;ctx.setLineDash([]);
-  for(const G of groups){const x1=dX(G.k)-bs/2,x2=dX(G.k+H-g)+bs/2;if(!isFinite(x1)||!isFinite(x2)||x2<0||x1>box.w)continue;
+  for(const G0 of groups){if(G0.partial)continue;let G=G0;if(useReal&&G0.k!==last){const R=MTF.real.get(G0.k);if(R)G={k:G0.k,o:R.o,h:R.h,l:R.l,c:R.c}}
+    const x1=dX(G.k)-bs/2,x2=dX(G.k+H-g)+bs/2;if(!isFinite(x1)||!isFinite(x2)||x2<0||x1>box.w)continue;
     const col=G.c>=G.o?up:dn,yo=pY(G.o),yc=pY(G.c),yh=pY(G.h),yl=pY(G.l);if(yo==null||yc==null)continue;
     const top=Math.min(yo,yc),bot=Math.max(yo,yc),xm=(x1+x2)/2,hx=col.startsWith("#");
     ctx.fillStyle=hx?rgba(col,0.10):col;ctx.strokeStyle=hx?rgba(col,0.75):col;
@@ -1830,7 +1867,7 @@ async function chClick(e){
   if(seg){const g=seg.parentElement;if(seg.disabled)return;$$("button",g).forEach(b=>b.setAttribute("aria-pressed",String(b===seg)));
     if(g.id==="chGran"){CH.gran=+seg.dataset.v;PAT.lastN=0;PAT.res=null;PAT.focus=null;chReload()}
     else if(g.id==="opDir"){CH.dir=seg.dataset.v;chUpdate()}
-    else if(g.id==="chMode"){const m=seg.dataset.v;if(m===CH.mode)return;CH.mode=m;$("#chReplay").hidden=m!=="replay";
+    else if(g.id==="chMode"){const m=seg.dataset.v;if(m===CH.mode)return;CH.mode=m;setTimeout(mtfStatus,0);$("#chReplay").hidden=m!=="replay";
       if(m==="live"){CH.rp.pos=null;chLoadLive()}else{rpPause();await chForget();CH.rp.balance=currentBalance(enriched(S.trades));
         if(CH.rp.all.length){CH.series.setData(CH.rp.all.slice(0,CH.rp.idx));CH.series.setMarkers(CH.rp.markers);const b=CH.rp.all[CH.rp.idx-1];CH.last=b.close;CH.lastTime=b.time;chStatus("Давтан тоглуулах")}
         else{CH.last=null;chStatus("Эхлэх цагаа сонгоод Ачаалах дарна уу.")}chUpdate()}}
