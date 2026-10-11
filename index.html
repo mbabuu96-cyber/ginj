@@ -256,7 +256,13 @@ svg text{font-family:var(--f-mono)}
 .np-table tr.dim td{opacity:.55}
 .np-nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
 .np-nav .sp{flex:1}
-.np-sel{display:flex;flex-direction:column;gap:6px}.np-mini{display:block;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.np-sel{display:flex;flex-direction:column;gap:6px}
+.np-detail{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(220px,1fr);gap:12px;align-items:start}
+@media (max-width:900px){.np-detail{grid-template-columns:1fr}}
+.np-stats{display:flex;flex-direction:column;gap:6px;font-size:12px}
+.np-kv{display:grid;grid-template-columns:1fr auto;gap:0 8px;align-items:baseline;padding:6px 8px;border:1px solid var(--line);border-radius:7px}
+.np-kv .lbl{grid-column:1}.np-kv b{grid-column:2;grid-row:1/3;font-size:15px;text-align:right}.np-kv .muted{grid-column:1;font-size:11px}
+.np-sess{display:grid;grid-template-columns:110px 1fr 40px;gap:8px;align-items:center}.np-sess .np-bar{height:16px;font-size:10px}.np-mini{display:block;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
 .fib-dlg{width:min(560px,calc(100vw - 24px))}
 .fib-dlg .dlg-f{flex-wrap:wrap;gap:8px;align-items:center}.fib-dlg .dlg-f .sp{flex:1 1 auto;min-width:0}.fib-dlg .fib-ok{display:flex;gap:8px;margin-left:auto;flex:0 0 auto}
 .fib-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px}
@@ -1216,6 +1222,7 @@ function chBuild(){
     else if(id==="npK"||id==="npM"||id==="npH"){NP[id.slice(2).toLowerCase()]=+e.target.value;npSave();npGo()}
     else if(id==="npShow"){NP.show=e.target.checked;npSave();drDirty()}
     else if(id==="npSrc"){NP.src=e.target.value;npSave();npGo()}
+    else if(id==="npSort"){NP.sort=e.target.value;npSave();patRender()}
     else if(id==="mtfSel"){DR.mtf=+e.target.value;drOptsSave();drDirty();MTF.key="";MTF.check=null;mtfStatus();mtfLoadReal();if(DR.mtf&&DR.mtf<=CH.gran)toast("Дээд интервал нь графикийн интервалаас их байх ёстой.")}
     else if(id==="sessChk"){DR.sess=e.target.checked;drOptsSave();drDirty();if(DR.sess&&CH.gran>3600)toast("Сешний бүс 1 цагаас бага интервал дээр харагдана.")}});
   const d=new Date(Date.now()-3*864e5);d.setHours(9,0,0,0);$("#rpStart").value=CH.rpStart||`${ymd(d)}T09:00`;$("#rpSpeed").value=String(CH.rp.speed||2);
@@ -1887,7 +1894,7 @@ function patSvg(R){const W=640,H=230,padL=8,padR=56,padT=12,padB=22,w=R.w,h=R.h;
 function patRender(){const box=$("#patBox");if(!box)return;box.hidden=!PAT.open;if(!PAT.open)return;const R=PAT.res;
   const sel=(id,vals,cur,suf)=>`<select id="${id}">${vals.map(v=>`<option value="${v}"${v===cur?" selected":""}>${v} ${suf}</option>`).join("")}</select>`;
   let h=`<div class="panel-h"><div class="seg pat-tabs" role="tablist" aria-label="Хэв маягийн төрөл"><button type="button" role="tab" data-ch="patTab" data-v="np" aria-pressed="${PAT.tab==="np"}">Нэртэй хэв маяг</button><button type="button" role="tab" data-ch="patTab" data-v="sim" aria-pressed="${PAT.tab==="sim"}">Төстэй хөдөлгөөн</button></div>
-    <span class="muted" style="font-size:12px">${CH.mode==="replay"?"давтан тоглуулалтын харагдаж буй лаагаар":`ачаалсан ${(CH.series?CH.series.data().length:0).toLocaleString("en-US")} лаагаар`}</span>
+    <span class="muted" style="font-size:12px">${PAT.tab==="np"&&NP.res&&NP.res.D?`${NP.res.D.src==="year"?Math.round(NP.res.days)+" хоногийн":"графикт ачаалсан"} ${NP.res.D.n.toLocaleString("en-US")} лаагаар${CH.mode==="replay"?" · давтан тоглуулалт":""}`:CH.mode==="replay"?"давтан тоглуулалтын харагдаж буй лаагаар":`ачаалсан ${(CH.series?CH.series.data().length:0).toLocaleString("en-US")} лаагаар`}</span>
     <button type="button" class="btn sm ghost" data-ch="patClose" aria-label="Хаах">✕</button></div>`;
   if(PAT.tab==="np"){box.innerHTML=h+npHtml();return}
   h+=`
@@ -2045,13 +2052,15 @@ function npDetect(o,h,l,c,opt){const n=c.length,k=opt.k||5,W=opt.wait||Math.max(
   return {occ:occ2,forming,atr}}
 
 // Үр дүн: орох үнээс ±m·ATR-ын аль нь түрүүлж хүрсэн бэ (тэнцүү SL/TP-тэй Buy ба Sell)
-function npOutcome(h,l,c,atr,b,m,H){const E=c[b],X=m*atr[b],n=c.length;if(!(X>0))return {res:"na"};
-  for(let j=b+1;j<=b+H;j++){if(j>=n)return {res:"open"};const up=h[j]>=E+X,dn=l[j]<=E-X;
-    if(up&&dn)return {res:"both",j,E,X};if(up)return {res:"up",j,E,X};if(dn)return {res:"dn",j,E,X}}
-  return {res:"none",j:b+H,E,X}}
+function npOutcome(h,l,c,atr,b,m,H,ex){const E=c[b],X=m*atr[b],n=c.length;if(!(X>0))return {res:"na"};
+  let r=null;for(let j=b+1;j<=b+H;j++){if(j>=n){r=r||{res:"open"};break}const up=h[j]>=E+X,dn=l[j]<=E-X;
+    if(up&&dn){r={res:"both",j,E,X};break}if(up){r={res:"up",j,E,X};break}if(dn){r={res:"dn",j,E,X};break}}
+  if(!r)r={res:"none",j:b+H,E,X};
+  if(ex&&b+H<n){let mx=-Infinity,mn=Infinity;for(let j=b+1;j<=b+H;j++){if(h[j]>mx)mx=h[j];if(l[j]<mn)mn=l[j]}const a=atr[b];r.u=+((mx-E)/a).toFixed(2);r.d=+((E-mn)/a).toFixed(2)}
+  return r}
 function npRun(o,h,l,c,opt){const m=opt.m||1.5,H=opt.h||50;const D=npDetect(o,h,l,c,opt);const atr=D.atr,n=c.length;
   const st={};NP_DEFS.forEach(([id])=>st[id]={id,list:[],up:0,dn:0,none:0,both:0,open:0});
-  D.occ.forEach(x=>{const r=npOutcome(h,l,c,atr,x.b,m,H);x.out=r;const s=st[x.id];s.list.push(x);if(s[r.res]!=null)s[r.res]++});
+  D.occ.forEach(x=>{const r=npOutcome(h,l,c,atr,x.b,m,H,true);x.out=r;const s=st[x.id];s.list.push(x);if(s[r.res]!=null)s[r.res]++});
   let bu=0,bd=0;const step=n>20000?3:1;for(let b=15;b<n;b+=step){const r=npOutcome(h,l,c,atr,b,m,H);if(r.res==="up")bu++;else if(r.res==="dn")bd++}
   const base=bu/((bu+bd)||1);
   Object.values(st).forEach(s=>{const N=s.up+s.dn;s.N=N;s.buy=N?s.up/N:0;s.sell=N?s.dn/N:0;
@@ -2059,8 +2068,8 @@ function npRun(o,h,l,c,opt){const m=opt.m||1.5,H=opt.h||50;const D=npDetect(o,h,
   const now=D.occ.filter(x=>x.b>=n-3);
   return {st,base:{buy:base,sell:1-base,n:bu+bd},forming:D.forming,now,n,m,H,k:opt.k||5}}
 const NP=(()=>{let s={};try{s=JSON.parse(localStorage.getItem("alkham-np")||"{}")}catch(e){}
-  return {res:null,k:s.k||5,m:s.m||1.5,h:s.h||50,g:s.g||"all",src:s.src||"year",sel:null,idx:null,lastN:0,t:0,seq:0,run:0,autoKey:"",busy:false,show:s.show!==false}})();
-function npSave(){try{localStorage.setItem("alkham-np",JSON.stringify({k:NP.k,m:NP.m,h:NP.h,g:NP.g,show:NP.show,src:NP.src}))}catch(e){}}
+  return {res:null,k:s.k||5,m:s.m||1.5,h:s.h||50,g:s.g||"all",src:s.src||"year",sort:s.sort||"edge",sel:null,idx:null,lastN:0,t:0,seq:0,run:0,autoKey:"",busy:false,show:s.show!==false}})();
+function npSave(){try{localStorage.setItem("alkham-np",JSON.stringify({k:NP.k,m:NP.m,h:NP.h,g:NP.g,show:NP.show,src:NP.src,sort:NP.sort}))}catch(e){}}
 const NP_DAYS=365;
 // 365 хоногийн түүх: графикаас тусдаа, Deriv-ээс 5000 лаагаар хэсэгчлэн татна (санах ойд хадгална)
 const NPY={key:"",t:null,o:null,h:null,l:null,c:null,busy:null,done:0,total:0,err:null,from:0};
@@ -2114,16 +2123,31 @@ async function npCompute(){const my=++NP.run;NP.busy=true;
     if(my!==NP.run)return;const D=npDataset();
     if(D.n<300){NP.res={err:`Хангалттай өгөгдөл алга (${D.n} лаа). Дор хаяж 300 лаа хэрэгтэй.`};return}
     const R=await npExec(D,{k:NP.k,m:NP.m,h:NP.h});if(my!==NP.run)return;
-    R.D=D;R.t0=CH.series&&CH.series.data().length?CH.series.data()[0].time:0;R.days=(D.t[D.n-1]-D.t[0])/86400;NP.res=R;
+    R.D=D;R.t0=CH.series&&CH.series.data().length?CH.series.data()[0].time:0;R.days=(D.t[D.n-1]-D.t[0])/86400;npExtra(R);NP.res=R;
     if(NP.sel&&R.st[NP.sel]){const L=R.st[NP.sel].list;if(NP.idx==null||NP.idx>=L.length)NP.idx=L.length?L.length-1:null}}
   catch(e){NP.res={err:"Шинжилгээ амжилтгүй: "+(e.message||e)}}
   finally{if(my===NP.run){NP.busy=false;const d=CH.series?CH.series.data():[];NP.lastN=d.length;patRender();drDirty()}}}
 const npPc=v=>(v*100).toFixed(0)+"%";
+const NP_SESS=[["Ази",0,7],["Лондон",7,12],["Нью-Йорк",12,21],["Бусад",21,24]];
+// Нэмэлт шалгалт: жилийг 2 хуваагаад давтагдаж байна уу, сешнээр, дундаж хөдөлгөөн
+function npExtra(R){const D=R.D,mid=D.t[0]+(D.t[D.n-1]-D.t[0])/2,base=R.base.buy;
+  const cnt=()=>({up:0,dn:0});const fin=c=>{c.N=c.up+c.dn;c.buy=c.N?c.up/c.N:0;c.sell=c.N?c.dn/c.N:0;return c};
+  Object.values(R.st).forEach(s=>{const h1=cnt(),h2=cnt(),ss=NP_SESS.map(cnt);let su=0,sd=0,nx=0,bars=0,nb=0;
+    s.list.forEach(x=>{const r=x.out||{};if(r.u!=null){su+=r.u;sd+=r.d;nx++}if(r.res!=="up"&&r.res!=="dn")return;
+      const t=D.t[x.b];(t<mid?h1:h2)[r.res]++;const hr=new Date(t*1000).getUTCHours();ss[NP_SESS.findIndex(q=>hr>=q[1]&&hr<q[2])][r.res]++;bars+=r.j-x.b;nb++});
+    fin(h1);fin(h2);ss.forEach(fin);const dir=NP_DEF[s.id].dir;
+    s.h1=h1;s.h2=h2;s.sess=ss;s.mfe=nx?su/nx:0;s.mae=nx?sd/nx:0;s.bars=nb?bars/nb:0;s.win=dir>0?s.buy:s.sell;
+    const sg=Math.sign(s.buy-base);s.stable=h1.N>=10&&h2.N>=10&&Math.sign(h1.buy-base)===sg&&Math.sign(h2.buy-base)===sg&&sg!==0;
+    s.strong=s.N>=30&&Math.abs(s.z)>3.0&&s.stable;s.score=s.N>=20?Math.abs(s.z)*(s.stable?1:0.5):-1+s.N/1e7})}
 function npBar(s,big){if(!s.N)return `<div class="np-bar nil">өмнө нь тохиолдоогүй</div>`;
   return `<div class="np-bar${big?" big":""}" title="Buy ${s.up} · Sell ${s.dn}"><div class="pb buy" style="width:${s.buy*100}%">${s.buy>=0.18?"Buy "+npPc(s.buy):""}</div><div class="pb sell" style="width:${s.sell*100}%">${s.sell>=0.18?"Sell "+npPc(s.sell):""}</div></div>`}
 function npVerdict(s,base){if(s.N<20)return `<span class="muted">цөөн (${s.N})</span>`;
-  const d=(s.buy-base.buy)*100;const t=`${d>=0?"+":""}${d.toFixed(0)} пункт`;
-  return s.signif?`<b class="${d>0?"pos":"neg"}">${t} · ялгаатай</b>`:`<span class="muted">${t} · ялгаагүй</span>`}
+  const d=(s.buy-base.buy)*100;const t=`${d>=0?"+":""}${d.toFixed(0)} пункт`,c=d>0?"pos":"neg";
+  if(s.strong)return `<b class="${c}" title="95%-иас ч хатуу шалгалтыг давсан, жилийн хоёр хагаст ижил чиглэлтэй">★ ${t} · хүчтэй</b>`;
+  if(s.signif&&s.stable)return `<b class="${c}" title="95%-ийн шалгалтыг давсан, жилийн хоёр хагаст ижил чиглэлтэй">${t} · ялгаатай</b>`;
+  if(s.signif)return `<span class="${c}" title="Нэг хагаст нь л ажилласан — тохиолдлынх байх магадлалтай">${t} · тогтворгүй</span>`;
+  return `<span class="muted">${t} · ялгаагүй</span>`}
+function npHalf(s){if(s.h1.N<10||s.h2.N<10)return `<span class="muted">—</span>`;return `<span class="${s.stable?"":"muted"}" title="Жилийн эхний ба сүүлийн хагасын Buy %">${npPc(s.h1.buy)} · ${npPc(s.h2.buy)}${s.stable?" ✓":""}</span>`}
 const npFmtD=(ep,y)=>new Date(ep*1000).toLocaleString("en-GB",y?{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}:{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
 function npDate(R,i,y){const t=R.D&&R.D.t[i];return t?npFmtD(t,y):""}
 function npDirTag(dir){return dir>0?`<span class="np-dir up">▲ Buy</span>`:`<span class="np-dir dn">▼ Sell</span>`}
@@ -2150,6 +2174,7 @@ function npHtml(){const R=NP.res;const sel=(id,vals,cur,fmt)=>`<select id="${id}
       <label class="lbl" for="npK" title="Оргил/ёроол тодорхойлох: өмнө, хойно хэдэн лаанаас өндөр/нам байх">Оргил/ёроол</label>${sel("npK",[3,5,8,13],NP.k,v=>v+" лаа")}
       <label class="lbl" for="npM" title="Орох үнээс дээш, доош тэнцүү зай (ATR-ийн үржвэр)">SL = TP</label>${sel("npM",[1,1.5,2,3],NP.m,v=>v+"× ATR")}
       <label class="lbl" for="npH">Хүлээх</label>${sel("npH",[20,50,100,200],NP.h,v=>v+" лаа")}
+      <label class="lbl" for="npSort">Эрэмбэ</label>${sel("npSort",["edge","count","group"],NP.sort,v=>({edge:"Давуу талаар",count:"Тоогоор",group:"Бүлгээр"})[v])}
       <label class="chk"><input type="checkbox" id="npShow"${NP.show?" checked":""}> Графикт</label>
       <button type="button" class="btn sm primary" data-ch="npRun">Дахин шинжлэх</button></div>
     <div class="seg np-groups" role="group" aria-label="Бүлэг">${NP_GROUPS.map(([g,t])=>`<button type="button" data-npg="${g}" aria-pressed="${NP.g===g}">${t}</button>`).join("")}</div>`;
@@ -2171,14 +2196,22 @@ function npHtml(){const R=NP.res;const sel=(id,vals,cur,fmt)=>`<select id="${id}
       const onc=npOnChart(R,x);
       h+=`<div class="np-sel"><div class="np-nav"><b>${esc(DF.mn)}</b><span class="muted">${NP.idx+1}/${L.length} · ${npDate(R,x.b,true)} · орох ${fmtP(D.c[x.b])} · <span class="${r.res==="up"?"pos":r.res==="dn"?"neg":""}">${resTxt}</span></span>
         <span class="sp"></span><button type="button" class="btn sm" data-ch="npPrev" ${NP.idx>0?"":"disabled"}>◀ Өмнөх</button><button type="button" class="btn sm" data-ch="npNext" ${NP.idx<L.length-1?"":"disabled"}>Дараах ▶</button><button type="button" class="btn sm ghost" data-ch="npLast">Сүүлийнх</button>
-        <button type="button" class="btn sm ghost" data-ch="npGoto" ${onc?"":"disabled title=\"Энэ хэсэг үндсэн графикт ачаалагдаагүй — доорх зурагт харна уу\""}>Графикт харах</button></div>${npMini(R,x)}</div>`}
+        <button type="button" class="btn sm ghost" data-ch="npGoto" ${onc?"":"disabled title=\"Энэ хэсэг үндсэн графикт ачаалагдаагүй — доорх зурагт харна уу\""}>Графикт харах</button></div>
+        <div class="np-detail">${npMini(R,x)}<div class="np-stats">
+          <div class="np-kv"><span class="lbl">Хүлээлтээр (${DF.dir>0?"Buy":"Sell"}) хожих</span><b class="${s.win>(DF.dir>0?B.buy:B.sell)?"pos":"neg"}">${npPc(s.win)}</b><span class="muted">суурь ${npPc(DF.dir>0?B.buy:B.sell)}</span></div>
+          <div class="np-kv"><span class="lbl">${R.H} лаанд дунджаар</span><b><span class="pos">+${s.mfe.toFixed(2)}</span> / <span class="neg">−${s.mae.toFixed(2)}</span> ATR</b><span class="muted">дээш / доош хамгийн хол</span></div>
+          <div class="np-kv"><span class="lbl">TP/SL хүрэх</span><b>${s.bars.toFixed(0)} лаа</b><span class="muted">дунджаар</span></div>
+          <div class="np-kv"><span class="lbl">Жилийн I · II хагас</span><b>${npHalf(s)}</b><span class="muted">${s.h1.N} · ${s.h2.N} тохиолдол</span></div>
+          <div class="lbl" style="margin-top:4px">Сешнээр (UTC цаг)</div>
+          ${s.sess.map((q,k)=>`<div class="np-sess"><span>${NP_SESS[k][0]} <span class="muted">${NP_SESS[k][1]}–${NP_SESS[k][2]}</span></span>${npBar(q)}<span class="muted num">${q.N}</span></div>`).join("")}
+        </div></div></div>`}
     else h+=`<div class="np-nav muted">${esc(DF.mn)}: энэ түүхэнд олдсонгүй. «Оргил/ёроол»-ыг багасгаж үзнэ үү.</div>`}
   const order={rev:0,cont:1,str:2,cdl:3};
-  const rows=NP_DEFS.map(d=>R.st[d[0]]).filter(s=>NP.g==="all"||NP_DEF[s.id].g===NP.g).sort((a,b)=>(a.N?0:1)-(b.N?0:1)||order[NP_DEF[a.id].g]-order[NP_DEF[b.id].g]||b.N-a.N);
-  h+=`<div class="tw np-tw"><table class="np-table"><thead><tr><th>Хэв маяг</th><th>Хүлээлт</th><th class="r">Тоо</th><th style="min-width:160px">Өмнө нь явсан: Buy / Sell</th><th class="r">Суурьтай зөрүү</th><th class="r">Сүүлд</th></tr></thead><tbody>
+  const rows=NP_DEFS.map(d=>R.st[d[0]]).filter(s=>NP.g==="all"||NP_DEF[s.id].g===NP.g).sort((a,b)=>(a.N?0:1)-(b.N?0:1)||(NP.sort==="edge"?b.score-a.score:NP.sort==="count"?b.N-a.N:order[NP_DEF[a.id].g]-order[NP_DEF[b.id].g]||b.N-a.N));
+  h+=`<div class="tw np-tw"><table class="np-table"><thead><tr><th>Хэв маяг</th><th>Хүлээлт</th><th class="r">Тоо</th><th style="min-width:160px">Өмнө нь явсан: Buy / Sell</th><th class="r" title="Хэв маягийн хүлээгдэх чиглэлээр (▲ Buy, ▼ Sell) орсон бол TP түрүүлж хүрсэн хувь">Хүлээлтээр</th><th class="r">Суурьтай зөрүү</th><th class="r" title="Жилийн эхний · сүүлийн хагас (Buy %). ✓ = хоёуланд ижил чиглэлтэй">I · II хагас</th><th class="r">Сүүлд</th></tr></thead><tbody>
     ${rows.map(s=>{const DF=NP_DEF[s.id],last=s.list[s.list.length-1],on=NP.sel===s.id;
       return `<tr class="click${on?" on":""}${s.N?"":" dim"}" data-np="${s.id}" tabindex="0"><td><b>${esc(DF.mn)}</b><div class="muted" style="font-size:11px">${esc(DF.en)}</div></td><td>${npDirTag(DF.dir)}</td>
-        <td class="r num">${s.N.toLocaleString("en-US")}</td><td>${npBar(s)}</td><td class="r num">${npVerdict(s,B)}</td><td class="r num muted">${last?npDate(R,last.b):"—"}</td></tr>`}).join("")}</tbody></table></div>`;
+        <td class="r num">${s.N.toLocaleString("en-US")}</td><td>${npBar(s)}</td><td class="r num">${s.N?`<b class="${s.win>B[NP_DEF[s.id].dir>0?"buy":"sell"]?"pos":""}">${npPc(s.win)}</b>`:"—"}</td><td class="r num">${npVerdict(s,B)}</td><td class="r num">${npHalf(s)}</td><td class="r num muted">${last?npDate(R,last.b):"—"}</td></tr>`}).join("")}</tbody></table></div>`;
   const nSig=rows.filter(s=>s.signif).length;
   h+=`<p class="muted" style="font-size:11px;margin:0">«Ялгаатай» = суурь хувиас 95%-ийн итгэлтэйгээр зөрсөн. ${NP_DEFS.length} хэв маягийг зэрэг шалгахад санамсаргүйгээр 1–2 нь «ялгаатай» гарч болно (энэ удаа ${nSig}). Тиймээс дор хаяж хэдэн зуун тохиолдолтой, өөр хугацааны интервал дээр ч давтагддаг үр дүнд л итгэнэ үү. ${CH.inst.kind==="step"?"<b>Step Index</b> нь санамсаргүй тул бүх хэв маяг 50/50 орчим гарах ёстой.":"Алтны spread, мэдээний огцом хөдөлгөөнийг тооцоогүй."}</p>`;
   return h}
