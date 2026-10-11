@@ -256,6 +256,7 @@ svg text{font-family:var(--f-mono)}
 .np-table tr.dim td{opacity:.55}
 .np-nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
 .np-nav .sp{flex:1}
+.np-sel{display:flex;flex-direction:column;gap:6px}.np-mini{display:block;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
 .fib-dlg{width:min(560px,calc(100vw - 24px))}
 .fib-dlg .dlg-f{flex-wrap:wrap;gap:8px;align-items:center}.fib-dlg .dlg-f .sp{flex:1 1 auto;min-width:0}.fib-dlg .fib-ok{display:flex;gap:8px;margin-left:auto;flex:0 0 auto}
 .fib-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px}
@@ -1214,6 +1215,7 @@ function chBuild(){
     else if(id==="patShow"){PAT.show=e.target.checked;drDirty()}
     else if(id==="npK"||id==="npM"||id==="npH"){NP[id.slice(2).toLowerCase()]=+e.target.value;npSave();npGo()}
     else if(id==="npShow"){NP.show=e.target.checked;npSave();drDirty()}
+    else if(id==="npSrc"){NP.src=e.target.value;npSave();npGo()}
     else if(id==="mtfSel"){DR.mtf=+e.target.value;drOptsSave();drDirty();MTF.key="";MTF.check=null;mtfStatus();mtfLoadReal();if(DR.mtf&&DR.mtf<=CH.gran)toast("Дээд интервал нь графикийн интервалаас их байх ёстой.")}
     else if(id==="sessChk"){DR.sess=e.target.checked;drOptsSave();drDirty();if(DR.sess&&CH.gran>3600)toast("Сешний бүс 1 цагаас бага интервал дээр харагдана.")}});
   const d=new Date(Date.now()-3*864e5);d.setHours(9,0,0,0);$("#rpStart").value=CH.rpStart||`${ymd(d)}T09:00`;$("#rpSpeed").value=String(CH.rp.speed||2);
@@ -1916,7 +1918,7 @@ function patRender(){const box=$("#patBox");if(!box)return;box.hidden=!PAT.open;
   box.innerHTML=h}
 function patGo(){if(PAT.tab==="np"){npGo();return}PAT.res=null;patRender();setTimeout(()=>{try{patRun()}catch(e){PAT.res={err:"Шинжилгээ амжилтгүй: "+e.message}}patRender();drDirty()},20)}
 function patAuto(){if(!PAT.open||!CH.series)return;const d=CH.series.data();if(!d.length)return;
-  if(PAT.tab==="np"){if(d.length!==NP.lastN||(NP.res&&!NP.res.err&&NP.res.t0!==d[0].time)){clearTimeout(NP.t);NP.lastN=d.length;NP.t=setTimeout(()=>{try{npCompute()}catch(e){}patRender();drDirty()},400)}return}
+  if(PAT.tab==="np"){const key=CH.mode+"|"+(NP.src==="year"?d[d.length-1].time:d.length+"|"+d[0].time);if(key!==NP.autoKey){NP.autoKey=key;clearTimeout(NP.t);NP.t=setTimeout(()=>npCompute(),NP.res?1500:300)}return}
   if(d.length!==PAT.lastN&&PAT.focus==null){clearTimeout(PAT.t);PAT.t=setTimeout(()=>{try{patRun()}catch(e){}patRender();drDirty()},400)}}
 function patJump(i){const R=PAT.res;if(!R||!R.matches[i])return;const m=R.matches[i];PAT.focus=i;
   CH.chart.timeScale().setVisibleLogicalRange({from:m.s-R.w,to:m.e+R.h+R.w});patRender();drDirty()}
@@ -2057,90 +2059,159 @@ function npRun(o,h,l,c,opt){const m=opt.m||1.5,H=opt.h||50;const D=npDetect(o,h,
   const now=D.occ.filter(x=>x.b>=n-3);
   return {st,base:{buy:base,sell:1-base,n:bu+bd},forming:D.forming,now,n,m,H,k:opt.k||5}}
 const NP=(()=>{let s={};try{s=JSON.parse(localStorage.getItem("alkham-np")||"{}")}catch(e){}
-  return {res:null,k:s.k||5,m:s.m||1.5,h:s.h||50,g:s.g||"all",sel:null,idx:null,lastN:0,t:0,show:s.show!==false}})();
-function npSave(){try{localStorage.setItem("alkham-np",JSON.stringify({k:NP.k,m:NP.m,h:NP.h,g:NP.g,show:NP.show}))}catch(e){}}
-function npCompute(){const data=CH.series?CH.series.data():[];const n=data.length;
-  if(n<300){NP.res={err:`Хангалттай өгөгдөл алга (${n} лаа). Дор хаяж 300 лаа хэрэгтэй.`};NP.lastN=n;return}
-  const o=new Float64Array(n),h=new Float64Array(n),l=new Float64Array(n),c=new Float64Array(n);
-  for(let i=0;i<n;i++){const b=data[i];o[i]=b.open;h[i]=b.high;l[i]=b.low;c[i]=b.close}
-  const R=npRun(o,h,l,c,{k:NP.k,m:NP.m,h:NP.h});R.t0=data[0].time;R.tN=data[n-1].time;R.c=c;NP.res=R;NP.lastN=n;
-  if(NP.sel&&R.st[NP.sel]){const L=R.st[NP.sel].list;if(NP.idx==null||NP.idx>=L.length)NP.idx=L.length?L.length-1:null}}
+  return {res:null,k:s.k||5,m:s.m||1.5,h:s.h||50,g:s.g||"all",src:s.src||"year",sel:null,idx:null,lastN:0,t:0,seq:0,run:0,autoKey:"",busy:false,show:s.show!==false}})();
+function npSave(){try{localStorage.setItem("alkham-np",JSON.stringify({k:NP.k,m:NP.m,h:NP.h,g:NP.g,show:NP.show,src:NP.src}))}catch(e){}}
+const NP_DAYS=365;
+// 365 хоногийн түүх: графикаас тусдаа, Deriv-ээс 5000 лаагаар хэсэгчлэн татна (санах ойд хадгална)
+const NPY={key:"",t:null,o:null,h:null,l:null,c:null,busy:null,done:0,total:0,err:null,from:0};
+function npYearKey(){return (CH.sym||"")+"|"+CH.gran}
+async function npYear(){const key=npYearKey();if(NPY.key===key&&NPY.t&&!NPY.err)return NPY;if(NPY.busy&&NPY.busyKey===key)return NPY.busy;
+  const g=CH.gran,now=Math.floor(Date.now()/1000),start=Math.floor((now-NP_DAYS*86400)/g)*g,span=5000*g;
+  const wins=[];for(let s=start;s<=now;s+=span)wins.push([s,Math.min(now,s+span-g)]);
+  NPY.busyKey=key;NPY.done=0;NPY.total=wins.length;NPY.err=null;
+  NPY.busy=(async()=>{const parts=new Array(wins.length);let next=0,fails=0;
+    const one=async()=>{while(next<wins.length){const w=next++;let tries=0;
+        for(;;){if(npYearKey()!==key)throw new Error("cancel");
+          try{const r=await dvSend({ticks_history:CH.sym,style:"candles",granularity:g,start:wins[w][0],end:wins[w][1],count:5000});parts[w]=r.candles||[];break}
+          catch(e){if(++tries>=4){parts[w]=[];fails++;break}await new Promise(r=>setTimeout(r,1500*tries))}}
+        NPY.done++;npProg()}};
+    await Promise.all([one(),one(),one()]);
+    const all=[];let last=-1;parts.forEach(p=>p.forEach(c=>{const ep=+c.epoch;if(ep>last){all.push(c);last=ep}}));
+    const n=all.length,t=new Float64Array(n),o=new Float64Array(n),h=new Float64Array(n),l=new Float64Array(n),c=new Float64Array(n);
+    all.forEach((x,i)=>{t[i]=+x.epoch;o[i]=+x.open;h[i]=+x.high;l[i]=+x.low;c[i]=+x.close});
+    Object.assign(NPY,{key,t,o,h,l,c,fails,from:start});return NPY})();
+  try{return await NPY.busy}catch(e){if(e.message!=="cancel")NPY.err=e.message||String(e);throw e}finally{if(NPY.busyKey===key)NPY.busy=null}}
+let npProgT=0;function npProg(){const now=Date.now();if(now-npProgT<250)return;npProgT=now;const el=$("#npProg");if(el)el.textContent=`${NP_DAYS} хоногийн түүх ачаалж байна… ${Math.round(NPY.done/Math.max(1,NPY.total)*100)}%`}
+// Шинжилгээний өгөгдөл: 365 хоног + графикийн шинэ лаа. Давтан тоглуулалтад тухайн мөчөөс хойшхийг хасна
+function npDataset(){const data=CH.series?CH.series.data():[];const cut=CH.mode==="replay"&&data.length?data[data.length-1].time-TZ:Infinity;
+  if(NP.src!=="year"||!NPY.t||NPY.key!==npYearKey()){const n=data.length,D={t:new Float64Array(n),o:new Float64Array(n),h:new Float64Array(n),l:new Float64Array(n),c:new Float64Array(n),src:"chart"};
+    data.forEach((b,i)=>{D.t[i]=b.time-TZ;D.o[i]=b.open;D.h[i]=b.high;D.l[i]=b.low;D.c[i]=b.close});D.n=n;return D}
+  const Y=NPY;let n0=Y.t.length;while(n0>0&&Y.t[n0-1]>cut)n0--;
+  const lastT=n0?Y.t[n0-1]:-Infinity;const extra=CH.mode==="replay"?[]:data.filter(b=>b.time-TZ>lastT);
+  // эхний мөрийн давхардлыг (хэсэгчилсэн сүүлийн лаа) графикийнхаар шинэчилнэ
+  const n=n0+extra.length,D={t:new Float64Array(n),o:new Float64Array(n),h:new Float64Array(n),l:new Float64Array(n),c:new Float64Array(n),src:"year"};
+  D.t.set(Y.t.subarray(0,n0));D.o.set(Y.o.subarray(0,n0));D.h.set(Y.h.subarray(0,n0));D.l.set(Y.l.subarray(0,n0));D.c.set(Y.c.subarray(0,n0));
+  extra.forEach((b,k)=>{const i=n0+k;D.t[i]=b.time-TZ;D.o[i]=b.open;D.h[i]=b.high;D.l[i]=b.low;D.c[i]=b.close});
+  if(n0&&CH.mode!=="replay"){const lb=data.find(b=>b.time-TZ===Y.t[n0-1]);if(lb){D.h[n0-1]=Math.max(D.h[n0-1],lb.high);D.l[n0-1]=Math.min(D.l[n0-1],lb.low);D.c[n0-1]=lb.close}}
+  D.n=n;return D}
+// Тооцоог тусдаа thread (Web Worker)-д хийнэ — 1м-ийн 500,000 лаа ч хуудсыг гацаахгүй
+function npPlain(R,n){R.forming=R.forming.map(f=>({idU:f.idU,idD:f.idD,lvU:f.idU?f.up(n-1):null,lvD:f.idD?f.dn(n-1):null,pts:f.pts.map(x=>({i:x.i,p:x.p})),t0:f.t0}));return R}
+let NPW=null;
+function npWorker(){if(NPW!==null)return NPW;try{
+    const src=`const NP_DEFS=${JSON.stringify(NP_DEFS)};const NP_DEF=Object.fromEntries(NP_DEFS.map(([id,mn,en,g,dir])=>[id,{id,mn,en,g,dir}]));
+const npLine=${npLine.toString()};const npSlope=${npSlope.toString()};
+${[npATR,npRawPivots,npForm,npDetect,npOutcome,npRun,npPlain].map(f=>f.toString()).join("\n")}
+onmessage=e=>{const {id,o,h,l,c,opt}=e.data;try{const R=npPlain(npRun(o,h,l,c,opt),c.length);postMessage({id,R})}catch(err){postMessage({id,err:String(err&&err.message||err)})}}`;
+    NPW=new Worker(URL.createObjectURL(new Blob([src],{type:"application/javascript"})));NPW.cb=new Map();
+    NPW.onmessage=e=>{const f=NPW.cb.get(e.data.id);if(f){NPW.cb.delete(e.data.id);f(e.data)}};NPW.onerror=()=>{NPW.cb.forEach(f=>f({err:"worker"}));NPW.cb.clear();NPW=false}}
+  catch(e){NPW=false}return NPW}
+function npExec(D,opt){const w=npWorker();
+  if(!w)return Promise.resolve(npPlain(npRun(D.o,D.h,D.l,D.c,opt),D.n));
+  return new Promise((res,rej)=>{const id=++NP.seq;w.cb.set(id,m=>{if(m.err){if(m.err==="worker")res(npPlain(npRun(D.o,D.h,D.l,D.c,opt),D.n));else rej(new Error(m.err))}else res(m.R)});
+    w.postMessage({id,o:D.o,h:D.h,l:D.l,c:D.c,opt})})}
+async function npCompute(){const my=++NP.run;NP.busy=true;
+  try{if(NP.src==="year"&&CH.sym){try{await npYear()}catch(e){if(e.message==="cancel")return}}
+    if(my!==NP.run)return;const D=npDataset();
+    if(D.n<300){NP.res={err:`Хангалттай өгөгдөл алга (${D.n} лаа). Дор хаяж 300 лаа хэрэгтэй.`};return}
+    const R=await npExec(D,{k:NP.k,m:NP.m,h:NP.h});if(my!==NP.run)return;
+    R.D=D;R.t0=CH.series&&CH.series.data().length?CH.series.data()[0].time:0;R.days=(D.t[D.n-1]-D.t[0])/86400;NP.res=R;
+    if(NP.sel&&R.st[NP.sel]){const L=R.st[NP.sel].list;if(NP.idx==null||NP.idx>=L.length)NP.idx=L.length?L.length-1:null}}
+  catch(e){NP.res={err:"Шинжилгээ амжилтгүй: "+(e.message||e)}}
+  finally{if(my===NP.run){NP.busy=false;const d=CH.series?CH.series.data():[];NP.lastN=d.length;patRender();drDirty()}}}
 const npPc=v=>(v*100).toFixed(0)+"%";
 function npBar(s,big){if(!s.N)return `<div class="np-bar nil">өмнө нь тохиолдоогүй</div>`;
   return `<div class="np-bar${big?" big":""}" title="Buy ${s.up} · Sell ${s.dn}"><div class="pb buy" style="width:${s.buy*100}%">${s.buy>=0.18?"Buy "+npPc(s.buy):""}</div><div class="pb sell" style="width:${s.sell*100}%">${s.sell>=0.18?"Sell "+npPc(s.sell):""}</div></div>`}
 function npVerdict(s,base){if(s.N<20)return `<span class="muted">цөөн (${s.N})</span>`;
   const d=(s.buy-base.buy)*100;const t=`${d>=0?"+":""}${d.toFixed(0)} пункт`;
   return s.signif?`<b class="${d>0?"pos":"neg"}">${t} · ялгаатай</b>`:`<span class="muted">${t} · ялгаагүй</span>`}
-function npDate(R,i){const data=CH.series.data();const b=data[i];return b?new Date((b.time-TZ)*1000).toLocaleString("en-GB",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}):""}
+const npFmtD=(ep,y)=>new Date(ep*1000).toLocaleString("en-GB",y?{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}:{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+function npDate(R,i,y){const t=R.D&&R.D.t[i];return t?npFmtD(t,y):""}
 function npDirTag(dir){return dir>0?`<span class="np-dir up">▲ Buy</span>`:`<span class="np-dir dn">▼ Sell</span>`}
-function npHtml(){const R=NP.res;const sel=(id,vals,cur,fmt)=>`<select id="${id}">${vals.map(v=>`<option value="${v}"${v===cur?" selected":""}>${fmt(v)}</option>`).join("")}</select>`;
+// Сонгосон тохиолдлын жижиг график (үндсэн графикт ачаалагдаагүй хуучин хэсгийг ч харуулна)
+function npMini(R,x){const D=R.D,pI=x.pts.map(p=>p[0]);const o=x.out||{};let i0=Math.max(0,Math.min(...pI,x.b)-12),i1=Math.min(D.n-1,Math.max(x.b,o.j||x.b)+8);
+  if(i1-i0>240)i0=Math.max(0,i1-240);const W=680,H=230,pl=6,pr=60,pt=10,pb=20;
+  let lo=Infinity,hi=-Infinity;for(let i=i0;i<=i1;i++){if(D.l[i]<lo)lo=D.l[i];if(D.h[i]>hi)hi=D.h[i]}if(o.X){lo=Math.min(lo,o.E-o.X);hi=Math.max(hi,o.E+o.X)}
+  const pad=(hi-lo)*0.06||1;lo-=pad;hi+=pad;const nb=i1-i0+1,bw=(W-pl-pr)/nb,X=i=>pl+(i-i0+0.5)*bw,Y=v=>pt+(H-pt-pb)*(1-(v-lo)/(hi-lo));
+  let g="";for(let k=0;k<=3;k++){const v=lo+(hi-lo)*k/3,y=Y(v);g+=`<line x1="${pl}" x2="${W-pr}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width=".6"/><text x="${W-pr+4}" y="${(y+3).toFixed(1)}" font-size="10" fill="var(--muted)">${fmtP(v)}</text>`}
+  if(o.X){const xe=X(Math.min(i1,o.j||x.b)),xb=X(x.b);g+=`<rect x="${xb}" y="${Y(o.E+o.X)}" width="${Math.max(1,xe-xb)}" height="${Y(o.E)-Y(o.E+o.X)}" fill="#089981" fill-opacity=".14"/><rect x="${xb}" y="${Y(o.E)}" width="${Math.max(1,xe-xb)}" height="${Y(o.E-o.X)-Y(o.E)}" fill="#F23645" fill-opacity=".14"/>`}
+  let cs="";const cw=Math.max(1,bw*0.7);for(let i=i0;i<=i1;i++){const up=D.c[i]>=D.o[i],col=up?"#089981":"#F23645",xx=X(i),yt=Y(Math.max(D.o[i],D.c[i])),yb=Y(Math.min(D.o[i],D.c[i]));
+    cs+=`<line x1="${xx.toFixed(1)}" x2="${xx.toFixed(1)}" y1="${Y(D.h[i]).toFixed(1)}" y2="${Y(D.l[i]).toFixed(1)}" stroke="${col}" stroke-width="1"/><rect x="${(xx-cw/2).toFixed(1)}" y="${yt.toFixed(1)}" width="${cw.toFixed(1)}" height="${Math.max(1,yb-yt).toFixed(1)}" fill="${col}"/>`}
+  let pat="";if(x.pts.length>1)pat+=`<polyline points="${x.pts.map(([i,p])=>X(i).toFixed(1)+","+Y(p).toFixed(1)).join(" ")}" fill="none" stroke="#2962FF" stroke-width="2"/>`;
+  x.pts.forEach(([i,p])=>pat+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(p).toFixed(1)}" r="3" fill="#2962FF"/>`);
+  (x.ln||[]).forEach(([a,b])=>{const f=npLine(a,b);pat+=`<line x1="${X(a.i)}" y1="${Y(a.p)}" x2="${X(x.b)}" y2="${Y(f(x.b))}" stroke="#FF9800" stroke-width="1.5" stroke-dasharray="5 4"/>`});
+  if(x.lv!=null&&!(x.ln&&x.ln.length))pat+=`<line x1="${X(Math.max(i0,x.pts[0][0]))}" y1="${Y(x.lv)}" x2="${X(x.b)}" y2="${Y(x.lv)}" stroke="#FF9800" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+  pat+=`<circle cx="${X(x.b)}" cy="${Y(D.c[x.b])}" r="4.5" fill="var(--ink)" stroke="var(--surface)" stroke-width="1.5"/>`;
+  return `<svg class="np-mini" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Сонгосон тохиолдлын график">${g}${cs}${pat}
+    <text x="${pl}" y="${H-5}" font-size="10" fill="var(--muted)">${npDate(R,i0,true)}</text><text x="${W-pr}" y="${H-5}" font-size="10" fill="var(--muted)" text-anchor="end">${npDate(R,i1,true)}</text></svg>`}
+function npOnChart(R,x){const d=CH.series?CH.series.data():[];return d.length&&R.D.t[Math.min(...x.pts.map(p=>p[0]),x.b)]>=d[0].time-TZ}
+function npHtml(){const R=NP.res;const sel=(id,vals,cur,fmt)=>`<select id="${id}">${vals.map(v=>`<option value="${v}"${String(v)===String(cur)?" selected":""}>${fmt(v)}</option>`).join("")}</select>`;
   let h=`<div class="ch-tools">
+      <label class="lbl" for="npSrc">Түүх</label>${sel("npSrc",["year","chart"],NP.src,v=>v==="year"?`${NP_DAYS} хоног`:"Графикт ачаалсан")}
       <label class="lbl" for="npK" title="Оргил/ёроол тодорхойлох: өмнө, хойно хэдэн лаанаас өндөр/нам байх">Оргил/ёроол</label>${sel("npK",[3,5,8,13],NP.k,v=>v+" лаа")}
       <label class="lbl" for="npM" title="Орох үнээс дээш, доош тэнцүү зай (ATR-ийн үржвэр)">SL = TP</label>${sel("npM",[1,1.5,2,3],NP.m,v=>v+"× ATR")}
       <label class="lbl" for="npH">Хүлээх</label>${sel("npH",[20,50,100,200],NP.h,v=>v+" лаа")}
       <label class="chk"><input type="checkbox" id="npShow"${NP.show?" checked":""}> Графикт</label>
       <button type="button" class="btn sm primary" data-ch="npRun">Дахин шинжлэх</button></div>
     <div class="seg np-groups" role="group" aria-label="Бүлэг">${NP_GROUPS.map(([g,t])=>`<button type="button" data-npg="${g}" aria-pressed="${NP.g===g}">${t}</button>`).join("")}</div>`;
-  if(!R)return h+`<div class="muted">Шинжилж байна…</div>`;
+  if(!R||NP.busy&&!R)return h+`<div class="muted" id="npProg">${NPY.busy?`${NP_DAYS} хоногийн түүх ачаалж байна… ${Math.round(NPY.done/Math.max(1,NPY.total)*100)}%`:"Шинжилж байна…"}</div>`;
   if(R.err)return h+`<div class="warns"><div>${esc(R.err)}</div></div>`;
-  const B=R.base;
-  h+=`<p class="muted np-explain">Хэв маяг илэрсэн (задарсан) лааны хаалтаар орж, SL ба TP-г <b>±${R.m}×ATR</b> тэнцүү тавьсан гэж үзээд, ${R.H} лааны дотор аль нь түрүүлж хүрснийг өнгөрсөн бүх тохиолдлоор тоолов. <b>Buy %</b> = дээшээ түрүүлж хүрсэн, <b>Sell %</b> = доошоо. Ирээдүйн лааг ашиглаагүй.</p>
+  const B=R.base,D=R.D;
+  const cover=D.src==="year"?`<b>${Math.round(R.days)} хоногийн</b> ${D.n.toLocaleString("en-US")} лаа (${npDate(R,0,true).slice(0,10)} → ${CH.mode==="replay"?npDate(R,D.n-1,true):"одоо"})${R.days<NP_DAYS-5?` — Deriv-ээс ийм хэмжээний түүх олдсон`:""}`:`графикт ачаалсан ${D.n.toLocaleString("en-US")} лаа (${Math.round(R.days)} хоног)`;
+  h+=`<p class="muted np-explain">${cover}${NP.busy?" · шинэчилж байна…":""}. Хэв маяг илэрсэн (задарсан) лааны хаалтаар орж, SL ба TP-г <b>±${R.m}×ATR</b> тэнцүү тавьсан гэж үзээд, ${R.H} лааны дотор аль нь түрүүлж хүрснийг бүх тохиолдлоор тоолов. <b>Buy %</b> = дээшээ түрүүлж хүрсэн, <b>Sell %</b> = доошоо. Ирээдүйн лааг ашиглаагүй.</p>
     <div class="np-base"><span class="lbl">Суурь (бүх лаа, санамсаргүй орсон бол)</span>${npBar({N:B.n,buy:B.buy,sell:B.sell,up:"",dn:""})}<span class="muted">${B.n.toLocaleString("en-US")} тохиолдол</span></div>`;
-  // Одоо илэрсэн ба бүрэлдэж буй
   const cards=[];
   R.now.forEach(x=>cards.push({id:x.id,txt:`${npDate(R,x.b)}-д илэрсэн`,cls:"now"}));
-  const seenF=new Set();R.forming.forEach(f=>{const ids=[f.idU,f.idD].filter(Boolean);ids.forEach(id=>{if(seenF.has(id))return;seenF.add(id);
-    const lv=id===f.idU?f.up(R.n-1):f.dn(R.n-1);cards.push({id,txt:`бүрэлдэж байна — ${fmtP(lv)} ${id===f.idU?"дээш":"доош"} хаагдвал`,cls:"form"})})});
-  if(cards.length)h+=`<div class="np-now"><div class="lbl">Одоо графикт</div><div class="np-cards">${cards.map(cd=>{const s=R.st[cd.id],D=NP_DEF[cd.id];
-      return `<button type="button" class="np-card ${cd.cls}" data-np="${cd.id}"><div class="np-card-h">${npDirTag(D.dir)}<b>${esc(D.mn)}</b></div><div class="muted" style="font-size:11px">${esc(cd.txt)}</div>${npBar(s)}<div class="muted" style="font-size:11px">Өмнө нь ${s.N} удаа · ${npVerdict(s,B)}</div></button>`}).join("")}</div></div>`;
+  const seenF=new Set();R.forming.forEach(f=>{[f.idU,f.idD].filter(Boolean).forEach(id=>{if(seenF.has(id))return;seenF.add(id);
+    const lv=id===f.idU?f.lvU:f.lvD;cards.push({id,txt:`бүрэлдэж байна — ${fmtP(lv)} ${id===f.idU?"дээш":"доош"} хаагдвал`,cls:"form"})})});
+  if(cards.length)h+=`<div class="np-now"><div class="lbl">Одоо графикт</div><div class="np-cards">${cards.map(cd=>{const s=R.st[cd.id],DF=NP_DEF[cd.id];
+      return `<button type="button" class="np-card ${cd.cls}" data-np="${cd.id}"><div class="np-card-h">${npDirTag(DF.dir)}<b>${esc(DF.mn)}</b></div><div class="muted" style="font-size:11px">${esc(cd.txt)}</div>${npBar(s)}<div class="muted" style="font-size:11px">Өмнө нь ${s.N} удаа · ${npVerdict(s,B)}</div></button>`}).join("")}</div></div>`;
   else h+=`<div class="muted" style="font-size:12px">Одоогийн сүүлийн лаанууд дээр хэв маяг илрээгүй, бүрэлдэж буй хэв маяг алга.</div>`;
-  if(NP.sel&&R.st[NP.sel]){const s=R.st[NP.sel],L=s.list,D=NP_DEF[NP.sel];
+  if(NP.sel&&R.st[NP.sel]){const s=R.st[NP.sel],L=s.list,DF=NP_DEF[NP.sel];
     if(L.length&&NP.idx!=null){const x=L[NP.idx],r=x.out||{};const resTxt={up:"дээш (Buy) түрүүлж хүрсэн",dn:"доош (Sell) түрүүлж хүрсэн",none:`${R.H} лаанд аль нь ч хүрээгүй`,both:"нэг лаанд хоёуланд хүрсэн",open:"одоо ч үргэлжилж байна",na:"—"}[r.res]||"";
-      h+=`<div class="np-nav"><b>${esc(D.mn)}</b><span class="muted">${NP.idx+1}/${L.length} · ${npDate(R,x.b)} · орох ${fmtP(R.c[x.b])} · <span class="${r.res==="up"?"pos":r.res==="dn"?"neg":""}">${resTxt}</span></span>
-        <span class="sp"></span><button type="button" class="btn sm" data-ch="npPrev" ${NP.idx>0?"":"disabled"}>◀ Өмнөх</button><button type="button" class="btn sm" data-ch="npNext" ${NP.idx<L.length-1?"":"disabled"}>Дараах ▶</button><button type="button" class="btn sm ghost" data-ch="npLast">Сүүлийнх</button><button type="button" class="btn sm ghost" data-ch="npNow">Одоо руу</button></div>`}
-    else h+=`<div class="np-nav muted">${esc(D.mn)}: энэ түүхэнд олдсонгүй. Илүү урт түүх ачаалах эсвэл «Оргил/ёроол»-ыг багасгаж үзнэ үү.</div>`}
-  // Хүснэгт
+      const onc=npOnChart(R,x);
+      h+=`<div class="np-sel"><div class="np-nav"><b>${esc(DF.mn)}</b><span class="muted">${NP.idx+1}/${L.length} · ${npDate(R,x.b,true)} · орох ${fmtP(D.c[x.b])} · <span class="${r.res==="up"?"pos":r.res==="dn"?"neg":""}">${resTxt}</span></span>
+        <span class="sp"></span><button type="button" class="btn sm" data-ch="npPrev" ${NP.idx>0?"":"disabled"}>◀ Өмнөх</button><button type="button" class="btn sm" data-ch="npNext" ${NP.idx<L.length-1?"":"disabled"}>Дараах ▶</button><button type="button" class="btn sm ghost" data-ch="npLast">Сүүлийнх</button>
+        <button type="button" class="btn sm ghost" data-ch="npGoto" ${onc?"":"disabled title=\"Энэ хэсэг үндсэн графикт ачаалагдаагүй — доорх зурагт харна уу\""}>Графикт харах</button></div>${npMini(R,x)}</div>`}
+    else h+=`<div class="np-nav muted">${esc(DF.mn)}: энэ түүхэнд олдсонгүй. «Оргил/ёроол»-ыг багасгаж үзнэ үү.</div>`}
   const order={rev:0,cont:1,str:2,cdl:3};
   const rows=NP_DEFS.map(d=>R.st[d[0]]).filter(s=>NP.g==="all"||NP_DEF[s.id].g===NP.g).sort((a,b)=>(a.N?0:1)-(b.N?0:1)||order[NP_DEF[a.id].g]-order[NP_DEF[b.id].g]||b.N-a.N);
   h+=`<div class="tw np-tw"><table class="np-table"><thead><tr><th>Хэв маяг</th><th>Хүлээлт</th><th class="r">Тоо</th><th style="min-width:160px">Өмнө нь явсан: Buy / Sell</th><th class="r">Суурьтай зөрүү</th><th class="r">Сүүлд</th></tr></thead><tbody>
-    ${rows.map(s=>{const D=NP_DEF[s.id],last=s.list[s.list.length-1],on=NP.sel===s.id;
-      return `<tr class="click${on?" on":""}${s.N?"":" dim"}" data-np="${s.id}" tabindex="0"><td><b>${esc(D.mn)}</b><div class="muted" style="font-size:11px">${esc(D.en)}</div></td><td>${npDirTag(D.dir)}</td>
-        <td class="r num">${s.N}</td><td>${npBar(s)}</td><td class="r num">${npVerdict(s,B)}</td><td class="r num muted">${last?npDate(R,last.b):"—"}</td></tr>`}).join("")}</tbody></table></div>`;
+    ${rows.map(s=>{const DF=NP_DEF[s.id],last=s.list[s.list.length-1],on=NP.sel===s.id;
+      return `<tr class="click${on?" on":""}${s.N?"":" dim"}" data-np="${s.id}" tabindex="0"><td><b>${esc(DF.mn)}</b><div class="muted" style="font-size:11px">${esc(DF.en)}</div></td><td>${npDirTag(DF.dir)}</td>
+        <td class="r num">${s.N.toLocaleString("en-US")}</td><td>${npBar(s)}</td><td class="r num">${npVerdict(s,B)}</td><td class="r num muted">${last?npDate(R,last.b):"—"}</td></tr>`}).join("")}</tbody></table></div>`;
   const nSig=rows.filter(s=>s.signif).length;
   h+=`<p class="muted" style="font-size:11px;margin:0">«Ялгаатай» = суурь хувиас 95%-ийн итгэлтэйгээр зөрсөн. ${NP_DEFS.length} хэв маягийг зэрэг шалгахад санамсаргүйгээр 1–2 нь «ялгаатай» гарч болно (энэ удаа ${nSig}). Тиймээс дор хаяж хэдэн зуун тохиолдолтой, өөр хугацааны интервал дээр ч давтагддаг үр дүнд л итгэнэ үү. ${CH.inst.kind==="step"?"<b>Step Index</b> нь санамсаргүй тул бүх хэв маяг 50/50 орчим гарах ёстой.":"Алтны spread, мэдээний огцом хөдөлгөөнийг тооцоогүй."}</p>`;
   return h}
-function npGo(){NP.res=null;patRender();setTimeout(()=>{try{npCompute()}catch(e){NP.res={err:"Шинжилгээ амжилтгүй: "+e.message}}patRender();drDirty()},20)}
-function npSelect(id,jump){NP.sel=id;const L=NP.res&&NP.res.st[id]?NP.res.st[id].list:[];NP.idx=L.length?L.length-1:null;patRender();if(jump!==false)npJump();drDirty()}
-function npJump(){const R=NP.res;if(!R||!NP.sel||NP.idx==null)return;const x=R.st[NP.sel].list[NP.idx];if(!x)return;
-  const i0=Math.min(...x.pts.map(p=>p[0]),x.b),i1=Math.max(x.b,(x.out&&x.out.j)||x.b);const pad=Math.max(15,(i1-i0)*0.4);
-  CH.chart.timeScale().setVisibleLogicalRange({from:i0-pad,to:i1+pad})}
-function npDraw(ctx,box){const R=NP.res;if(!PAT.open||PAT.tab!=="np"||!R||R.err||!NP.show)return;const data=CH.series.data();
-  if(!data.length||data[0].time!==R.t0||data.length!==R.n)return;
-  const X=i=>data[i]?dX(data[i].time-TZ):null,F=`11px ${TVF}`;
+function npGo(){NP.res=null;patRender();npCompute()}
+function npSelect(id,jump){NP.sel=id;const L=NP.res&&NP.res.st&&NP.res.st[id]?NP.res.st[id].list:[];NP.idx=L.length?L.length-1:null;patRender();if(jump!==false)npJump();drDirty()}
+function npIdxOnChart(ep){const d=CH.series.data();let lo=0,hi=d.length-1;while(lo<hi){const m=(lo+hi)>>1;if(d[m].time-TZ<ep)lo=m+1;else hi=m}return lo}
+function npJump(){const R=NP.res;if(!R||!R.D||!NP.sel||NP.idx==null)return;const x=R.st[NP.sel].list[NP.idx];if(!x||!npOnChart(R,x))return;
+  const D=R.D,a=npIdxOnChart(D.t[Math.min(...x.pts.map(p=>p[0]),x.b)]),b=npIdxOnChart(D.t[Math.min(D.n-1,Math.max(x.b,(x.out&&x.out.j)||x.b))]);const pad=Math.max(15,(b-a)*0.4);
+  CH.chart.timeScale().setVisibleLogicalRange({from:a-pad,to:b+pad})}
+function npDraw(ctx,box){const R=NP.res;if(!PAT.open||PAT.tab!=="np"||!R||R.err||!R.D||!NP.show)return;const data=CH.series.data();if(!data.length)return;
+  const D=R.D,X=i=>D.t[i]!=null?dX(D.t[i]):null,F=`11px ${TVF}`,vis=x=>x!=null&&x>-30&&x<box.w+30;
   const used=[];const lab=(t,x,y,col)=>{for(let g=0;g<8&&used.some(u=>Math.abs(u-y)<19);g++)y+=19;used.push(y);ctx.font=`600 ${F}`;const w=ctx.measureText(t).width+8;x=Math.max(2,Math.min(x,box.w-w-2));ctx.fillStyle=col;ctx.fillRect(x,y-9,w,18);ctx.fillStyle="#fff";ctx.textBaseline="middle";ctx.fillText(t,x+4,y)};
-  const r0=CH.chart.timeScale().getVisibleLogicalRange();
-  // сонгосон хэв маягийн бүх тохиолдлын тэмдэг
-  if(NP.sel&&R.st[NP.sel]&&r0){const D=NP_DEF[NP.sel];R.st[NP.sel].list.forEach((x,k)=>{if(x.b<r0.from-2||x.b>r0.to+2)return;const xx=X(x.b);if(xx==null)return;
-      const res=x.out&&x.out.res,col=res==="up"?"#089981":res==="dn"?"#F23645":"#787B86";const y=D.dir>0?pY(data[x.b].low)+10:pY(data[x.b].high)-10;if(y==null)return;
-      ctx.fillStyle=col;ctx.beginPath();if(D.dir>0){ctx.moveTo(xx,y-5);ctx.lineTo(xx-5,y+4);ctx.lineTo(xx+5,y+4)}else{ctx.moveTo(xx,y+5);ctx.lineTo(xx-5,y-4);ctx.lineTo(xx+5,y-4)}ctx.closePath();ctx.fill();
+  const first=data[0].time-TZ;
+  if(NP.sel&&R.st[NP.sel]){const DF=NP_DEF[NP.sel];R.st[NP.sel].list.forEach((x,k)=>{if(D.t[x.b]<first)return;const xx=X(x.b);if(!vis(xx))return;
+      const res=x.out&&x.out.res,col=res==="up"?"#089981":res==="dn"?"#F23645":"#787B86";const y=DF.dir>0?pY(D.l[x.b])+10:pY(D.h[x.b])-10;if(y==null)return;
+      ctx.fillStyle=col;ctx.beginPath();if(DF.dir>0){ctx.moveTo(xx,y-5);ctx.lineTo(xx-5,y+4);ctx.lineTo(xx+5,y+4)}else{ctx.moveTo(xx,y+5);ctx.lineTo(xx-5,y-4);ctx.lineTo(xx+5,y-4)}ctx.closePath();ctx.fill();
       if(k===NP.idx){ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();ctx.arc(xx,y,9,0,7);ctx.stroke()}});
     const x=NP.idx!=null?R.st[NP.sel].list[NP.idx]:null;
-    if(x){const blue="#2962FF";ctx.lineWidth=2;ctx.setLineDash([]);ctx.strokeStyle=blue;
+    if(x&&npOnChart(R,x)){const blue="#2962FF";ctx.lineWidth=2;ctx.setLineDash([]);ctx.strokeStyle=blue;
       if(x.pts.length>1){ctx.beginPath();x.pts.forEach(([i,p],k)=>{const a=X(i),b=pY(p);if(a==null||b==null)return;k?ctx.lineTo(a,b):ctx.moveTo(a,b)});ctx.stroke()}
       x.pts.forEach(([i,p])=>{const a=X(i),b=pY(p);if(a==null||b==null)return;ctx.fillStyle=blue;ctx.beginPath();ctx.arc(a,b,3,0,7);ctx.fill()});
       ctx.strokeStyle="#FF9800";ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
       (x.ln||[]).forEach(([a,b])=>{const xa=X(a.i),xb=X(x.b),f=npLine(a,b);const ya=pY(a.p),yb=pY(f(x.b));if(xa!=null&&xb!=null&&ya!=null&&yb!=null){ctx.beginPath();ctx.moveTo(xa,ya);ctx.lineTo(xb,yb);ctx.stroke()}});
       if(x.lv!=null&&!(x.ln&&x.ln.length)){const xa=X(x.pts[0][0]),xb=X(x.b),y=pY(x.lv);if(xa!=null&&xb!=null&&y!=null){ctx.beginPath();ctx.moveTo(xa,y);ctx.lineTo(xb,y);ctx.stroke()}}
       ctx.setLineDash([]);
-      const o=x.out||{};const xb=X(x.b),xe=X(Math.min(data.length-1,o.j||x.b+R.H));
+      const o=x.out||{};const xb=X(x.b),xe=X(Math.min(D.n-1,o.j||x.b+R.H));
       if(o.X&&xb!=null&&xe!=null){const yE=pY(o.E),yU=pY(o.E+o.X),yD=pY(o.E-o.X);
         ctx.fillStyle="rgba(8,153,129,0.13)";ctx.fillRect(xb,yU,xe-xb,yE-yU);ctx.fillStyle="rgba(242,54,69,0.13)";ctx.fillRect(xb,yE,xe-xb,yD-yE);
         ctx.strokeStyle="#787B86";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(xb,yE);ctx.lineTo(xe,yE);ctx.stroke()}
-      if(xb!=null){const y=pY(R.c[x.b]);ctx.fillStyle="#131722";ctx.beginPath();ctx.arc(xb,y,4,0,7);ctx.fill();
-        const s=R.st[NP.sel];lab(`${NP_DEF[NP.sel].mn} · өмнө нь Buy ${npPc(s.buy)} / Sell ${npPc(s.sell)} (${s.N})`,xb+8,Math.max(14,(pY(o.E+(o.X||0))||y)-14),NP_DEF[NP.sel].dir>0?"#089981":"#F23645")}}}
-  // одоо бүрэлдэж буй: гох түвшин
-  const xl=X(R.n-1);if(xl==null)return;const shown=new Set();
-  R.forming.forEach(f=>{[f.idU,f.idD].filter(Boolean).forEach(id=>{if(shown.has(id))return;shown.add(id);const lv=id===f.idU?f.up(R.n-1):f.dn(R.n-1),y=pY(lv);if(y==null)return;
+      if(xb!=null){const y=pY(D.c[x.b]);ctx.fillStyle="#131722";ctx.beginPath();ctx.arc(xb,y,4,0,7);ctx.fill();
+        const s=R.st[NP.sel];lab(`${DF.mn} · өмнө нь Buy ${npPc(s.buy)} / Sell ${npPc(s.sell)} (${s.N})`,xb+8,Math.max(14,(pY(o.E+(o.X||0))||y)-14),DF.dir>0?"#089981":"#F23645")}}}
+  const xl=X(D.n-1);if(xl==null)return;const shown=new Set();
+  R.forming.forEach(f=>{[f.idU,f.idD].filter(Boolean).forEach(id=>{if(shown.has(id))return;shown.add(id);const lv=id===f.idU?f.lvU:f.lvD,y=pY(lv);if(y==null)return;
     const xa=X(f.pts[0].i);ctx.strokeStyle=NP_DEF[id].dir>0?"#089981":"#F23645";ctx.lineWidth=1.5;ctx.setLineDash([6,4]);ctx.beginPath();ctx.moveTo(xa!=null?xa:0,y);ctx.lineTo(Math.min(box.w,xl+60),y);ctx.stroke();ctx.setLineDash([]);
     const s=R.st[id];lab(`${NP_DEF[id].mn}? ${id===f.idU?"↑":"↓"} ${fmtP(lv)} · ${s.N?`өмнө нь Buy ${npPc(s.buy)} / Sell ${npPc(s.sell)} (${s.N})`:"өмнө нь тохиолдоогүй"}`,Math.min(xl+8,box.w-260),y-12,NP_DEF[id].dir>0?"#089981":"#F23645")})})}
 
@@ -2172,6 +2243,7 @@ async function chClick(e){
   else if(act==="npRun")npGo();
   else if(act==="npPrev"||act==="npNext"||act==="npLast"){const L=NP.res&&NP.sel?NP.res.st[NP.sel].list:[];if(!L.length)return;NP.idx=act==="npLast"?L.length-1:Math.max(0,Math.min(L.length-1,NP.idx+(act==="npNext"?1:-1)));patRender();npJump();drDirty()}
   else if(act==="npNow"){CH.chart.timeScale().scrollToRealTime();drDirty()}
+  else if(act==="npGoto"){npJump();drDirty()}
   else if(act==="patBack"){PAT.focus=null;CH.chart.timeScale().scrollToRealTime();patGo()}
   else if(act==="zoom"){const ts=CH.chart.timeScale();const cur=ts.options().barSpacing||CH.bs;const nx=Math.max(1,Math.min(60,+(cur*(+b.dataset.v>0?1.35:1/1.35)).toFixed(2)));
     ts.applyOptions({barSpacing:nx});CH.bs=nx;try{localStorage.setItem("alkham-chart-bs",String(nx))}catch(e){}ts.scrollToRealTime();drDirty();chZones()}
