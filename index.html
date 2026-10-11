@@ -1510,14 +1510,32 @@ function drSessions(ctx,box,font){const t0=xEp(0),t1=xEp(box.w);if(t0==null||t1=
     if(x2-x1>40)ctx.fillText(name,Math.max(x1,2)+3,8+i*13)})}
 // Дээд интервалын лааны эхлэл: UTC-д тулгуурласан, 7 хоног Даваа 00:00 UTC-ээс
 const WEEK_OFF=345600; // 1970-01-05 (Даваа)
-const htfKey=(ep,H)=>H===604800?Math.floor((ep-WEEK_OFF)/H)*H+WEEK_OFF:Math.floor(ep/H)*H;
+const htfKeyUtc=(ep,H)=>H===604800?Math.floor((ep-WEEK_OFF)/H)*H+WEEK_OFF:Math.floor(ep/H)*H;
+// Алт: TradingView / брокерууд (Pepperstone г.м.) 4ц, өдөр, 7 хоногийг Нью-Йоркийн 18:00-ийн сешнээс эхлүүлдэг (зун 22:00 UTC, өвөл 23:00 UTC)
+function usDst(ep){const y=new Date(ep*1000).getUTCFullYear();
+  const nth=(m,n)=>{const d=new Date(Date.UTC(y,m,1));const first=(7-d.getUTCDay())%7;return Date.UTC(y,m,1+first+7*(n-1))/1000};
+  return ep>=nth(2,2)+7*3600&&ep<nth(10,1)+6*3600}
+function nyOff(ep){return usDst(ep)?4*3600:5*3600}
+function goldSess(ep){let off=18*3600+nyOff(ep),s=Math.floor((ep-off)/86400)*86400+off;
+  const off2=18*3600+nyOff(s);if(off2!==off){s=Math.floor((ep-off2)/86400)*86400+off2;if(s>ep)s-=86400}return s}
+function goldKey(ep,H){const s=goldSess(ep);
+  if(H===86400)return s;
+  if(H===604800){const wd=new Date((s-nyOff(s))*1000).getUTCDay();/* сешн эхэлсэн Нью-Йоркийн өдөр: 0=Ням */return goldSess(s-wd*86400+3600)}
+  return s+Math.floor((ep-s)/H)*H}
+const isGoldInst=ins=>!!ins&&(ins.kind==="gold"||/xau|gold/i.test(ins.name||""));
+const goldSessOn=H=>H>=14400&&isGoldInst(CH.inst);
+const htfKey=(ep,H)=>goldSessOn(H)?goldKey(ep,H):htfKeyUtc(ep,H);
 const MTF={real:null,key:"",busy:false,check:null};
 // Шууд горимд Deriv-ийн жинхэнэ лааг ачаална (15м, 1ц, 4ц, 1ө). 7 хоногийн лааг Deriv өгдөггүй тул нэгтгэж тооцно.
-async function mtfLoadReal(){const H=DR.mtf,data=CH.series?CH.series.data():[];
-  if(!H||H===604800||CH.mode!=="live"||!CH.sym||!data.length||H<=CH.gran){MTF.real=null;MTF.check=null;mtfStatus();return}
-  const key=CH.sym+"|"+H+"|"+CH.gran+"|"+data[0].time;if(MTF.key===key||MTF.busy)return;MTF.busy=true;
-  try{const start=data[0].time-TZ;const r=await dvSend({ticks_history:CH.sym,style:"candles",granularity:H,start,end:"latest",count:5000});
-    const m=new Map();(r.candles||[]).forEach(c=>m.set(+c.epoch,{o:+c.open,h:+c.high,l:+c.low,c:+c.close}));MTF.real=m;MTF.key=key;mtfVerify()}
+async function mtfLoadReal(){const H=DR.mtf,data=CH.series?CH.series.data():[];const gs=goldSessOn(H);
+  if(!H||(H===604800&&!gs)||CH.mode!=="live"||!CH.sym||!data.length||H<=CH.gran){MTF.real=null;MTF.check=null;mtfStatus();return}
+  const key=CH.sym+"|"+H+"|"+CH.gran+"|"+data[0].time+"|"+gs;if(MTF.key===key||MTF.busy)return;MTF.busy=true;
+  try{const start=data[0].time-TZ;
+    // алт: Deriv-ийн 4ц/өдрийн лаа UTC-ээр эхэлдэг тул TradingView-тэй зөрнө. Иймд Deriv-ийн 1ц лааг Нью-Йоркийн сешнээр нэгтгэнэ
+    const r=await dvSend({ticks_history:CH.sym,style:"candles",granularity:gs?3600:H,start:gs?goldKey(start,H):start,end:"latest",count:5000});
+    const m=new Map();
+    if(gs){(r.candles||[]).forEach(c=>{const ep=+c.epoch,k=goldKey(ep,H),R=m.get(k);if(!R)m.set(k,{o:+c.open,h:+c.high,l:+c.low,c:+c.close});else{R.h=Math.max(R.h,+c.high);R.l=Math.min(R.l,+c.low);R.c=+c.close}})}
+    else(r.candles||[]).forEach(c=>m.set(+c.epoch,{o:+c.open,h:+c.high,l:+c.low,c:+c.close}));MTF.real=m;MTF.key=key;mtfVerify()}
   catch(e){MTF.real=null;MTF.check={err:true}}finally{MTF.busy=false;mtfStatus();drDirty()}}
 function mtfGroups(data,H,i0,i1){let cur=null;const out=[];
   for(let i=i0;i<=i1;i++){const b=data[i],ep=b.time-TZ,k=htfKey(ep,H);
@@ -1534,10 +1552,13 @@ function mtfStatus(){const el=$("#mtfCheck");if(!el)return;const H=DR.mtf;
   if(!H){el.textContent="";return}
   if(H<=CH.gran){el.textContent="Графикийн интервалаас их байх ёстой";el.className="mtf-check bad";return}
   if(CH.mode==="replay"){el.textContent="Давтан тоглуулалт: харагдаж буй лаагаар нэгтгэв (ирээдүйг харуулахгүй)";el.className="mtf-check";return}
-  if(H===604800){el.textContent="7 хоног: Даваа 00:00 UTC-ээс нэгтгэв (Deriv 7 хоногийн лаа өгдөггүй)";el.className="mtf-check";return}
+  const gs=goldSessOn(H);
+  if(H===604800&&!gs){el.textContent="7 хоног: Даваа 00:00 UTC-ээс нэгтгэв (Deriv 7 хоногийн лаа өгдөггүй)";el.className="mtf-check";return}
   const c=MTF.check;if(!c){el.textContent=MTF.busy?"Deriv-ийн лааг шалгаж байна…":"";el.className="mtf-check";return}
   if(c.err){el.textContent="Deriv-ийн лааг татаж чадсангүй — нэгтгэсэн лаагаар харуулж байна";el.className="mtf-check bad";return}
-  const name={900:"15м",1800:"30м",3600:"1ц",14400:"4ц",86400:"1ө"}[H]||H+"с";
+  const name={900:"15м",1800:"30м",3600:"1ц",14400:"4ц",86400:"1ө",604800:"7 хоног"}[H]||H+"с";
+  if(gs){el.textContent=(c.bad?`Шалгалт: ${c.ok}/${c.ok+c.bad} таарсан, ${c.bad} зөрсөн — Deriv-ийн 1ц лаанаас нэгтгэснийг харуулж байна`:`✓ TradingView-ийн цагаар (Нью-Йорк 18:00 сешн): Deriv-ийн 1ц лаанаас нэгтгэсэн ${name}-тай ${c.ok}/${c.ok} таарч байна`);
+    el.className="mtf-check "+(c.bad?"bad":"good");el.title="Алтны 4ц, өдөр, 7 хоногийн лаа TradingView/брокерынх шиг Нью-Йоркийн 18:00 (зун 22:00 UTC, өвөл 23:00 UTC)-ээс эхэлнэ";return}
   el.textContent=c.bad?`Шалгалт: ${c.ok}/${c.ok+c.bad} таарсан, ${c.bad} зөрсөн — Deriv-ийн жинхэнэ ${name} лааг харуулж байна`:`✓ Deriv-ийн ${name} лаатай ${c.ok}/${c.ok} яг таарч байна`;
   el.className="mtf-check "+(c.bad?"bad":"good")}
 function drMtf(ctx,box){const data=CH.series.data();if(!data.length)return;const H=DR.mtf,g=CH.gran;
@@ -1551,7 +1572,8 @@ function drMtf(ctx,box){const data=CH.series.data();if(!data.length)return;const
   const useReal=MTF.real&&CH.mode==="live";const last=groups.length?groups[groups.length-1].k:null;
   ctx.lineWidth=1;ctx.setLineDash([]);
   for(const G0 of groups){if(G0.partial)continue;let G=G0;if(useReal&&G0.k!==last){const R=MTF.real.get(G0.k);if(R)G={k:G0.k,o:R.o,h:R.h,l:R.l,c:R.c}}
-    const x1=dX(G.k)-bs/2,x2=dX(G.k+H-g)+bs/2;if(!isFinite(x1)||!isFinite(x2)||x2<0||x1>box.w)continue;
+    // хайрцаг: бүлгийн эхний лаанаас сүүлийн лаа хүртэл (алтны завсарлага, амралтын өдрийн цоорхойд зөв байрлана)
+    const fb=data[G0.i0],lb=data[G0.i0+G0.n-1],x1=(G0.first===G0.k?dX(G0.k):dX(fb.time-TZ))-bs/2,x2=(G0===groups[groups.length-1]?dX(G0.k+H-g):dX(lb.time-TZ))+bs/2;if(!isFinite(x1)||!isFinite(x2)||x2<0||x1>box.w)continue;
     const col=G.c>=G.o?up:dn,yo=pY(G.o),yc=pY(G.c),yh=pY(G.h),yl=pY(G.l);if(yo==null||yc==null)continue;
     const top=Math.min(yo,yc),bot=Math.max(yo,yc),xm=(x1+x2)/2,hx=col.startsWith("#");
     ctx.fillStyle=hx?rgba(col,0.07):col;ctx.strokeStyle=hx?rgba(col,0.55):col;
