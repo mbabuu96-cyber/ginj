@@ -236,6 +236,7 @@ svg text{font-family:var(--f-mono)}
 .pat-bar .pb{display:flex;align-items:center;justify-content:center;color:#fff;white-space:nowrap;overflow:hidden;min-width:0}
 .pat-bar .buy{background:var(--gain)}.pat-bar .sell{background:var(--loss)}
 .fib-dlg{width:min(560px,calc(100vw - 24px))}
+.fib-dlg .dlg-f{flex-wrap:wrap;gap:8px;align-items:center}.fib-dlg .dlg-f .sp{flex:1 1 auto;min-width:0}.fib-dlg .fib-ok{display:flex;gap:8px;margin-left:auto;flex:0 0 auto}
 .fib-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px}
 @media (max-width:520px){.fib-grid{grid-template-columns:1fr}}
 .fib-row{display:grid;grid-template-columns:auto 1fr 34px auto;gap:6px;align-items:center}
@@ -470,7 +471,7 @@ async function pullAll(){
   try{const rows=[];for(let from=0;;from+=1000){const {data,error}=await SB.client.from("journal_docs").select("coll,id,data").range(from,from+999);if(error)throw error;rows.push(...data);if(data.length<1000)break}
     if(!pendingGet().length&&S.mode==="supa"){
       const m={trades:{},days:{},reviews:{},beliefs:{}};let st=null;
-      const dw={};rows.forEach(r=>{if(r.coll==="settings"){if(r.id==="main")st=r.data;else if(String(r.id).startsWith("draw:"))dw[String(r.id).slice(5)]=(r.data&&r.data.items)||[]}else if(m[r.coll])m[r.coll][r.id]=r.data});
+      const dw={};rows.forEach(r=>{if(r.coll==="settings"){if(r.id==="prefs:ui"){S.prefs=r.data||{};try{localStorage.setItem("alkham-ui-prefs",JSON.stringify(S.prefs))}catch(e){}}else if(r.id==="main")st=r.data;else if(String(r.id).startsWith("draw:"))dw[String(r.id).slice(5)]=(r.data&&r.data.items)||[]}else if(m[r.coll])m[r.coll][r.id]=r.data});
       S.drawings=dw;if(typeof DR!=="undefined"&&DR.sel&&!(dw[drKey()]||[]).some(x=>x.id===DR.sel.id))DR.sel=null;if(typeof drDirty==="function")drDirty();
       Object.assign(S,m);if(st)S.settings=mergeSettings(st);S.cloudLoaded=true;cacheSave()}
     SB.status="ok";SB.lastSync=new Date();SB.err="";
@@ -1173,18 +1174,19 @@ function chBuild(){
     <button type="button" class="btn primary" data-ch="go" id="opGo" style="justify-content:center">Тэмдэглэлд бүртгэх</button>
     <div id="rpBox" hidden style="display:flex;flex-direction:column;gap:10px"></div>
   </section></div>`;
-  $("#opRiskIn").value=CH.risk=S.settings.riskPct||1;
+  $("#opRiskIn").value=CH.risk=CH.riskSaved||S.settings.riskPct||1;
   root.addEventListener("click",chClick);
   root.addEventListener("input",e=>{if(e.target.id==="opRiskIn"){const v=num(e.target.value);if(v)CH.risk=v}chUpdate()});
   root.addEventListener("change",e=>{const id=e.target.id;
     if(id==="chInst"){chSetInst(e.target.value);PAT.lastN=0;PAT.res=null;PAT.focus=null;chReload()}
     else if(id==="opMkt"){CH.mkt=e.target.checked;chUpdate()}
-    else if(id==="rpSpeed"){CH.rp.speed=+e.target.value;if(CH.rp.timer){rpPause();rpPlay()}}
+    else if(id==="rpStart"){CH.rpStart=e.target.value;drOptsSave()}
+    else if(id==="rpSpeed"){CH.rp.speed=+e.target.value;drOptsSave();if(CH.rp.timer){rpPause();rpPlay()}}
     else if(id==="patW"||id==="patH"||id==="patK"){PAT[id.slice(3).toLowerCase()]=+e.target.value;PAT.focus=null;patGo()}
     else if(id==="patShow"){PAT.show=e.target.checked;drDirty()}
     else if(id==="mtfSel"){DR.mtf=+e.target.value;drOptsSave();drDirty();MTF.key="";MTF.check=null;mtfStatus();mtfLoadReal();if(DR.mtf&&DR.mtf<=CH.gran)toast("Дээд интервал нь графикийн интервалаас их байх ёстой.")}
     else if(id==="sessChk"){DR.sess=e.target.checked;drOptsSave();drDirty();if(DR.sess&&CH.gran>3600)toast("Сешний бүс 1 цагаас бага интервал дээр харагдана.")}});
-  const d=new Date(Date.now()-3*864e5);d.setHours(9,0,0,0);$("#rpStart").value=`${ymd(d)}T09:00`;
+  const d=new Date(Date.now()-3*864e5);d.setHours(9,0,0,0);$("#rpStart").value=CH.rpStart||`${ymd(d)}T09:00`;$("#rpSpeed").value=String(CH.rp.speed||2);
   $("#mtfSel").value=String(DR.mtf);$("#sessChk").checked=DR.sess;drInit();
   let wide=false;try{wide=localStorage.getItem("alkham-chart-wide")==="1"}catch(e){}chWide(wide);
   document.addEventListener("fullscreenchange",()=>{const on=document.fullscreenElement===$("#chPanel");$("#btnFull").textContent=on?"✕ Гарах":"⛶ Бүтэн дэлгэц";setTimeout(()=>{chZones();drDirty()},60)});
@@ -1411,7 +1413,16 @@ const FIB_BASE={levels:[[0,1,"#787B86"],[0.236,1,"#E05D5D"],[0.382,1,"#D9A23A"],
   [1.272,0,"#B3612A"],[1.414,0,"#E05D5D"],[1.618,1,"#3A8FD9"],[2,0,"#B3612A"],[2.618,1,"#E05D5D"],[3,0,"#6C5CC7"],[3.618,1,"#8A5AD6"],[4.236,1,"#D94C8A"],[4.618,0,"#2E9E8F"]].map(([v,on,c])=>({v,on:!!on,c})),
   opt:{prices:false,values:true,side:"right",extL:false,extR:false,reverse:false,bg:false,one:false}};
 const FIB_CLEAN={prices:false,values:true,side:"right",bg:false,one:false};
-function fibDefault(){try{const o=JSON.parse(localStorage.getItem("alkham-fib-default")||"null");if(o&&Array.isArray(o.levels)&&o.levels.length)return JSON.parse(JSON.stringify({levels:o.levels,opt:Object.assign({},FIB_BASE.opt,o.opt)}))}catch(e){}return JSON.parse(JSON.stringify(FIB_BASE))}
+function prefsGet(){S.prefs=S.prefs||(()=>{try{return JSON.parse(localStorage.getItem("alkham-ui-prefs")||"{}")}catch(e){return {}}})();return S.prefs}
+let prefsT=0;function prefsSave(){const pr=prefsGet();try{localStorage.setItem("alkham-ui-prefs",JSON.stringify(pr))}catch(e){}
+  clearTimeout(prefsT);prefsT=setTimeout(()=>{if(S.mode==="supa")supaQueue({t:"put",coll:"settings",id:"prefs:ui",data:clone(pr)})},800)}
+function styleFor(tool){const st=(prefsGet().styles||{})[tool];return st?JSON.parse(JSON.stringify(st)):null}
+function styleRemember(d){const key=d.type==="trend"&&d.ext==="right"&&d._tool==="ray"?"ray":d.type;const pr=prefsGet();pr.styles=pr.styles||{};
+  const st={color:d.color,width:d.width,dash:!!d.dash};if(d.type==="trend")st.ext=d.ext||"none";
+  if(d.type==="fib"){st.levels=JSON.parse(JSON.stringify(d.levels||[]));st.fopt=Object.assign({},d.fopt||{})}
+  pr.styles[key]=st;if(d.type==="fib")pr.fib={levels:st.levels,opt:st.fopt};prefsSave()}
+function fibDefault(){const pf=prefsGet().fib;if(pf&&Array.isArray(pf.levels)&&pf.levels.length)return JSON.parse(JSON.stringify({levels:pf.levels,opt:Object.assign({},FIB_BASE.opt,pf.opt)}));
+  try{const o=JSON.parse(localStorage.getItem("alkham-fib-default")||"null");if(o&&Array.isArray(o.levels)&&o.levels.length)return JSON.parse(JSON.stringify({levels:o.levels,opt:Object.assign({},FIB_BASE.opt,o.opt)}))}catch(e){}return JSON.parse(JSON.stringify(FIB_BASE))}
 function fibOf(d){if(!d.levels){const f=fibDefault();return {levels:f.levels,opt:Object.assign({},f.opt,{extR:d.ext==="right"||f.opt.extR})}}return {levels:d.levels,opt:Object.assign({},FIB_BASE.opt,d.fopt)}}
 const SESS=[["Ази",0,9,"47,111,222"],["Лондон",7,16,"22,147,106"],["Нью-Йорк",13,22,"200,150,30"]]; // UTC цаг (зуны цагийг тооцоогүй)
 const TOOLS=[ // [түлхүүр, нэр, товчлол, svg path]
@@ -1429,9 +1440,10 @@ const TOOLS=[ // [түлхүүр, нэр, товчлол, svg path]
 const KEYMAP={t:"trend",y:"ray",h:"hline",j:"hray",v:"vline",r:"rect",f:"fib",l:"long",s:"short"};
 const TB=40; // зүүн хэрэгслийн самбарын өргөн
 const DR={tool:"cursor",color:DCOLORS[0],sel:null,hover:null,draft:null,drag:null,intercept:false,dirty:true,sig:"",raf:0,saveT:{},undo:{},
-  mtf:0,sess:false,magnet:true,lock:false,hidden:false};
-try{const o=JSON.parse(localStorage.getItem("alkham-chart-opts")||"{}");DR.mtf=+o.mtf||0;DR.sess=!!o.sess;if(o.color)DR.color=o.color;if(o.magnet!=null)DR.magnet=!!o.magnet;DR.lock=!!o.lock}catch(e){}
-function drOptsSave(){try{localStorage.setItem("alkham-chart-opts",JSON.stringify({mtf:DR.mtf,sess:DR.sess,color:DR.color,magnet:DR.magnet,lock:DR.lock}))}catch(e){}}
+  mtf:0,sess:false,magnet:false,lock:false,hidden:false,styles:{}};
+try{const o=JSON.parse(localStorage.getItem("alkham-chart-opts")||"{}");DR.mtf=+o.mtf||0;DR.sess=!!o.sess;if(o.color)DR.color=o.color;if(o.magnet2!=null)DR.magnet=!!o.magnet2;DR.lock=!!o.lock;
+  if([60,300,900,3600,14400,86400].includes(+o.gran))CH.gran=+o.gran;if(o.rpStart)CH.rpStart=o.rpStart;if(+o.rpSpeed)CH.rp.speed=+o.rpSpeed;if(+o.risk)CH.riskSaved=+o.risk}catch(e){}
+function drOptsSave(){try{localStorage.setItem("alkham-chart-opts",JSON.stringify({mtf:DR.mtf,sess:DR.sess,color:DR.color,magnet2:DR.magnet,lock:DR.lock,gran:CH.gran,rpStart:CH.rpStart,rpSpeed:CH.rp.speed,risk:CH.risk}))}catch(e){}}
 function drKey(){return CH.inst?CH.inst.name:""}
 function drList(){S.drawings=S.drawings||{};const k=drKey();if(!S.drawings[k])S.drawings[k]=[];return S.drawings[k]}
 const drClean=d=>{const o={};for(const k of ["id","type","a","b","sl","tp","t2","color","width","dash","ext","levels","fopt"])if(d[k]!==undefined)o[k]=d[k];return o};
@@ -1459,7 +1471,7 @@ const pY=p=>CH.series.priceToCoordinate(p),yP=y=>CH.series.coordinateToPrice(y);
 function drSnap(x,y){const data=CH.series.data();const l=CH.chart.timeScale().coordinateToLogical(x);if(l==null)return null;const i=Math.round(l);
   if(i<0||i>=data.length)return null;const b=data[i];let best=null;
   for(const p of [b.open,b.high,b.low,b.close]){const yy=pY(p);if(yy==null)continue;const d=Math.abs(yy-y);if(!best||d<best.d)best={d,p}}
-  return best&&best.d<40?{t:b.time-TZ,p:best.p}:null}
+  return best&&best.d<14?{t:b.time-TZ,p:best.p}:null}
 function evPt(e,noSnap){const r=$("#chChart").getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;
   if(DR.magnet&&!noSnap&&!e.ctrlKey){const s=drSnap(x,y);if(s)return {x,y,t:s.t,p:s.p,snap:true}}
   const ep=xEp(x),p=yP(y);return ep==null||p==null?null:{x,y,t:ep,p:+(+p).toFixed(decOf(CH.inst))}}
@@ -1575,7 +1587,7 @@ function drShape(ctx,d,box,font,sel,hov){
     drLabel(ctx,`Зорилт ${(+d.tp).toFixed(dec)} · ${cur}${fm(c.reward)} · ${c.rr.toFixed(2)}R`,lx0,yt+(yt<ya?-12:12),gx?rgba(gain,0.95):gain,"#fff");
     drLabel(ctx,`Stop ${(+d.sl).toFixed(dec)} · ${CH.inst.kind==="step"?c.steps+" алхам":c.dist.toFixed(dec)} · ${cur}${fm(c.risk)}`,lx0,ys+(ys>ya?12:-12),lx?rgba(loss,0.95):loss,"#fff");
     if(sel||hov)drLabel(ctx,`${d.type==="long"?"Long":"Short"} ${fm(c.lots,2)} лот @ ${(+d.a.p).toFixed(dec)}`,lx0,ya+(d.type==="long"?12:-12),rgba("#202826",0.9),"#fff")}
-  if(sel){ctx.setLineDash([]);for(const h of drHandles(d)){ctx.fillStyle=cssVar("--surface")||"#fff";ctx.beginPath();ctx.arc(h.x,h.y,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle=d.color||cssVar("--ink");ctx.lineWidth=2;ctx.stroke()}}}
+  if(sel||hov){ctx.setLineDash([]);for(const h of drHandles(d)){ctx.fillStyle=cssVar("--surface")||"#fff";ctx.beginPath();ctx.arc(h.x,h.y,sel?6:5,0,Math.PI*2);ctx.fill();ctx.strokeStyle=d.color||cssVar("--ink");ctx.lineWidth=2;ctx.stroke()}}}
 function drHandles(d){const xa=dX(d.a.t),ya=pY(d.a.p);if(xa==null||ya==null)return [];const H=[];
   if(d.type==="trend"||d.type==="rect"||d.type==="fib"){H.push({k:"a",x:xa,y:ya});const xb=dX(d.b.t),yb=pY(d.b.p);if(xb!=null&&yb!=null)H.push({k:"b",x:xb,y:yb})}
   else if(d.type==="hray")H.push({k:"a",x:xa,y:ya});
@@ -1585,7 +1597,8 @@ function drHandles(d){const xa=dX(d.a.t),ya=pY(d.a.p);if(xa==null||ya==null)retu
 /* --- хит тест --- */
 function segDist(px,py,x1,y1,x2,y2){const dx=x2-x1,dy=y2-y1,L=dx*dx+dy*dy;let t=L?((px-x1)*dx+(py-y1)*dy)/L:0;t=Math.max(0,Math.min(1,t));return Math.hypot(px-(x1+t*dx),py-(y1+t*dy))}
 function drHit(x,y){if(DR.hidden)return null;const box=plotBox();
-  if(DR.sel)for(const h of drHandles(DR.sel))if(Math.hypot(x-h.x,y-h.y)<9)return {d:DR.sel,h:h.k};
+  const order=[DR.sel,DR.hover].filter(Boolean).concat(drList().slice().reverse());
+  for(const d of order)for(const h of drHandles(d))if(Math.hypot(x-h.x,y-h.y)<11)return {d,h:h.k};
   const list=drList();for(let i=list.length-1;i>=0;i--){const d=list[i],xa=dX(d.a.t),ya=pY(d.a.p);if(xa==null||ya==null)continue;
     if(d.type==="hline"){if(Math.abs(y-ya)<6&&x<box.w)return {d,h:"move"};continue}
     if(d.type==="hray"){if(Math.abs(y-ya)<6&&x>=xa-6&&x<box.w)return {d,h:"move"};continue}
@@ -1594,19 +1607,21 @@ function drHit(x,y){if(DR.hidden)return null;const box=plotBox();
       if(x>=Math.min(xa,x2)-4&&x<=Math.max(xa,x2)+4&&y>=t-4&&y<=b+4)return {d,h:"move"};continue}
     const xb=dX(d.b.t),yb=pY(d.b.p);if(xb==null||yb==null)continue;
     if(d.type==="trend"){const [p,q,r,s]=extendLine(xa,ya,xb,yb,d.ext,box.w);if(segDist(x,y,p,q,r,s)<6)return {d,h:"move"}}
-    if(d.type==="rect"&&x>=Math.min(xa,xb)-4&&x<=Math.max(xa,xb)+4&&y>=Math.min(ya,yb)-4&&y<=Math.max(ya,yb)+4)return {d,h:"move"};
+    if(d.type==="rect"){const l=Math.min(xa,xb),r=Math.max(xa,xb),t=Math.min(ya,yb),bt=Math.max(ya,yb);const inside=x>=l-4&&x<=r+4&&y>=t-4&&y<=bt+4;
+      const edge=inside&&(Math.abs(x-l)<6||Math.abs(x-r)<6||Math.abs(y-t)<6||Math.abs(y-bt)<6);if(edge||(inside&&d===DR.sel))return {d,h:"move"}}
     if(d.type==="fib"){const F=fibOf(d),o=F.opt;let L=Math.min(xa,xb),R=Math.max(xa,xb,L+40);if(o.extL)L=0;if(o.extR)R=box.w;const p0=o.reverse?d.a.p:d.b.p,range=p0-(o.reverse?d.b.p:d.a.p);
-      if(x>=L-4&&x<=R+4){const ys=F.levels.filter(l=>l.on).map(l=>pY(p0-range*+l.v)).filter(v=>v!=null);if(ys.length&&y>=Math.min(...ys)-5&&y<=Math.max(...ys)+5)return {d,h:"move"}}}}
+      if(x>=L-4&&x<=R+4){const ys=F.levels.filter(l=>l.on).map(l=>pY(p0-range*+l.v)).filter(v=>v!=null);if(ys.some(yy=>Math.abs(y-yy)<=5))return {d,h:"move"}}
+      if(segDist(x,y,xa,ya,xb,yb)<6)return {d,h:"move"}}}
   return null}
 
 /* --- үүсгэх --- */
-function drNew(type,pt){const base={id:uid(),color:DR.color,width:1.5,dash:false};
+function drNew(type,pt){const st=styleFor(type)||{};const base={id:uid(),color:st.color||DR.color,width:st.width||1.5,dash:!!st.dash,_tool:type};
   if(type==="hline"||type==="hray"||type==="vline")return Object.assign(base,{type,a:{t:pt.t,p:pt.p}});
   if(type==="long"||type==="short"){const r=CH.series.priceToCoordinate(pt.p),box=plotBox();
     const off=Math.abs((yP(r-box.h*0.08)||pt.p)-pt.p)||pt.p*0.002,dir=type==="long"?1:-1,dec=decOf(CH.inst);
-    return Object.assign(base,{type,color:"#5B6670",a:{t:pt.t,p:pt.p},sl:+(pt.p-dir*off).toFixed(dec),tp:+(pt.p+dir*off*2).toFixed(dec),t2:pt.t+CH.gran*30})}
+    return Object.assign(base,{type,color:st.color||"#5B6670",a:{t:pt.t,p:pt.p},sl:+(pt.p-dir*off).toFixed(dec),tp:+(pt.p+dir*off*2).toFixed(dec),t2:pt.t+CH.gran*30})}
   if(type==="fib"){const f=fibDefault();return Object.assign(base,{type,a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p},levels:f.levels,fopt:f.opt})}
-  return Object.assign(base,{type:type==="ray"?"trend":type,ext:type==="ray"?"right":"none",a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p}})}
+  return Object.assign(base,{type:type==="ray"?"trend":type,ext:st.ext||(type==="ray"?"right":"none"),a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p}})}
 const ONE_CLICK=["hline","hray","vline","long","short"];
 
 /* --- хулгана / хуруу --- */
@@ -1621,12 +1636,12 @@ function drDown(e){
     else{drSetB(DR.draft,pt,e);const d=DR.draft;DR.draft=null;DR.drag=null;drPush();drList().push(d);drFinish(d)}
     drDirty();return}
   const p0=evPt(e,true);const hit=p0&&drHit(p0.x,p0.y);
-  if(hit){stop();if(DR.sel!==hit.d){DR.sel=hit.d;drSelUi()}DR.drag={mode:hit.h,start:p0,orig:JSON.parse(JSON.stringify(drClean(hit.d))),moved:false};drDirty()}
+  if(hit){stop();if(DR.sel!==hit.d){DR.sel=hit.d;drSelUi()}DR.hover=hit.d;DR.drag={mode:hit.h,start:p0,orig:JSON.parse(JSON.stringify(drClean(hit.d))),moved:false};drDirty()}
   else if(DR.sel){DR.sel=null;drSelUi();drDirty()}}
 function drSetB(d,pt,e){d.b={t:pt.t,p:e&&e.shiftKey?d.a.p:pt.p}}
 function drMove(e){
   if(!DR.drag&&!DR.draft){if(CH.chart&&!CH.pick&&e.target.closest&&e.target.closest("#chChart")){const p=evPt(e,true);const hit=p&&DR.tool==="cursor"?drHit(p.x,p.y):null;
-      const hv=hit?hit.d:null;if(hv!==DR.hover){DR.hover=hv;drDirty()}$("#chChart").style.cursor=hit?(hit.h==="move"?"move":"grab"):""}return}
+      const hv=hit?hit.d:null;if(hv!==DR.hover){DR.hover=hv;drDirty()}$("#chChart").style.cursor=hit?(hit.h==="move"?"move":"pointer"):""}return}
   if(DR.intercept)e.preventDefault();
   if(DR.draft){const pt=evPt(e);if(pt){drSetB(DR.draft,pt,e);drDirty()}return}
   const g=DR.drag,d=DR.sel;if(!g||!d)return;const o=g.orig;
@@ -1675,6 +1690,7 @@ function drProp(btn){const d=DR.sel;if(!d)return;const k=btn.dataset.prop,v=btn.
   if(k==="clone"){const c=JSON.parse(JSON.stringify(drClean(d)));c.id=uid();const dt=CH.gran*10;c.a.t+=dt;if(c.b)c.b.t+=dt;if(c.t2)c.t2+=dt;drList().push(c);DR.sel=c}
   else if(k==="color"){d.color=v;DR.color=v;drOptsSave()}
   else if(k==="width")d.width=+v;else if(k==="dash")d.dash=!d.dash;else if(k==="ext")d.ext=v;
+  if(k!=="clone")styleRemember(d);
   drSave();drPropsUi();drDirty()}
 
 /* --- Фибоначчийн тохиргоо --- */
@@ -1703,8 +1719,8 @@ function fibRender(){const dl=$("#fibDlg"),d=FIBED.d,o=d.fopt;
         ${ck("extL","Зүүн тийш сунгах")}${ck("extR","Баруун тийш сунгах")}${ck("reverse","Эргүүлэх (0 ↔ 1)")}
         <label class="chk fib-opt">Шошго <select data-fopt="side"><option value="left"${o.side==="left"?" selected":""}>Зүүн</option><option value="right"${o.side==="right"?" selected":""}>Баруун</option></select></label></div></fieldset>
     </div>
-    <div class="dlg-f"><span class="sp" style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn sm" data-fib="savedef" title="Шинээр зурах Фибо энэ тохиргоог авна">Анхдагч болгож хадгалах</button><button type="button" class="btn sm ghost" data-fib="reset">Анхны утга</button><button type="button" class="btn sm ghost" data-fib="clean" title="Нимгэн шугам, дэвсгэргүй, баруун талд зөвхөн түвшин">Цэвэр харагдац</button></span>
-      <button type="button" class="btn" data-fib="cancel">Болих</button><button type="button" class="btn primary" data-fib="ok">Хадгалах</button></div></form>`}
+    <div class="dlg-f"><span class="sp" style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn sm" data-fib="applyall" title="Энэ хэрэгслийн бүх Фибод ижил түвшин, тохиргоог хэрэглэх">Бүх Фибод хэрэглэх</button><button type="button" class="btn sm ghost" data-fib="reset">Анхны утга</button><button type="button" class="btn sm ghost" data-fib="clean" title="Нимгэн шугам, дэвсгэргүй, баруун талд зөвхөн түвшин">Цэвэр харагдац</button></span>
+      <span class="fib-ok"><button type="button" class="btn" data-fib="cancel">Болих</button><button type="button" class="btn primary" data-fib="ok">Хадгалах</button></span></div></form>`}
 function fibLive(e){if(!FIBED)return;const d=FIBED.d,t=e.target;
   if(t.dataset.lv){const l=d.levels[+t.dataset.i];if(!l)return;if(t.dataset.lv==="on"){l.on=t.checked;t.closest(".fib-row").classList.toggle("off",!t.checked)}else if(t.dataset.lv==="v"){const n=num(t.value);if(n!=null)l.v=n}else l.c=t.value}
   else if(t.dataset.fopt){const k=t.dataset.fopt;d.fopt[k]=t.type==="checkbox"?t.checked:t.value;if(k==="one")$$('#fibDlg input[type=color]').forEach(x=>x.disabled=t.checked)}
@@ -1713,13 +1729,15 @@ function fibAct(b){const d=FIBED&&FIBED.d,k=b.dataset.fib;if(!d)return;
   if(k==="cancel"){$("#fibDlg").close();return}
   if(k==="ok"){d.levels=d.levels.filter(l=>isFinite(+l.v)).map(l=>({v:+l.v,on:!!l.on,c:l.c})).sort((a,b)=>a.v-b.v);
     const cur=JSON.stringify({l:d.levels,o:d.fopt});d.levels=FIBED.orig.levels;d.fopt=FIBED.orig.fopt;drPush();const nv=JSON.parse(cur);d.levels=nv.l;d.fopt=nv.o;
-    FIBED.saved=true;drSave();drDirty();$("#fibDlg").close();toast("Фибо тохиргоо хадгалагдлаа");return}
+    FIBED.saved=true;styleRemember(d);drSave();drDirty();$("#fibDlg").close();toast("Хадгаллаа — дараагийн Фибо ч энэ тохиргоогоор зурагдана");return}
   if(k==="add"){const mx=Math.max(1,...d.levels.map(l=>+l.v||0));d.levels.push({v:+(mx+0.5).toFixed(3),on:true,c:d.color});fibRender();drDirty();const ins=$$('#fibDlg input[data-lv=v]');ins[ins.length-1].focus();return}
   if(k==="rm"){d.levels.splice(+b.dataset.i,1);fibRender();drDirty();return}
   if(k==="all"||k==="none"){d.levels.forEach(l=>l.on=k==="all");fibRender();drDirty();return}
   if(k==="reset"){const f=JSON.parse(JSON.stringify(FIB_BASE));d.levels=f.levels;d.fopt=f.opt;fibRender();drDirty();return}
+  if(k==="applyall"){const lv=JSON.parse(JSON.stringify(d.levels)),fo=Object.assign({},d.fopt);d.levels=FIBED.orig.levels;d.fopt=FIBED.orig.fopt;drPush();d.levels=lv;d.fopt=fo;
+    drList().forEach(x=>{if(x.type==="fib"&&x!==d){x.levels=JSON.parse(JSON.stringify(lv));x.fopt=Object.assign({},fo)}});FIBED.saved=true;styleRemember(d);drSave();drDirty();$("#fibDlg").close();toast("Бүх Фибод хэрэглэлээ");return}
   if(k==="clean"){Object.assign(d.fopt,FIB_CLEAN);fibRender();drDirty();return}
-  if(k==="savedef"){try{localStorage.setItem("alkham-fib-default",JSON.stringify({levels:d.levels,opt:d.fopt}))}catch(e){}toast("Шинэ Фибо энэ тохиргоогоор зурагдана");return}}
+  if(k==="savedef"){styleRemember(d);toast("Шинэ Фибо энэ тохиргоогоор зурагдана");return}}
 /* --- зүүн хэрэгслийн самбар --- */
 function drBarHtml(){const ic=p=>`<svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
   return TOOLS.map(([k,n,sc,p])=>`<button type="button" data-tool="${k}" aria-pressed="${k===DR.tool}" title="${n} (${sc})" aria-label="${n}">${ic(p)}</button>`).join("")
@@ -1865,14 +1883,14 @@ async function chClick(e){
   if(e.target.closest("#dtBar,#dtProps"))return;
   const seg=e.target.closest(".seg button");
   if(seg){const g=seg.parentElement;if(seg.disabled)return;$$("button",g).forEach(b=>b.setAttribute("aria-pressed",String(b===seg)));
-    if(g.id==="chGran"){CH.gran=+seg.dataset.v;PAT.lastN=0;PAT.res=null;PAT.focus=null;chReload()}
+    if(g.id==="chGran"){CH.gran=+seg.dataset.v;drOptsSave();PAT.lastN=0;PAT.res=null;PAT.focus=null;chReload()}
     else if(g.id==="opDir"){CH.dir=seg.dataset.v;chUpdate()}
     else if(g.id==="chMode"){const m=seg.dataset.v;if(m===CH.mode)return;CH.mode=m;setTimeout(mtfStatus,0);$("#chReplay").hidden=m!=="replay";
       if(m==="live"){CH.rp.pos=null;chLoadLive()}else{rpPause();await chForget();CH.rp.balance=currentBalance(enriched(S.trades));
         if(CH.rp.all.length){CH.series.setData(CH.rp.all.slice(0,CH.rp.idx));CH.series.setMarkers(CH.rp.markers);const b=CH.rp.all[CH.rp.idx-1];CH.last=b.close;CH.lastTime=b.time;chStatus("Давтан тоглуулах")}
         else{CH.last=null;chStatus("Эхлэх цагаа сонгоод Ачаалах дарна уу.")}chUpdate()}}
     return}
-  const rk=e.target.closest("#opRisk button");if(rk){CH.risk=+rk.dataset.v;chUpdate();return}
+  const rk=e.target.closest("#opRisk button");if(rk){CH.risk=+rk.dataset.v;drOptsSave();chUpdate();return}
   const pr=e.target.closest("tr[data-pat]");if(pr){patJump(+pr.dataset.pat);return}
   const b=e.target.closest("[data-ch]");if(!b||b.disabled)return;const act=b.dataset.ch;
   if(act==="pick"){CH.pick=CH.pick===b.dataset.k?null:b.dataset.k;const h=$("#chHint");h.hidden=!CH.pick;h.textContent=CH.pick==="sl"?"Stop-loss тавих үнэ дээр графикт дарна уу":"Зорилтот үнэ дээр графикт дарна уу";$("#chWrap").classList.toggle("picking",!!CH.pick)}
