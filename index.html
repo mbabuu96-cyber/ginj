@@ -2477,6 +2477,7 @@ function myHtml(){const R=NP.res;const sel=(id,vals,cur,fmt)=>`<select id="${id}
     else if(x.st==="order")st.push(`<div class="np-card now"><div class="np-card-h">${npDirTag(x.dir)}<b>Лимит ${side} ${fmtP(x.E)}</b></div><div class="muted" style="font-size:12px">SL ${fmtP(x.SL)} · TP ${fmtP(x.TP)} · ${x.R.toFixed(2)}R · фибо ${MY.anc} = ${fmtP(x.dir<0?x.lo:x.hi)}, 0 = ${fmtP(x.dir<0?x.hi:x.lo)}</div><button type="button" class="btn sm primary" data-ch="myOrder" data-k="${k}">Захиалгад ашиглах</button></div>`)});
   B.nowPools.forEach(p=>st.push(`<div class="np-card"><div class="np-card-h">${npDirTag(p.dir)}<b>Liquidity ${fmtP(p.lv)}</b></div><div class="muted" style="font-size:12px">${p.mem.length} ${p.dir<0?"ижил оргил (дээр)":"ижил ёроол (доор)"} · шүүрдэгдээгүй. 4ц лаа шүүрдэхийг хүлээнэ.</div></div>`));
   h+=`<div class="np-now"><div class="lbl">Одоогийн төлөв</div>${st.length?`<div class="np-cards">${st.join("")}</div>`:`<div class="muted" style="font-size:12px">Ойролцоо хадгалагдсан liquidity, идэвхтэй setup алга.</div>`}</div>
+  ${(()=>{const exp=(D.t[D.n-1]-D.t[0])/CH.gran+1,cov=D.n/exp,gold=isGoldInst(CH.inst);return `<div class="muted" style="font-size:12px">Түүх: ${D.n.toLocaleString("en-US")} лаа · ${tfName(CH.gran)} · ${Math.round(R.days)} хоног · бүрэн байдал ${(cov*100).toFixed(0)}%${gold?" (алтанд амралтын өдөр, завсарлагатай тул ~70% хэвийн)":""}${!gold&&cov<0.9||gold&&cov<0.6?` <b class="neg">— Deriv-ээс түүх дутуу ирсэн</b>`:""} <button type="button" class="btn sm ghost" data-ch="myReload">Түүхийг дахин татах</button></div>`})()}
   <div class="my-funnel">${[["4ц sweep",B.cnt.sweep],["CHoCH",B.cnt.choch],["Лимит тавьсан",B.cnt.placed],["Биелсэн",B.cnt.fill],["Арилжаа",B.N]].map(([t,v])=>`<span><b>${v}</b> ${t}</span>`).join("<i>→</i>")}
     <span class="muted">· алгассан: sweep-ээс давсан ${B.cnt.inval}, лимит тавихаас өмнө 0.618-аас өнгөрсөн ${B.cnt.missed}, TP хүртэл явсан ${B.cnt.cancel}, хугацаа дууссан ${B.cnt.expired}, өмнөх позиц нээлттэй ${B.cnt.fill-B.N}</span></div>
   <div class="bot-kpis">
@@ -2538,6 +2539,7 @@ async function chClick(e){
   else if(act==="patRun"){PAT.focus=null;patGo()}
   else if(act==="patTab"){PAT.tab=b.dataset.v;try{localStorage.setItem("alkham-pat-tab",PAT.tab)}catch(e){}PAT.focus=null;patGo()}
   else if(act==="npRun")npGo();
+  else if(act==="myReload"){NPY.key="";NPY.t=null;BOT.my=null;npGo()}
   else if(act==="botNone"){BOT.pats.clear();BOT.res=null;BOT.sel=null;botSave();patRender()}
   else if(act==="botOrder")botOrder(+b.dataset.k);
   else if(act==="myOrder")myOrder(+b.dataset.k);
