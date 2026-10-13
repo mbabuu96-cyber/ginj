@@ -260,6 +260,7 @@ svg text{font-family:var(--f-mono)}
 .bot-g{display:flex;flex-wrap:wrap;gap:4px;align-items:center}.bot-g .lbl{width:120px;flex:none;font-size:11px}
 .bot-p{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer;font-family:inherit}
 .bot-p:hover{border-color:#2962FF}.bot-p.on{background:#2962FF;border-color:#2962FF;color:#fff}
+.my-funnel{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:baseline;font-size:12px;padding:8px 10px;border:1px solid var(--line);border-radius:8px}.my-funnel i{color:var(--muted);font-style:normal}
 .bot-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;font-size:12px}
 .np-sel{display:flex;flex-direction:column;gap:6px}
 .np-detail{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(220px,1fr);gap:12px;align-items:start}
@@ -2389,7 +2390,7 @@ function myRun(R){const D=R.D,n=D.n,g=CH.gran,H4=14400,P=MY;if(g>=H4)return {err
       const ext=dir<0?rMax(first+1,beforeI-1):rMin(first+1,beforeI-1);const lastI=Math.max(...mem.map(p=>p.i));
       if(dir<0?ext>top.p:ext<top.p){continue}out.push({lv:top.p,mem,first,lastI})}
     return out}
-  const setups=[],live=[];
+  const setups=[],live=[],cnt={sweep:0,choch:0,inval:0,missed:0,placed:0,cancel:0,expired:0,fill:0};
   for(let q=15;q<C4.length;q++){const K=C4[q],closed=q<C4.length-1,tol=P.tol*(a4[q-1]||a4[q]);if(!(tol>0))continue;
     for(const dir of [-1,1]){if(P.side==="sell"&&dir>0||P.side==="buy"&&dir<0)continue;
       const ext=dir<0?K.h:K.l;
@@ -2397,25 +2398,30 @@ function myRun(R){const D=R.D,n=D.n,g=CH.gran,H4=14400,P=MY;if(g>=H4)return {err
       const pool=ps[0];
       if(!closed){live.push({st:"sweep",dir,pool,K});continue}
       // Sweep хийсэн 4ц лаа хаагдсан → 1м/5м дээр CHoCH хайна
-      const pk=dir<0?K.hi:K.li;const refs=dir<0?sL:sH;let ri=myLB(refs,pk,p=>p.i)-1;if(ri<0)continue;const ref=refs[ri];
+      cnt.sweep++;const pk=dir<0?K.hi:K.li;const refs=dir<0?sL:sH;let ri=myLB(refs,pk,p=>p.i)-1;if(ri<0)continue;const ref=refs[ri];
       const wait=Math.max(K.i1-pk+1,Math.round(H4/g));let j=-1;
       for(let t=pk+1;t<=Math.min(n-1,pk+wait*2);t++){if(dir<0?D.h[t]>ext:D.l[t]<ext)break;if(t<ref.conf)continue;if(dir<0?D.c[t]<ref.p:D.c[t]>ref.p){j=t;break}}
       if(j<0){if(pk+wait*2>=n-1)live.push({st:"choch",dir,pool,K,ref});continue}
-      // CHoCH-ын хөлийн ёроол (1): j-ээс хойш баталгаажсан анхны жижиг ёроол
+      cnt.choch++;
+      // CHoCH-ын хөлийн ёроол: j-ээс хойш баталгаажсан анхны жижиг ёроол
       const legs=dir<0?sL:sH;let li=myLB(legs,j,p=>p.i);let leg=legs[li];
-      // лаа хаагдахаас өмнө ёроол баталгаажсан ч 4ц хаагдах хүртэл хүлээнэ
       if(!leg){live.push({st:"leg",dir,pool,K,ref,j});continue}
+      // 4ц лаа хаагдах ба ёроол баталгаажихын аль хожуу нь → лимит тавина
       const place=Math.max(leg.conf,K.i1+1);if(place>=n){live.push({st:"leg",dir,pool,K,ref,j});continue}
-      if(dir<0?rMax(pk+1,place)>ext:rMin(pk+1,place)<ext)continue;
-      const lo1=dir<0?rMin(pk,place):rMax(pk,place);
-      const hi=dir<0?ext:lo1,lo=dir<0?lo1:ext;
-      const E=lvl(dir,hi,lo,P.ent),SL=lvl(dir,hi,lo,P.sl),TP=lvl(dir,hi,lo,P.tp);if(!(Math.abs(E-SL)>0))continue;
-      // байршуулахаас өмнө үнэ орох түвшинд аль хэдийн хүрсэн бол алгасна
-      const seg0=Math.min(place,Math.max(j,leg.i));if(dir<0?rMax(seg0,place)>=E:rMin(seg0,place)<=E)continue;
+      if(dir<0?rMax(pk+1,place)>ext:rMin(pk+1,place)<ext){cnt.inval++;continue}
+      let lo1=dir<0?rMin(pk,place):rMax(pk,place);
+      const calc=()=>{const hi=dir<0?ext:lo1,lo=dir<0?lo1:ext;return {hi,lo,E:lvl(dir,hi,lo,P.ent),SL:lvl(dir,hi,lo,P.sl),TP:lvl(dir,hi,lo,P.tp)}};
+      let L=calc();if(!(Math.abs(L.E-L.SL)>0))continue;const tp0=L.TP;
+      // байршуулах үед үнэ орох түвшнээс аль хэдийн давсан бол хоцорсон
+      if(dir<0?D.c[place]>=L.E:D.c[place]<=L.E){cnt.missed++;continue}
+      cnt.placed++;
+      // хүлээх хугацаанд шинэ ёроол хийвэл фибог шинэ ёроолоос дахин татна (TP-д хүрвэл цуцална)
       let f=-1,why="";for(let t=place+1;t<=Math.min(n-1,place+P.exp);t++){
-        if(dir<0?D.l[t]<=TP:D.h[t]>=TP){why="cancel";break}if(dir<0?D.h[t]>=E:D.l[t]<=E){f=t;break}}
-      const s={dir,pool,K,pk,ref,j,leg,place,lo1,hi,lo,E,SL,TP,f,R:Math.abs(TP-E)/Math.abs(E-SL)};
-      if(f<0){if(!why&&place+P.exp>=n-1)live.push(Object.assign({st:"order"},s));continue}
+        if(dir<0?D.l[t]<lo1:D.h[t]>lo1){lo1=dir<0?D.l[t]:D.h[t];if(dir<0?lo1<=tp0:lo1>=tp0){why="cancel";break}L=calc();continue}
+        if(dir<0?D.h[t]>=L.E:D.l[t]<=L.E){f=t;break}}
+      const s={dir,pool,K,pk,ref,j,leg,place,lo1,hi:L.hi,lo:L.lo,E:L.E,SL:L.SL,TP:L.TP,f,R:Math.abs(L.TP-L.E)/Math.abs(L.E-L.SL)};
+      if(f<0){if(why)cnt.cancel++;else if(place+P.exp>=n-1)live.push(Object.assign({st:"order"},s));else cnt.expired++;continue}
+      cnt.fill++;
       setups.push(s)}}
   // арилжаа
   const sp0=botSpread(),riskP=botRisk()/100;let busy=-1,eq=0,peak=0,dd=0,bal=1,bp=1,ddP=0;const trades=[],curve=[0];
@@ -2435,7 +2441,7 @@ function myRun(R){const D=R.D,n=D.n,g=CH.gran,H4=14400,P=MY;if(g>=H4)return {err
   if(lastA>0)for(const dir of [-1,1]){const ps=pools(dir,n,D.t[n-1]-P.lb*86400,P.tol*lastA,v=>dir<0?v>D.c[n-1]:v<D.c[n-1]);ps.slice(0,2).forEach(p=>nowPools.push({dir,...p}))}
   return {trades,curve,N,win:N?w.length/N:0,avg:N?eq/N:0,total:eq,pf:gl?gw/gl:(gw?Infinity:0),dd,ddP,bal,
     se:N>1?Math.sqrt(trades.reduce((a,t)=>a+(t.R-eq/N)**2,0)/(N-1)/N):0,rand:rs.length?rs.reduce((a,v)=>a+v,0)/rs.length:0,
-    h1:half(0),h2:half(1),nSet:setups.length,live:live.slice(-4),nowPools,avgR:N?trades.reduce((a,t)=>a+t.s.R,0)/N:0,key:R.D.n+"|"+R.D.t[R.D.n-1]+"|"+JSON.stringify(P)+MY.maxB+botSpread()+"|"+botRisk()}}
+    h1:half(0),h2:half(1),nSet:setups.length,cnt,live:live.slice(-4),nowPools,avgR:N?trades.reduce((a,t)=>a+t.s.R,0)/N:0,key:R.D.n+"|"+R.D.t[R.D.n-1]+"|"+JSON.stringify(P)+MY.maxB+botSpread()+"|"+botRisk()}}
 function myMiniTrade(R,t){const s=t.s,pts=[...s.pool.mem.map(p=>[p.i,p.p]).sort((a,b)=>a[0]-b[0]),[s.pk,s.dir<0?s.hi:s.lo]];
   return npMini(R,{pts,b:t.b,lv:s.pool.lv,out:{j:t.j,E:t.E,tp:t.tp,sl:t.sl},fib:{dir:s.dir,hi:s.hi,lo:s.lo,anc:MY.anc,ls:[...new Set([MY.sl,0,MY.ent,1,MY.anc,MY.tp])]}})}
 function myHtml(){const R=NP.res;const sel=(id,vals,cur,fmt)=>`<select id="${id}">${vals.map(v=>`<option value="${v}"${String(v)===String(cur)?" selected":""}>${fmt(v)}</option>`).join("")}</select>`;
@@ -2471,6 +2477,8 @@ function myHtml(){const R=NP.res;const sel=(id,vals,cur,fmt)=>`<select id="${id}
     else if(x.st==="order")st.push(`<div class="np-card now"><div class="np-card-h">${npDirTag(x.dir)}<b>Лимит ${side} ${fmtP(x.E)}</b></div><div class="muted" style="font-size:12px">SL ${fmtP(x.SL)} · TP ${fmtP(x.TP)} · ${x.R.toFixed(2)}R · фибо ${MY.anc} = ${fmtP(x.dir<0?x.lo:x.hi)}, 0 = ${fmtP(x.dir<0?x.hi:x.lo)}</div><button type="button" class="btn sm primary" data-ch="myOrder" data-k="${k}">Захиалгад ашиглах</button></div>`)});
   B.nowPools.forEach(p=>st.push(`<div class="np-card"><div class="np-card-h">${npDirTag(p.dir)}<b>Liquidity ${fmtP(p.lv)}</b></div><div class="muted" style="font-size:12px">${p.mem.length} ${p.dir<0?"ижил оргил (дээр)":"ижил ёроол (доор)"} · шүүрдэгдээгүй. 4ц лаа шүүрдэхийг хүлээнэ.</div></div>`));
   h+=`<div class="np-now"><div class="lbl">Одоогийн төлөв</div>${st.length?`<div class="np-cards">${st.join("")}</div>`:`<div class="muted" style="font-size:12px">Ойролцоо хадгалагдсан liquidity, идэвхтэй setup алга.</div>`}</div>
+  <div class="my-funnel">${[["4ц sweep",B.cnt.sweep],["CHoCH",B.cnt.choch],["Лимит тавьсан",B.cnt.placed],["Биелсэн",B.cnt.fill],["Арилжаа",B.N]].map(([t,v])=>`<span><b>${v}</b> ${t}</span>`).join("<i>→</i>")}
+    <span class="muted">· алгассан: sweep-ээс давсан ${B.cnt.inval}, лимит тавихаас өмнө 0.618-аас өнгөрсөн ${B.cnt.missed}, TP хүртэл явсан ${B.cnt.cancel}, хугацаа дууссан ${B.cnt.expired}, өмнөх позиц нээлттэй ${B.cnt.fill-B.N}</span></div>
   <div class="bot-kpis">
     <div class="np-kv"><span class="lbl">Арилжаа</span><b>${B.N}</b><span class="muted">${Math.round(R.days)} хоногт · ${B.nSet} setup биелсэн</span></div>
     <div class="np-kv"><span class="lbl">Хожлын хувь</span><b>${pc(B.win)}</b><span class="muted">тэнцэх цэг ≈ ${pc(be)} (${B.avgR.toFixed(2)}R)</span></div>
