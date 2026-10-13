@@ -2359,7 +2359,7 @@ function botOrder(k){const B=BOT.res;const s=B&&B.live[k];if(!s)return;CH.dir=s.
 
 /* --- Миний арга: range-ийн ижил оргил/ёроол (liquidity) → 4ц лааны sweep (inducement) → 1м/5м CHoCH → фибо (CHoCH-ын ёроол 1 → sweep-ийн оргил 0) --- */
 const MY=(()=>{let s={};try{s=JSON.parse(localStorage.getItem("alkham-my")||"{}")}catch(e){}
-  return Object.assign({nEq:2,tol:0.2,ph:1,lb:2,kc:3,anc:1.618,ent:0.618,sl:-0.236,tp:4,exp:240,side:"both",maxB:1000},s)})();
+  return Object.assign({nEq:2,tol:0.2,ph:1,lb:0,kc:3,anc:1.618,ent:0.618,sl:-0.236,tp:4,exp:240,side:"both",maxB:1000},s)})();
 function mySave(){try{const o={};["nEq","tol","ph","lb","kc","anc","ent","sl","tp","exp","side","maxB"].forEach(k=>o[k]=MY[k]);localStorage.setItem("alkham-my",JSON.stringify(o))}catch(e){}}
 // хурдан муж-хамгийн их/бага (блокоор)
 function myRange(arr,isMax){const B=256,n=arr.length,nb=Math.ceil(n/B),blk=new Float64Array(nb);
@@ -2382,19 +2382,17 @@ function myRun(R){const D=R.D,n=D.n,g=CH.gran,H4=14400,P=MY;if(g>=H4)return {err
   // фибо: 0 = sweep-ийн оргил, CHoCH-ын ёроол = ${P.anc} түвшин (таны арга: 1.618) → нэг нэгж = хөл / anc
   const lvl=(dir,hi,lo,L)=>{const u=(hi-lo)/P.anc;return dir<0?hi-L*u:lo+L*u};
   // pool хайх: тухайн мөчөөс өмнө баталгаажсан, хадгалагдсан (шүүрдэгдээгүй) ижил оргилууд
-  function pools(dir,beforeI,fromEp,tol,inside){const list=dir<0?pH:pL;const a=myLB(list,fromEp,p=>D.t[p.i]);const c=[];
-    for(let x=a;x<list.length&&list[x].conf<beforeI;x++){const p=list[x];if(inside&&!inside(p.p))continue;c.push(p)}
-    c.sort((x,y)=>dir<0?y.p-x.p:x.p-y.p);const out=[];
-    for(const top of c){const mem=c.filter(p=>dir<0?(p.p<=top.p&&p.p>=top.p-tol):(p.p>=top.p&&p.p<=top.p+tol));if(mem.length<P.nEq)continue;
-      const first=Math.min(...mem.map(p=>p.i));// pool эвдэрсэн эсэх: эхний оргилоос хойш түвшнээс давсан лаа байвал хүчингүй
-      const ext=dir<0?rMax(first+1,beforeI-1):rMin(first+1,beforeI-1);const lastI=Math.max(...mem.map(p=>p.i));
-      if(dir<0?ext>top.p:ext<top.p){continue}out.push({lv:top.p,mem,first,lastI})}
-    return out}
+  // Liquidity: шүүрдэгдээгүй (үүссэнээс хойш давагдаагүй) оргил/ёроолууд. Ижил өндөртэй байх шаардлагагүй
+  function pools(dir,beforeI,fromEp,tol,inside){const list=dir<0?pH:pL;const a=fromEp>0?myLB(list,fromEp,p=>D.t[p.i]):0;const mem=[];
+    for(let x=a;x<list.length&&list[x].conf<beforeI;x++){const p=list[x];if(inside&&!inside(p.p))continue;
+      const ex=dir<0?rMax(p.i+1,beforeI-1):rMin(p.i+1,beforeI-1);if(dir<0?ex>p.p:ex<p.p)continue;mem.push(p)}
+    if(mem.length<P.nEq)return [];mem.sort((x,y)=>dir<0?x.p-y.p:y.p-x.p);
+    return [{lv:mem[mem.length-1].p,mem,first:Math.min(...mem.map(p=>p.i)),lastI:Math.max(...mem.map(p=>p.i))}]}
   const setups=[],live=[],cnt={sweep:0,choch:0,inval:0,missed:0,placed:0,cancel:0,expired:0,fill:0};
   for(let q=15;q<C4.length;q++){const K=C4[q],closed=q<C4.length-1,tol=P.tol*(a4[q-1]||a4[q]);if(!(tol>0))continue;
     for(const dir of [-1,1]){if(P.side==="sell"&&dir>0||P.side==="buy"&&dir<0)continue;
       const ext=dir<0?K.h:K.l;
-      const ps=pools(dir,K.i0,K.k-P.lb*86400,tol,v=>dir<0?(v<K.h&&(!closed||v>K.c)):(v>K.l&&(!closed||v<K.c)));if(!ps.length)continue;
+      const ps=pools(dir,K.i0,P.lb?K.k-P.lb*86400:0,tol,v=>dir<0?(v<K.h&&(!closed||v>K.c)):(v>K.l&&(!closed||v<K.c)));if(!ps.length)continue;
       const pool=ps[0];
       if(!closed){live.push({st:"sweep",dir,pool,K});continue}
       // Sweep хийсэн 4ц лаа хаагдсан → 1м/5м дээр CHoCH хайна
@@ -2437,20 +2435,20 @@ function myRun(R){const D=R.D,n=D.n,g=CH.gran,H4=14400,P=MY;if(g>=H4)return {err
         const r=botTrade(D,b,d,E-d*ds,E+d*dt,MY.maxB);if(!r)continue;sum+=((r.exit-E)*d-sp0)/ds;cnt++}rs.push(cnt?sum/cnt:0)}}
   const mid=D.t[0]+(D.t[n-1]-D.t[0])/2,half=k=>{const L=trades.filter(t=>k?D.t[t.b]>=mid:D.t[t.b]<mid);return {N:L.length,avg:L.length?L.reduce((a,t)=>a+t.R,0)/L.length:0}};
   // одоо хадгалагдаж буй pool-ууд (үнийн ойролцоо)
-  const lastA=a4[C4.length-2]||a4[C4.length-1]||0,nowPools=[];
-  if(lastA>0)for(const dir of [-1,1]){const ps=pools(dir,n,D.t[n-1]-P.lb*86400,P.tol*lastA,v=>dir<0?v>D.c[n-1]:v<D.c[n-1]);ps.slice(0,2).forEach(p=>nowPools.push({dir,...p}))}
+  const nowPools=[];
+  for(const dir of [-1,1]){const ps=pools(dir,n,P.lb?D.t[n-1]-P.lb*86400:0,0,v=>dir<0?v>D.c[n-1]:v<D.c[n-1]);if(!ps.length)continue;
+    const m=ps[0].mem.slice(0,Math.max(P.nEq,3));const need=m[P.nEq-1];nowPools.push({dir,lv:need.p,mem:m,first:Math.min(...m.map(p=>p.i)),need:P.nEq})}
   return {trades,curve,N,win:N?w.length/N:0,avg:N?eq/N:0,total:eq,pf:gl?gw/gl:(gw?Infinity:0),dd,ddP,bal,
     se:N>1?Math.sqrt(trades.reduce((a,t)=>a+(t.R-eq/N)**2,0)/(N-1)/N):0,rand:rs.length?rs.reduce((a,v)=>a+v,0)/rs.length:0,
     h1:half(0),h2:half(1),nSet:setups.length,cnt,live:live.slice(-4),nowPools,avgR:N?trades.reduce((a,t)=>a+t.s.R,0)/N:0,key:R.D.n+"|"+R.D.t[R.D.n-1]+"|"+JSON.stringify(P)+MY.maxB+botSpread()+"|"+botRisk()}}
 function myMiniTrade(R,t){const s=t.s,pts=[...s.pool.mem.map(p=>[p.i,p.p]).sort((a,b)=>a[0]-b[0]),[s.pk,s.dir<0?s.hi:s.lo]];
   return npMini(R,{pts,b:t.b,lv:s.pool.lv,out:{j:t.j,E:t.E,tp:t.tp,sl:t.sl},fib:{dir:s.dir,hi:s.hi,lo:s.lo,anc:MY.anc,ls:[...new Set([MY.sl,0,MY.ent,1,MY.anc,MY.tp])]}})}
 function myHtml(){const R=NP.res;const sel=(id,vals,cur,fmt)=>`<select id="${id}">${vals.map(v=>`<option value="${v}"${String(v)===String(cur)?" selected":""}>${fmt(v)}</option>`).join("")}</select>`;
-  let h=`<p class="muted np-explain"><b>Дүрэм:</b> ① Сүүлийн ${MY.lb} хоногийн range-д <b>${MY.nEq}+ ижил оргил/ёроол</b> (зөрүү ≤ ${MY.tol}×4ц ATR, хадгалагдсан) → ② <b>4ц лаа</b> түүнийг сүүлээрээ шүүрдээд буцаж хаагдана (inducement) — энэ үед орохгүй → ③ ${tfName(CH.gran)} дээр <b>CHoCH</b> → ④ фибо: CHoCH-ын ёроол <b>${MY.anc}</b> → sweep-ийн оргил <b>0</b> → ⑤ <b>${MY.ent}</b>-д лимит, SL <b>${MY.sl}</b>, TP <b>${MY.tp}</b> (≈${((MY.tp-MY.ent)/(MY.ent-MY.sl)).toFixed(2)}R). Buy бол эсрэгээрээ.</p>
+  let h=`<p class="muted np-explain"><b>Дүрэм:</b> ① ${MY.lb?`Сүүлийн ${MY.lb} хоногийн`:"Өмнө үүссэн"} <b>шүүрдэгдээгүй ${MY.nEq}+ оргил/ёроол</b> (liquidity) → ② <b>4ц лааны сүүл</b> тэдгээрээс давж гараад буцаж хаагдана (inducement) — энэ үед орохгүй → ③ ${tfName(CH.gran)} дээр <b>CHoCH</b> → ④ фибо: CHoCH-ын ёроол <b>${MY.anc}</b> → sweep-ийн оргил <b>0</b> → ⑤ <b>${MY.ent}</b>-д лимит, SL <b>${MY.sl}</b>, TP <b>${MY.tp}</b> (≈${((MY.tp-MY.ent)/(MY.ent-MY.sl)).toFixed(2)}R). Buy бол эсрэгээрээ.</p>
   <div class="ch-tools">
-    <label class="lbl" for="myNEq">Ижил оргил</label>${sel("myNEq",[2,3,4],MY.nEq,v=>v+"+")}
-    <label class="lbl" for="myTol">Зөрүү</label>${sel("myTol",[0.05,0.1,0.2,0.3,0.5],MY.tol,v=>v+"× 4ц ATR")}
+    <label class="lbl" for="myNEq" title="4ц лааны сүүл хэдэн шүүрдэгдээгүй оргил/ёроолыг давах ёстой">Шүүрдэх оргил</label>${sel("myNEq",[1,2,3,4,5],MY.nEq,v=>v+"+")}
     <label class="lbl" for="myPh" title="Оргил/ёроол тодорхойлох: өмнө, хойно хэдэн цагийн хамгийн өндөр/нам">Оргилын хүч</label>${sel("myPh",[0.25,0.5,1,2,4],MY.ph,v=>v+" цаг")}
-    <label class="lbl" for="myLb">Range</label>${sel("myLb",[1,2,3,5,7],MY.lb,v=>v+" хоног")}
+    <label class="lbl" for="myLb">Range</label>${sel("myLb",[0,1,2,3,5,7,14,30],MY.lb,v=>v?v+" хоног":"Хязгааргүй")}
     <label class="lbl" for="myKc" title="CHoCH-д ашиглах жижиг оргил/ёроол">CHoCH</label>${sel("myKc",[2,3,5,8],MY.kc,v=>v+" лаа")}</div>
   <div class="ch-tools">
     <label class="lbl" for="myAnc" title="CHoCH-ын ёроолыг фибогийн аль түвшин гэж тавих (таны арга 1.618)">Ёроол =</label>${sel("myAnc",[1,1.272,1.414,1.618,2],MY.anc,v=>"фибо "+v)}
@@ -2471,11 +2469,11 @@ function myHtml(){const R=NP.res;const sel=(id,vals,cur,fmt)=>`<select id="${id}
   const edge=B.N>=30&&z>2&&B.avg>0&&B.h1.avg>0&&B.h2.avg>0;
   // одоогийн төлөв
   const st=[];B.live.forEach((x,k)=>{const side=x.dir<0?"Sell":"Buy",lv=fmtP(x.pool.lv);
-    if(x.st==="sweep")st.push(`<div class="np-card form"><div class="np-card-h">${npDirTag(x.dir)}<b>4ц лаа liquidity шүүрдэж байна</b></div><div class="muted" style="font-size:12px">${lv} түвшний ${x.pool.mem.length} ${x.dir<0?"оргил":"ёроол"}. 4ц лаа ${x.dir<0?"доор":"дээр"} нь хаагдвал inducement болно — одоо орохгүй.</div></div>`);
+    if(x.st==="sweep")st.push(`<div class="np-card form"><div class="np-card-h">${npDirTag(x.dir)}<b>4ц лаа liquidity шүүрдэж байна</b></div><div class="muted" style="font-size:12px">${x.pool.mem.length} шүүрдэгдээгүй ${x.dir<0?"оргил":"ёроол"} (хамгийн хол нь ${lv}). 4ц лаа тэдгээрийн ${x.dir<0?"доор":"дээр"} хаагдвал inducement болно — одоо орохгүй.</div></div>`);
     else if(x.st==="choch")st.push(`<div class="np-card form"><div class="np-card-h">${npDirTag(x.dir)}<b>Sweep болсон · CHoCH хүлээж байна</b></div><div class="muted" style="font-size:12px">${lv} шүүрдэгдсэн. ${tfName(CH.gran)} дээр ${fmtP(x.ref.p)} ${x.dir<0?"доош":"дээш"} хаагдвал CHoCH.</div></div>`);
     else if(x.st==="leg")st.push(`<div class="np-card form"><div class="np-card-h">${npDirTag(x.dir)}<b>CHoCH болсон · фибогийн 1 цэгийг хүлээж байна</b></div><div class="muted" style="font-size:12px">Хөдөлгөөний ${x.dir<0?"ёроол":"оргил"} баталгаажиж, 4ц лаа хаагдсаны дараа лимит тавина.</div></div>`);
     else if(x.st==="order")st.push(`<div class="np-card now"><div class="np-card-h">${npDirTag(x.dir)}<b>Лимит ${side} ${fmtP(x.E)}</b></div><div class="muted" style="font-size:12px">SL ${fmtP(x.SL)} · TP ${fmtP(x.TP)} · ${x.R.toFixed(2)}R · фибо ${MY.anc} = ${fmtP(x.dir<0?x.lo:x.hi)}, 0 = ${fmtP(x.dir<0?x.hi:x.lo)}</div><button type="button" class="btn sm primary" data-ch="myOrder" data-k="${k}">Захиалгад ашиглах</button></div>`)});
-  B.nowPools.forEach(p=>st.push(`<div class="np-card"><div class="np-card-h">${npDirTag(p.dir)}<b>Liquidity ${fmtP(p.lv)}</b></div><div class="muted" style="font-size:12px">${p.mem.length} ${p.dir<0?"ижил оргил (дээр)":"ижил ёроол (доор)"} · шүүрдэгдээгүй. 4ц лаа шүүрдэхийг хүлээнэ.</div></div>`));
+  B.nowPools.forEach(p=>st.push(`<div class="np-card"><div class="np-card-h">${npDirTag(p.dir)}<b>Liquidity ${p.dir<0?"дээр":"доор"}</b></div><div class="muted" style="font-size:12px">Шүүрдэгдээгүй ${p.dir<0?"оргил":"ёроол"}: ${p.mem.map(m=>fmtP(m.p)).join(", ")}. 4ц лааны сүүл ${fmtP(p.lv)}-${p.dir<0?"аас дээш":"аас доош"} гараад буцаж хаагдвал ${p.need} нь шүүрдэгдэнэ.</div></div>`));
   h+=`<div class="np-now"><div class="lbl">Одоогийн төлөв</div>${st.length?`<div class="np-cards">${st.join("")}</div>`:`<div class="muted" style="font-size:12px">Ойролцоо хадгалагдсан liquidity, идэвхтэй setup алга.</div>`}</div>
   ${(()=>{const exp=(D.t[D.n-1]-D.t[0])/CH.gran+1,cov=D.n/exp,gold=isGoldInst(CH.inst);return `<div class="muted" style="font-size:12px">Түүх: ${D.n.toLocaleString("en-US")} лаа · ${tfName(CH.gran)} · ${Math.round(R.days)} хоног · бүрэн байдал ${(cov*100).toFixed(0)}%${gold?" (алтанд амралтын өдөр, завсарлагатай тул ~70% хэвийн)":""}${!gold&&cov<0.9||gold&&cov<0.6?` <b class="neg">— Deriv-ээс түүх дутуу ирсэн</b>`:""} <button type="button" class="btn sm ghost" data-ch="myReload">Түүхийг дахин татах</button></div>`})()}
   <div class="my-funnel">${[["4ц sweep",B.cnt.sweep],["CHoCH",B.cnt.choch],["Лимит тавьсан",B.cnt.placed],["Биелсэн",B.cnt.fill],["Арилжаа",B.N]].map(([t,v])=>`<span><b>${v}</b> ${t}</span>`).join("<i>→</i>")}
@@ -2495,9 +2493,9 @@ function myHtml(){const R=NP.res;const sel=(id,vals,cur,fmt)=>`<select id="${id}
   ${botCurve(B)}`;
   const T=B.trades;
   if(BOT.mySel!=null&&T[BOT.mySel]){const t=T[BOT.mySel],s=t.s;
-    h+=`<div class="np-sel"><div class="np-nav"><b>${t.dir<0?"Sell":"Buy"} · liquidity ${fmtP(s.pool.lv)} (${s.pool.mem.length})</b><span class="muted">${npDate(R,t.b,true)} · орох ${fmtP(t.E)} → ${fmtP(t.exit)} (${t.why}) · <b class="${t.R>0?"pos":"neg"}">${rf(t.R)}</b></span></div>${myMiniTrade(R,t)}</div>`}
+    h+=`<div class="np-sel"><div class="np-nav"><b>${t.dir<0?"Sell":"Buy"} · ${s.pool.mem.length} оргил шүүрдсэн (${fmtP(s.pool.lv)} хүртэл)</b><span class="muted">${npDate(R,t.b,true)} · орох ${fmtP(t.E)} → ${fmtP(t.exit)} (${t.why}) · <b class="${t.R>0?"pos":"neg"}">${rf(t.R)}</b></span></div>${myMiniTrade(R,t)}</div>`}
   h+=`<div class="tw np-tw"><table class="np-table"><thead><tr><th>Огноо</th><th>Чиглэл</th><th class="r">Liquidity</th><th class="r">Орох</th><th class="r">SL</th><th class="r">TP</th><th>Гарсан</th><th class="r">R</th></tr></thead><tbody>
-    ${T.slice(-150).reverse().map(t=>{const i=T.indexOf(t);return `<tr class="click${BOT.mySel===i?" on":""}" data-myt="${i}"><td class="num">${npDate(R,t.b,true)}</td><td>${npDirTag(t.dir)}</td><td class="r num">${fmtP(t.s.pool.lv)} <span class="muted">×${t.s.pool.mem.length}</span></td><td class="r num">${fmtP(t.E)}</td><td class="r num">${fmtP(t.sl)}</td><td class="r num">${fmtP(t.tp)}</td><td>${t.why}</td><td class="r num ${t.R>0?"pos":"neg"}">${rf(t.R)}</td></tr>`}).join("")}</tbody></table></div>
+    ${T.slice(-150).reverse().map(t=>{const i=T.indexOf(t);return `<tr class="click${BOT.mySel===i?" on":""}" data-myt="${i}"><td class="num">${npDate(R,t.b,true)}</td><td>${npDirTag(t.dir)}</td><td class="r num">${fmtP(t.s.pool.lv)} <span class="muted">${t.s.pool.mem.length} оргил</span></td><td class="r num">${fmtP(t.E)}</td><td class="r num">${fmtP(t.sl)}</td><td class="r num">${fmtP(t.tp)}</td><td>${t.why}</td><td class="r num ${t.R>0?"pos":"neg"}">${rf(t.R)}</td></tr>`}).join("")}</tbody></table></div>
   <p class="muted" style="font-size:11px;margin:0">Ирээдүйг харахгүй: оргил/ёроол баталгаажсан, 4ц лаа хаагдсан, CHoCH-ын ёроол баталгаажсан мөчөөс хойш л лимит тавина. Лимит биелэхээс өмнө TP-д хүрвэл, эсвэл sweep-ийн оргилоос давбал цуцална. Нэг лаанд SL, TP хоёуланд хүрвэл SL гэж тооцно.</p>`;
   return h}
 function tfName(g){return ({60:"1м",300:"5м",900:"15м",3600:"1ц",14400:"4ц",86400:"1ө"})[g]||g+"с"}
@@ -2507,7 +2505,7 @@ function myOrder(k){const x=BOT.my&&BOT.my.live[k];if(!x||x.st!=="order")return;
 function myDraw(ctx,box){const B=BOT.my,R=NP.res;if(!B||B.err||!R||!R.D||!PAT.open||PAT.tab!=="bot"||BOT.mode!=="my")return;const D=R.D,X=i=>dX(D.t[i]);
   const line=(y,col,dash,txt,x0)=>{if(y==null)return;ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.setLineDash(dash);ctx.beginPath();ctx.moveTo(x0!=null?Math.max(0,x0):0,y);ctx.lineTo(box.w,y);ctx.stroke();ctx.setLineDash([]);
     ctx.font=`600 11px ${TVF}`;const w=ctx.measureText(txt).width+8;ctx.fillStyle=col;ctx.fillRect(box.w-w-4,y-9,w,18);ctx.fillStyle="#fff";ctx.textBaseline="middle";ctx.fillText(txt,box.w-w,y)};
-  B.nowPools.forEach(p=>{line(pY(p.lv),"#FF9800",[6,4],`Liquidity ${fmtP(p.lv)} ×${p.mem.length}`,X(p.first));p.mem.forEach(m=>{const x=X(m.i),y=pY(m.p);if(x!=null&&y!=null){ctx.fillStyle="#FF9800";ctx.beginPath();ctx.arc(x,y,3.5,0,7);ctx.fill()}})});
+  B.nowPools.forEach(p=>{p.mem.forEach((m,k)=>line(pY(m.p),"#FF9800",k===p.need-1?[]:[6,4],`${k===p.need-1?"Sweep түвшин ":"Liquidity "}${fmtP(m.p)}`,X(m.i)));p.mem.forEach(m=>{const x=X(m.i),y=pY(m.p);if(x!=null&&y!=null){ctx.fillStyle="#FF9800";ctx.beginPath();ctx.arc(x,y,3.5,0,7);ctx.fill()}})});
   B.live.forEach(x=>{if(x.st!=="order")return;line(pY(x.E),"#2962FF",[],`Лимит ${x.dir<0?"Sell":"Buy"} ${fmtP(x.E)}`,X(x.place));line(pY(x.SL),"#F23645",[4,3],`SL ${fmtP(x.SL)}`,X(x.place));line(pY(x.TP),"#089981",[4,3],`TP ${fmtP(x.TP)}`,X(x.place))})}
 
 /* --- clicks inside chart tab --- */
