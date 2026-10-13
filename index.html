@@ -2086,23 +2086,41 @@ const NP_DAYS=365;
 // 365 хоногийн түүх: графикаас тусдаа, Deriv-ээс 5000 лаагаар хэсэгчлэн татна (санах ойд хадгална)
 const NPY={key:"",t:null,o:null,h:null,l:null,c:null,busy:null,done:0,total:0,err:null,from:0};
 function npYearKey(){return (CH.sym||"")+"|"+CH.gran}
-async function npYear(){const key=npYearKey();if(NPY.key===key&&NPY.t&&!NPY.err)return NPY;if(NPY.busy&&NPY.busyKey===key)return NPY.busy;
+// Татсан түүхийг хөтчийн IndexedDB-д хадгална → дараагийн удаа зөвхөн дутуу/шинэ хэсгийг татна
+const npIdb=(()=>{let dbp=null;const open=()=>dbp||(dbp=new Promise((res,rej)=>{try{const r=indexedDB.open("alkham-hist",1);r.onupgradeneeded=()=>r.result.createObjectStore("h");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}}));
+  return {get:async k=>{try{const db=await open();return await new Promise(r=>{const q=db.transaction("h").objectStore("h").get(k);q.onsuccess=()=>r(q.result||null);q.onerror=()=>r(null)})}catch(e){return null}},
+    set:async(k,v)=>{try{const db=await open();await new Promise(r=>{const tx=db.transaction("h","readwrite");tx.objectStore("h").put(v,k);tx.oncomplete=r;tx.onerror=r;tx.onabort=r})}catch(e){}},
+    del:async k=>{try{const db=await open();await new Promise(r=>{const tx=db.transaction("h","readwrite");tx.objectStore("h").delete(k);tx.oncomplete=r;tx.onerror=r})}catch(e){}}}})();
+async function npYear(force){const key=npYearKey();if(!force&&NPY.key===key&&NPY.t&&!NPY.err)return NPY;if(NPY.busy&&NPY.busyKey===key)return NPY.busy;
   const g=CH.gran,now=Math.floor(Date.now()/1000),start=Math.floor((now-NP_DAYS*86400)/g)*g,span=5000*g;
   const wins=[];for(let s=start;s<=now;s+=span)wins.push([s,Math.min(now,s+span-g)]);
-  NPY.busyKey=key;NPY.done=0;NPY.total=wins.length;NPY.err=null;
-  NPY.busy=(async()=>{const parts=new Array(wins.length);let next=0,fails=0;
-    const one=async()=>{while(next<wins.length){const w=next++;let tries=0;
-        for(;;){if(npYearKey()!==key)throw new Error("cancel");
-          try{const r=await dvSend({ticks_history:CH.sym,style:"candles",granularity:g,start:wins[w][0],end:wins[w][1],count:5000});parts[w]=r.candles||[];break}
-          catch(e){if(++tries>=4){parts[w]=[];fails++;break}await new Promise(r=>setTimeout(r,1500*tries))}}
-        NPY.done++;npProg()}};
-    await Promise.all([one(),one(),one()]);
-    const all=[];let last=-1;parts.forEach(p=>p.forEach(c=>{const ep=+c.epoch;if(ep>last){all.push(c);last=ep}}));
-    const n=all.length,t=new Float64Array(n),o=new Float64Array(n),h=new Float64Array(n),l=new Float64Array(n),c=new Float64Array(n);
-    all.forEach((x,i)=>{t[i]=+x.epoch;o[i]=+x.open;h[i]=+x.high;l[i]=+x.low;c[i]=+x.close});
-    Object.assign(NPY,{key,t,o,h,l,c,fails,from:start});return NPY})();
+  NPY.busyKey=key;NPY.done=0;NPY.total=wins.length;NPY.err=null;NPY.retry=0;
+  NPY.busy=(async()=>{
+    const cache=force?null:await npIdb.get("npy:"+key);
+    // хадгалсан өгөгдлийн цонх бүрт хэдэн лаа байгааг тоолж, дутуу цонхыг л татна
+    const ct=cache&&cache.t?cache.t:new Float64Array(0);const lb=x=>{let lo=0,hi=ct.length;while(lo<hi){const m=(lo+hi)>>1;if(ct[m]<x)lo=m+1;else hi=m}return lo};
+    const have=wins.map(([a,b])=>lb(b+1)-lb(a));const full=wins.map(([a,b])=>Math.round((b-a)/g)+1);
+    const med=have.filter(x=>x>0).sort((x,y)=>x-y)[Math.floor(have.filter(x=>x>0).length/2)]||0;
+    const need=wins.map((w,i)=>i>=wins.length-2||have[i]<Math.max(1,Math.min(full[i],med)*0.6));
+    const todo=wins.map((w,i)=>i).filter(i=>need[i]);NPY.total=todo.length;NPY.cached=wins.length-todo.length;
+    const parts=new Map();let next=0;const fail=new Set();
+    const fetchOne=async w=>{let tries=0;for(;;){if(npYearKey()!==key)throw new Error("cancel");
+        try{const r=await dvSend({ticks_history:CH.sym,style:"candles",granularity:g,start:wins[w][0],end:wins[w][1],count:5000});parts.set(w,r.candles||[]);fail.delete(w);return}
+        catch(e){NPY.retry++;const rl=/rate|limit|too many/i.test((e&&(e.code||"")+" "+(e.message||""))||"");if(++tries>=(rl?8:4)){fail.add(w);return}
+          await new Promise(r=>setTimeout(r,(rl?4000:1500)*tries))}}};
+    const worker=async()=>{while(next<todo.length){const w=todo[next++];await fetchOne(w);NPY.done++;npProg();await new Promise(r=>setTimeout(r,250))}};
+    await Promise.all([worker(),worker()]);
+    // амжилтгүй цонхнуудыг удаан, нэг нэгээр дахин татна
+    for(let round=0;round<2&&fail.size;round++)for(const w of [...fail]){await new Promise(r=>setTimeout(r,1500));await fetchOne(w)}
+    // нэгтгэх: хадгалсан + шинээр татсан (epoch-оор эрэмбэлж давхардлыг хасна)
+    const m=new Map();for(let i=0;i<ct.length;i++)if(ct[i]>=start)m.set(ct[i],[cache.o[i],cache.h[i],cache.l[i],cache.c[i]]);
+    parts.forEach(arr=>arr.forEach(x=>m.set(+x.epoch,[+x.open,+x.high,+x.low,+x.close])));
+    const keys=[...m.keys()].sort((a,b)=>a-b),n=keys.length,t=new Float64Array(n),o=new Float64Array(n),h=new Float64Array(n),l=new Float64Array(n),c=new Float64Array(n);
+    keys.forEach((ep,i)=>{const v=m.get(ep);t[i]=ep;o[i]=v[0];h[i]=v[1];l[i]=v[2];c[i]=v[3]});
+    Object.assign(NPY,{key,t,o,h,l,c,fails:fail.size,from:start});
+    npIdb.set("npy:"+key,{t,o,h,l,c,saved:Date.now()});return NPY})();
   try{return await NPY.busy}catch(e){if(e.message!=="cancel")NPY.err=e.message||String(e);throw e}finally{if(NPY.busyKey===key)NPY.busy=null}}
-let npProgT=0;function npProg(){const now=Date.now();if(now-npProgT<250)return;npProgT=now;const el=$("#npProg");if(el)el.textContent=`${NP_DAYS} хоногийн түүх ачаалж байна… ${Math.round(NPY.done/Math.max(1,NPY.total)*100)}%`}
+let npProgT=0;function npProg(){const now=Date.now();if(now-npProgT<250)return;npProgT=now;const el=$("#npProg");if(el)el.textContent=`${NP_DAYS} хоногийн түүх ачаалж байна… ${Math.round(NPY.done/Math.max(1,NPY.total)*100)}% (${NPY.done}/${NPY.total} хэсэг${NPY.cached?`, ${NPY.cached} нь хадгалсан`:""}${NPY.retry?`, дахин оролдлого ${NPY.retry}`:""})`}
 // Шинжилгээний өгөгдөл: 365 хоног + графикийн шинэ лаа. Давтан тоглуулалтад тухайн мөчөөс хойшхийг хасна
 function npDataset(){const data=CH.series?CH.series.data():[];const cut=CH.mode==="replay"&&data.length?data[data.length-1].time-TZ:Infinity;
   if(NP.src!=="year"||!NPY.t||NPY.key!==npYearKey()){const n=data.length,D={t:new Float64Array(n),o:new Float64Array(n),h:new Float64Array(n),l:new Float64Array(n),c:new Float64Array(n),src:"chart"};
@@ -2467,13 +2485,14 @@ function myHtml(){const R=NP.res;const sel=(id,vals,cur,fmt)=>`<select id="${id}
   const D=R.D,pc=v=>(v*100).toFixed(1)+"%",rf=v=>(v>=0?"+":"")+v.toFixed(2)+"R",z=B.se?(B.avg-B.rand)/B.se:0,be=B.avgR?1/(1+B.avgR):0;
   const edge=B.N>=30&&z>2&&B.avg>0&&B.h1.avg>0&&B.h2.avg>0;
   // одоогийн төлөв
-  const st=[];B.live.forEach((x,k)=>{const side=x.dir<0?"Sell":"Buy",lv=fmtP(x.pool.lv);
+  const st=[];const lastOf={};B.live.forEach((x,k)=>{lastOf[x.dir+"|"+(x.st==="order"?"o":"w")]=k});
+  B.live.forEach((x,k)=>{if(lastOf[x.dir+"|"+(x.st==="order"?"o":"w")]!==k)return;const side=x.dir<0?"Sell":"Buy",lv=fmtP(x.pool.lv);
     if(x.st==="sweep"||x.st==="choch")st.push(`<div class="np-card form"><div class="np-card-h">${npDirTag(x.dir)}<b>Inducement болсон · CHoCH хүлээж байна</b></div><div class="muted" style="font-size:12px">Үнэ өмнөх 4ц лааны ${x.dir<0?"оргил":"ёроол"} ${lv}-${x.dir<0?"аас дээш":"аас доош"} гарсан.${isFinite(x.ref.p)?` ${tfName(CH.gran)} дээр ${fmtP(x.ref.p)} ${x.dir<0?"доош":"дээш"} хаагдвал CHoCH.`:""}</div></div>`);
     else if(x.st==="leg")st.push(`<div class="np-card form"><div class="np-card-h">${npDirTag(x.dir)}<b>CHoCH болсон · фибогийн 1 цэгийг хүлээж байна</b></div><div class="muted" style="font-size:12px">Хөдөлгөөний ${x.dir<0?"ёроол":"оргил"} баталгаажиж, 4ц лаа хаагдсаны дараа лимит тавина.</div></div>`);
     else if(x.st==="order")st.push(`<div class="np-card now"><div class="np-card-h">${npDirTag(x.dir)}<b>Лимит ${side} ${fmtP(x.E)}</b></div><div class="muted" style="font-size:12px">SL ${fmtP(x.SL)} · TP ${fmtP(x.TP)} · ${x.R.toFixed(2)}R · фибо ${MY.anc} = ${fmtP(x.dir<0?x.lo:x.hi)}, 0 = ${fmtP(x.dir<0?x.hi:x.lo)}</div><button type="button" class="btn sm primary" data-ch="myOrder" data-k="${k}">Захиалгад ашиглах</button></div>`)});
   B.nowPools.forEach(p=>st.push(`<div class="np-card"><div class="np-card-h">${npDirTag(p.dir)}<b>Өмнөх 4ц ${p.dir<0?"оргил":"ёроол"} ${fmtP(p.lv)}</b></div><div class="muted" style="font-size:12px">Үнэ үүнээс ${p.dir<0?"дээш":"доош"} гарвал inducement болж, дараа нь CHoCH хүлээнэ.</div></div>`));
   h+=`<div class="np-now"><div class="lbl">Одоогийн төлөв</div>${st.length?`<div class="np-cards">${st.join("")}</div>`:`<div class="muted" style="font-size:12px">Ойролцоо хадгалагдсан liquidity, идэвхтэй setup алга.</div>`}</div>
-  ${(()=>{const exp=(D.t[D.n-1]-D.t[0])/CH.gran+1,cov=D.n/exp,gold=isGoldInst(CH.inst);return `<div class="muted" style="font-size:12px">Түүх: ${D.n.toLocaleString("en-US")} лаа · ${tfName(CH.gran)} · ${Math.round(R.days)} хоног · бүрэн байдал ${(cov*100).toFixed(0)}%${gold?" (алтанд амралтын өдөр, завсарлагатай тул ~70% хэвийн)":""}${!gold&&cov<0.9||gold&&cov<0.6?` <b class="neg">— Deriv-ээс түүх дутуу ирсэн</b>`:""} <button type="button" class="btn sm ghost" data-ch="myReload">Түүхийг дахин татах</button></div>`})()}
+  ${(()=>{const exp=(D.t[D.n-1]-D.t[0])/CH.gran+1,cov=D.n/exp,gold=isGoldInst(CH.inst);return `<div class="muted" style="font-size:12px">Түүх: ${D.n.toLocaleString("en-US")} лаа · ${tfName(CH.gran)} · ${Math.round(R.days)} хоног · бүрэн байдал ${(cov*100).toFixed(0)}%${NPY.fails?` · ${NPY.fails} хэсэг татагдаагүй`:""}${gold?" (алтанд амралтын өдөр, завсарлагатай тул ~70% хэвийн)":""}${!gold&&cov<0.9||gold&&cov<0.6?` <b class="neg">— Deriv-ээс түүх дутуу ирсэн</b>`:""} <button type="button" class="btn sm ghost" data-ch="myReload">Түүхийг дахин татах</button></div>`})()}
   <div class="my-funnel">${[["4ц inducement",B.cnt.sweep],["CHoCH",B.cnt.choch],["Лимит тавьсан",B.cnt.placed],["Биелсэн",B.cnt.fill],["Арилжаа",B.N]].map(([t,v])=>`<span><b>${v}</b> ${t}</span>`).join("<i>→</i>")}
     <span class="muted">· алгассан: sweep-ээс давсан ${B.cnt.inval}, лимит тавихаас өмнө 0.618-аас өнгөрсөн ${B.cnt.missed}, TP хүртэл явсан ${B.cnt.cancel}, хугацаа дууссан ${B.cnt.expired}, өмнөх позиц нээлттэй ${B.cnt.fill-B.N}</span></div>
   <div class="bot-kpis">
@@ -2535,7 +2554,7 @@ async function chClick(e){
   else if(act==="patRun"){PAT.focus=null;patGo()}
   else if(act==="patTab"){PAT.tab=b.dataset.v;try{localStorage.setItem("alkham-pat-tab",PAT.tab)}catch(e){}PAT.focus=null;patGo()}
   else if(act==="npRun")npGo();
-  else if(act==="myReload"){NPY.key="";NPY.t=null;BOT.my=null;npGo()}
+  else if(act==="myReload"){const k=npYearKey();NPY.key="";NPY.t=null;BOT.my=null;npIdb.del("npy:"+k).then(()=>npGo())}
   else if(act==="botNone"){BOT.pats.clear();BOT.res=null;BOT.sel=null;botSave();patRender()}
   else if(act==="botOrder")botOrder(+b.dataset.k);
   else if(act==="myOrder")myOrder(+b.dataset.k);
