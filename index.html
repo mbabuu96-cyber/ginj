@@ -2391,23 +2391,22 @@ function myRun(R){const D=R.D,n=D.n,g=CH.gran,H4=14400,P=MY;if(g>=H4)return {err
   const setups=[],live=[],cnt={sweep:0,choch:0,inval:0,missed:0,placed:0,cancel:0,expired:0,fill:0};
   for(let q=15;q<C4.length;q++){const K=C4[q],closed=q<C4.length-1,tol=P.tol*(a4[q-1]||a4[q]);if(!(tol>0))continue;
     for(const dir of [-1,1]){if(P.side==="sell"&&dir>0||P.side==="buy"&&dir<0)continue;
-      const ext=dir<0?K.h:K.l;
-      // Inducement: 4ц лаа өмнөх 4ц лааны оргилоос (ёроолоос) сүүлээрээ давж гараад буцаж доор (дээр) нь хаагдана
+      // Inducement: үнэ өмнөх 4ц лааны оргилоос (ёроолоос) давж гарна. 4ц лаа хаагдахыг хүлээхгүй
       const pv=C4[q-1],lvP=dir<0?pv.h:pv.l,pi=dir<0?pv.hi:pv.li;
-      if(dir<0?!(K.h>lvP&&(!closed||K.c<lvP)):!(K.l<lvP&&(!closed||K.c>lvP)))continue;
+      if(dir<0?!(K.h>lvP):!(K.l<lvP))continue;
+      let sw=K.i0;while(sw<=K.i1&&(dir<0?!(D.h[sw]>lvP):!(D.l[sw]<lvP)))sw++;
       const pool={lv:lvP,mem:[{i:pi,p:lvP}],first:pi,lastI:pi};
-      if(!closed){live.push({st:"sweep",dir,pool,K});continue}
-      // Sweep хийсэн 4ц лаа хаагдсан → 1м/5м дээр CHoCH хайна
-      cnt.sweep++;const pk=dir<0?K.hi:K.li;const refs=dir<0?sL:sH;let ri=myLB(refs,pk,p=>p.i)-1;if(ri<0)continue;const ref=refs[ri];
-      const wait=Math.max(K.i1-pk+1,Math.round(H4/g));let j=-1;
-      for(let t=pk+1;t<=Math.min(n-1,pk+wait*2);t++){if(dir<0?D.h[t]>ext:D.l[t]<ext)break;if(t<ref.conf)continue;if(dir<0?D.c[t]<ref.p:D.c[t]>ref.p){j=t;break}}
-      if(j<0){if(pk+wait*2>=n-1)live.push({st:"choch",dir,pool,K,ref});continue}
+      cnt.sweep++;
+      // Дараа нь 1м/5м дээр CHoCH: оргил шинэчлэгдэх бүрт өмнөх жижиг ёроолыг лавлана
+      const refs=dir<0?sL:sH,lim=Math.min(n-1,K.i1+Math.round(H4/g));let ext=dir<0?-Infinity:Infinity,pk=sw,ref=null,j=-1;
+      for(let t=sw;t<=lim;t++){if(dir<0?D.h[t]>ext:D.l[t]<ext){ext=dir<0?D.h[t]:D.l[t];pk=t;const ri=myLB(refs,pk,p=>p.i)-1;ref=ri>=0?refs[ri]:null}
+        if(!ref||t<=pk||t<ref.conf)continue;if(dir<0?D.c[t]<ref.p:D.c[t]>ref.p){j=t;break}}
+      if(j<0){if(lim>=n-1)live.push({st:closed?"choch":"sweep",dir,pool,K,ref:ref||{p:NaN}});continue}
       cnt.choch++;
-      // CHoCH-ын хөлийн ёроол: j-ээс хойш баталгаажсан анхны жижиг ёроол
+      // CHoCH-ын хөлийн ёроол баталгаажмагц лимит тавина
       const legs=dir<0?sL:sH;let li=myLB(legs,j,p=>p.i);let leg=legs[li];
-      if(!leg){live.push({st:"leg",dir,pool,K,ref,j});continue}
-      // 4ц лаа хаагдах ба ёроол баталгаажихын аль хожуу нь → лимит тавина
-      const place=Math.max(leg.conf,K.i1+1);if(place>=n){live.push({st:"leg",dir,pool,K,ref,j});continue}
+      if(!leg||leg.conf>=n){live.push({st:"leg",dir,pool,K,ref,j});continue}
+      const place=leg.conf;
       if(dir<0?rMax(pk+1,place)>ext:rMin(pk+1,place)<ext){cnt.inval++;continue}
       let lo1=dir<0?rMin(pk,place):rMax(pk,place);
       const calc=()=>{const hi=dir<0?ext:lo1,lo=dir<0?lo1:ext;return {hi,lo,E:lvl(dir,hi,lo,P.ent),SL:lvl(dir,hi,lo,P.sl),TP:lvl(dir,hi,lo,P.tp)}};
@@ -2447,7 +2446,7 @@ function myRun(R){const D=R.D,n=D.n,g=CH.gran,H4=14400,P=MY;if(g>=H4)return {err
 function myMiniTrade(R,t){const s=t.s,pts=[...s.pool.mem.map(p=>[p.i,p.p]).sort((a,b)=>a[0]-b[0]),[s.pk,s.dir<0?s.hi:s.lo]];
   return npMini(R,{pts,b:t.b,lv:s.pool.lv,out:{j:t.j,E:t.E,tp:t.tp,sl:t.sl},fib:{dir:s.dir,hi:s.hi,lo:s.lo,anc:MY.anc,ls:[...new Set([MY.sl,0,MY.ent,1,MY.anc,MY.tp])]}})}
 function myHtml(){const R=NP.res;const sel=(id,vals,cur,fmt)=>`<select id="${id}">${vals.map(v=>`<option value="${v}"${String(v)===String(cur)?" selected":""}>${fmt(v)}</option>`).join("")}</select>`;
-  let h=`<p class="muted np-explain"><b>Дүрэм:</b> ① <b>4ц лаа</b> өмнөх 4ц лааны оргилоос (ёроолоос) сүүлээрээ давж гараад буцаж доор (дээр) нь хаагдана (inducement) — энэ үед орохгүй → ② ${tfName(CH.gran)} дээр <b>CHoCH</b> → ③ фибо: CHoCH-ын ёроол <b>${MY.anc}</b> → sweep-ийн оргил <b>0</b> → ④ <b>${MY.ent}</b>-д лимит, SL <b>${MY.sl}</b>, TP <b>${MY.tp}</b> (≈${((MY.tp-MY.ent)/(MY.ent-MY.sl)).toFixed(2)}R). Buy бол эсрэгээрээ.</p>
+  let h=`<p class="muted np-explain"><b>Дүрэм:</b> ① Үнэ өмнөх <b>4ц лааны оргилоос (ёроолоос)</b> давж гарна (inducement) — энэ үед орохгүй, 4ц хаагдахыг хүлээхгүй → ② ${tfName(CH.gran)} дээр <b>CHoCH</b> → ③ фибо: CHoCH-ын ёроол <b>${MY.anc}</b> → sweep-ийн оргил <b>0</b> → ④ <b>${MY.ent}</b>-д лимит, SL <b>${MY.sl}</b>, TP <b>${MY.tp}</b> (≈${((MY.tp-MY.ent)/(MY.ent-MY.sl)).toFixed(2)}R). Buy бол эсрэгээрээ.</p>
   <div class="ch-tools">
     <label class="lbl" for="myKc" title="CHoCH-д ашиглах жижиг оргил/ёроол">CHoCH</label>${sel("myKc",[2,3,5,8],MY.kc,v=>v+" лаа")}</div>
   <div class="ch-tools">
@@ -2469,14 +2468,13 @@ function myHtml(){const R=NP.res;const sel=(id,vals,cur,fmt)=>`<select id="${id}
   const edge=B.N>=30&&z>2&&B.avg>0&&B.h1.avg>0&&B.h2.avg>0;
   // одоогийн төлөв
   const st=[];B.live.forEach((x,k)=>{const side=x.dir<0?"Sell":"Buy",lv=fmtP(x.pool.lv);
-    if(x.st==="sweep")st.push(`<div class="np-card form"><div class="np-card-h">${npDirTag(x.dir)}<b>4ц лаа inducement хийж байна</b></div><div class="muted" style="font-size:12px">Одоогийн 4ц лаа өмнөх 4ц лааны ${x.dir<0?"оргил":"ёроол"} ${lv}-${x.dir<0?"аас дээш":"аас доош"} гарсан. Энэ лаа ${lv}-${x.dir<0?"ээс доор":"ээс дээр"} хаагдвал inducement болно — одоо орохгүй.</div></div>`);
-    else if(x.st==="choch")st.push(`<div class="np-card form"><div class="np-card-h">${npDirTag(x.dir)}<b>Sweep болсон · CHoCH хүлээж байна</b></div><div class="muted" style="font-size:12px">${lv} шүүрдэгдсэн. ${tfName(CH.gran)} дээр ${fmtP(x.ref.p)} ${x.dir<0?"доош":"дээш"} хаагдвал CHoCH.</div></div>`);
+    if(x.st==="sweep"||x.st==="choch")st.push(`<div class="np-card form"><div class="np-card-h">${npDirTag(x.dir)}<b>Inducement болсон · CHoCH хүлээж байна</b></div><div class="muted" style="font-size:12px">Үнэ өмнөх 4ц лааны ${x.dir<0?"оргил":"ёроол"} ${lv}-${x.dir<0?"аас дээш":"аас доош"} гарсан.${isFinite(x.ref.p)?` ${tfName(CH.gran)} дээр ${fmtP(x.ref.p)} ${x.dir<0?"доош":"дээш"} хаагдвал CHoCH.`:""}</div></div>`);
     else if(x.st==="leg")st.push(`<div class="np-card form"><div class="np-card-h">${npDirTag(x.dir)}<b>CHoCH болсон · фибогийн 1 цэгийг хүлээж байна</b></div><div class="muted" style="font-size:12px">Хөдөлгөөний ${x.dir<0?"ёроол":"оргил"} баталгаажиж, 4ц лаа хаагдсаны дараа лимит тавина.</div></div>`);
     else if(x.st==="order")st.push(`<div class="np-card now"><div class="np-card-h">${npDirTag(x.dir)}<b>Лимит ${side} ${fmtP(x.E)}</b></div><div class="muted" style="font-size:12px">SL ${fmtP(x.SL)} · TP ${fmtP(x.TP)} · ${x.R.toFixed(2)}R · фибо ${MY.anc} = ${fmtP(x.dir<0?x.lo:x.hi)}, 0 = ${fmtP(x.dir<0?x.hi:x.lo)}</div><button type="button" class="btn sm primary" data-ch="myOrder" data-k="${k}">Захиалгад ашиглах</button></div>`)});
-  B.nowPools.forEach(p=>st.push(`<div class="np-card"><div class="np-card-h">${npDirTag(p.dir)}<b>Өмнөх 4ц ${p.dir<0?"оргил":"ёроол"} ${fmtP(p.lv)}</b></div><div class="muted" style="font-size:12px">Одоогийн 4ц лаа үүнээс ${p.dir<0?"дээш":"доош"} гараад буцаж ${p.dir<0?"доор":"дээр"} нь хаагдвал inducement болно.</div></div>`));
+  B.nowPools.forEach(p=>st.push(`<div class="np-card"><div class="np-card-h">${npDirTag(p.dir)}<b>Өмнөх 4ц ${p.dir<0?"оргил":"ёроол"} ${fmtP(p.lv)}</b></div><div class="muted" style="font-size:12px">Үнэ үүнээс ${p.dir<0?"дээш":"доош"} гарвал inducement болж, дараа нь CHoCH хүлээнэ.</div></div>`));
   h+=`<div class="np-now"><div class="lbl">Одоогийн төлөв</div>${st.length?`<div class="np-cards">${st.join("")}</div>`:`<div class="muted" style="font-size:12px">Ойролцоо хадгалагдсан liquidity, идэвхтэй setup алга.</div>`}</div>
   ${(()=>{const exp=(D.t[D.n-1]-D.t[0])/CH.gran+1,cov=D.n/exp,gold=isGoldInst(CH.inst);return `<div class="muted" style="font-size:12px">Түүх: ${D.n.toLocaleString("en-US")} лаа · ${tfName(CH.gran)} · ${Math.round(R.days)} хоног · бүрэн байдал ${(cov*100).toFixed(0)}%${gold?" (алтанд амралтын өдөр, завсарлагатай тул ~70% хэвийн)":""}${!gold&&cov<0.9||gold&&cov<0.6?` <b class="neg">— Deriv-ээс түүх дутуу ирсэн</b>`:""} <button type="button" class="btn sm ghost" data-ch="myReload">Түүхийг дахин татах</button></div>`})()}
-  <div class="my-funnel">${[["4ц sweep",B.cnt.sweep],["CHoCH",B.cnt.choch],["Лимит тавьсан",B.cnt.placed],["Биелсэн",B.cnt.fill],["Арилжаа",B.N]].map(([t,v])=>`<span><b>${v}</b> ${t}</span>`).join("<i>→</i>")}
+  <div class="my-funnel">${[["4ц inducement",B.cnt.sweep],["CHoCH",B.cnt.choch],["Лимит тавьсан",B.cnt.placed],["Биелсэн",B.cnt.fill],["Арилжаа",B.N]].map(([t,v])=>`<span><b>${v}</b> ${t}</span>`).join("<i>→</i>")}
     <span class="muted">· алгассан: sweep-ээс давсан ${B.cnt.inval}, лимит тавихаас өмнө 0.618-аас өнгөрсөн ${B.cnt.missed}, TP хүртэл явсан ${B.cnt.cancel}, хугацаа дууссан ${B.cnt.expired}, өмнөх позиц нээлттэй ${B.cnt.fill-B.N}</span></div>
   <div class="bot-kpis">
     <div class="np-kv"><span class="lbl">Арилжаа</span><b>${B.N}</b><span class="muted">${Math.round(R.days)} хоногт · ${B.nSet} setup биелсэн</span></div>
@@ -2496,7 +2494,7 @@ function myHtml(){const R=NP.res;const sel=(id,vals,cur,fmt)=>`<select id="${id}
     h+=`<div class="np-sel"><div class="np-nav"><b>${t.dir<0?"Sell":"Buy"} · 4ц inducement ${fmtP(s.pool.lv)}</b><span class="muted">${npDate(R,t.b,true)} · орох ${fmtP(t.E)} → ${fmtP(t.exit)} (${t.why}) · <b class="${t.R>0?"pos":"neg"}">${rf(t.R)}</b></span></div>${myMiniTrade(R,t)}</div>`}
   h+=`<div class="tw np-tw"><table class="np-table"><thead><tr><th>Огноо</th><th>Чиглэл</th><th class="r">Өмнөх 4ц түвшин</th><th class="r">Орох</th><th class="r">SL</th><th class="r">TP</th><th>Гарсан</th><th class="r">R</th></tr></thead><tbody>
     ${T.slice(-150).reverse().map(t=>{const i=T.indexOf(t);return `<tr class="click${BOT.mySel===i?" on":""}" data-myt="${i}"><td class="num">${npDate(R,t.b,true)}</td><td>${npDirTag(t.dir)}</td><td class="r num">${fmtP(t.s.pool.lv)} </td><td class="r num">${fmtP(t.E)}</td><td class="r num">${fmtP(t.sl)}</td><td class="r num">${fmtP(t.tp)}</td><td>${t.why}</td><td class="r num ${t.R>0?"pos":"neg"}">${rf(t.R)}</td></tr>`}).join("")}</tbody></table></div>
-  <p class="muted" style="font-size:11px;margin:0">Ирээдүйг харахгүй: оргил/ёроол баталгаажсан, 4ц лаа хаагдсан, CHoCH-ын ёроол баталгаажсан мөчөөс хойш л лимит тавина. Лимит биелэхээс өмнө TP-д хүрвэл, эсвэл sweep-ийн оргилоос давбал цуцална. Нэг лаанд SL, TP хоёуланд хүрвэл SL гэж тооцно.</p>`;
+  <p class="muted" style="font-size:11px;margin:0">Ирээдүйг харахгүй: inducement болж, CHoCH хийж, CHoCH-ын ёроол баталгаажсан мөчөөс хойш л лимит тавина. Лимит биелэхээс өмнө TP-д хүрвэл, эсвэл sweep-ийн оргилоос давбал цуцална. Нэг лаанд SL, TP хоёуланд хүрвэл SL гэж тооцно.</p>`;
   return h}
 function tfName(g){return ({60:"1м",300:"5м",900:"15м",3600:"1ц",14400:"4ц",86400:"1ө"})[g]||g+"с"}
 function myOrder(k){const x=BOT.my&&BOT.my.live[k];if(!x||x.st!=="order")return;CH.dir=x.dir>0?"Buy":"Sell";if(CH.mode!=="replay"){CH.mkt=false;$("#opMkt").checked=false;$("#opEntry").value=fmtP(x.E)}
