@@ -1413,6 +1413,29 @@ function chZones(){cancelAnimationFrame(zoneRaf);zoneRaf=requestAnimationFrame((
   place(zt,z.tp);place(zs,z.sl)})}
 
 /* --- replay (backtest) --- */
+// Түүхэн лаа татах: Deriv-ийн лаа (end+count) → дутуу бол тикээс 1м/5м лаа бүтээнэ
+async function rpCandles(sym,g,a,b){const out=[];let end=b;
+  for(let k=0;k<4&&end>=a;k++){const r=await dvSend({ticks_history:sym,style:"candles",granularity:g,end,count:5000,adjust_start_time:1});
+    const cs=(r.candles||[]).filter(c=>+c.epoch>=a&&+c.epoch<=b);if(!cs.length)break;out.unshift(...cs);const first=+cs[0].epoch;if(first<=a+g)break;end=first-1}
+  const seen=new Set();return out.filter(c=>{const e=+c.epoch;if(seen.has(e))return false;seen.add(e);return true}).sort((x,y)=>x.epoch-y.epoch)}
+async function rpTicks(sym,g,a,b,onProg){const win=isGoldInst(CH.inst)?900:3000,wins=[];for(let s=a;s<b;s+=win)wins.push([s,Math.min(b,s+win-1)]);
+  const bars=new Map();let done=0,got=0;
+  const one=async([s,e])=>{for(let t=0;t<4;t++){try{const r=await dvSend({ticks_history:sym,style:"ticks",start:s,end:e,count:5000});const h=r.history||{};const T=h.times||[],P=h.prices||[];
+        for(let i=0;i<T.length;i++){const ep=+T[i];if(ep<a||ep>b)continue;const k=Math.floor(ep/g)*g,p=+P[i];let c=bars.get(k);if(!c){c={epoch:k,open:p,high:p,low:p,close:p,_f:ep,_l:ep};bars.set(k,c)}
+          else{if(ep<c._f){c._f=ep;c.open=p}if(ep>=c._l){c._l=ep;c.close=p}if(p>c.high)c.high=p;if(p<c.low)c.low=p}got++}return}
+      catch(err){await new Promise(r=>setTimeout(r,1200*(t+1)))}}};
+  let next=0;const worker=async()=>{while(next<wins.length){const w=wins[next++];await one(w);done++;onProg&&onProg(done,wins.length)}};
+  await Promise.all([worker(),worker(),worker()]);
+  return [...bars.values()].sort((x,y)=>x.epoch-y.epoch).map(({_f,_l,...c})=>c)}
+// хамгийн эрт боломжтой лааны огноог хоёртын хайлтаар олно (хадгална)
+async function rpEarliest(sym,g){const key="alkham-earliest-"+sym+"-"+g;try{const v=JSON.parse(localStorage.getItem(key)||"null");if(v&&Date.now()-v.at<864e5)return v.ep}catch(e){}
+  const now=Math.floor(Date.now()/1000);let lo=now-5*365*86400,hi=now-86400;
+  const has=async t=>{try{const r=await dvSend({ticks_history:sym,style:"candles",granularity:g,end:t+g*30,count:30,adjust_start_time:1});return (r.candles||[]).some(c=>Math.abs(+c.epoch-t)<g*31)}catch(e){return false}};
+  if(await has(lo))hi=lo;else for(let k=0;k<14&&hi-lo>86400;k++){const m=Math.floor((lo+hi)/2);if(await has(m))hi=m;else lo=m}
+  try{localStorage.setItem(key,JSON.stringify({ep:hi,at:Date.now()}))}catch(e){}return hi}
+async function rpFetch(sym,g,a,b,prog){let cs=await rpCandles(sym,g,a,b);const span=(b-a)/g+1;
+  if(g<=300&&cs.length<span*0.5){const tb=await rpTicks(sym,g,a,b,prog);if(tb.length>cs.length){CH.rp.src="tick";return tb}}
+  if(cs.length)CH.rp.src="candle";return cs}
 async function rpLoad(){
   rpPause();await chForget();const seq=++CH.loadSeq;const ins=CH.inst,g=CH.gran;
   const v=$("#rpStart").value;const start=Math.floor(new Date(v).getTime()/1000);
@@ -1420,25 +1443,27 @@ async function rpLoad(){
   if(start>Date.now()/1000-g*5){chStatus("Эхлэх цаг өнгөрсөн хугацаанд байх ёстой.",true);return}
   chStatus("Түүхэн өгөгдөл ачаалж байна…");chEmpty("Түүхэн өгөгдөл ачаалж байна…");
   try{const sym=await derivSymbol(ins);if(!sym)throw {code:"InvalidSymbol"};
-    const past=await dvSend({ticks_history:sym,style:"candles",granularity:g,end:start,count:2000,adjust_start_time:1});
-    const fut=await dvSend({ticks_history:sym,style:"candles",granularity:g,start:start,end:Math.min(Math.floor(Date.now()/1000),start+4999*g),count:5000});
-    if(seq!==CH.loadSeq)return;
-    const pb=(past.candles||[]).filter(c=>+c.epoch<start).map(toBar),fb=(fut.candles||[]).filter(c=>+c.epoch>=start).map(toBar);
-    if(!fb.length)throw new Error("Сонгосон цагаас хойш өгөгдөл олдсонгүй. Өөр цаг сонгоно уу.");
+    const now=Math.floor(Date.now()/1000),preN=g<=60?600:2000,futN=g<=60?1440:5000;CH.rp.src="candle";
+    const prog=(d,t)=>{chEmpty(`Deriv-ийн ${tfName(g)} лаа энэ өдөрт алга — тикээс лаа бүтээж байна… ${Math.round(d/t*100)}%`)};
+    const pastA=await rpFetch(sym,g,start-preN*g,start-1,prog);if(seq!==CH.loadSeq)return;
+    const futA=await rpFetch(sym,g,start,Math.min(now,start+futN*g-g),prog);if(seq!==CH.loadSeq)return;
+    const pb=pastA.filter(c=>+c.epoch<start).map(toBar),fb=futA.filter(c=>+c.epoch>=start).map(toBar);
+    if(!fb.length){const ep=await rpEarliest(sym,g);const d=new Date(ep*1000);
+      throw new Error(`Deriv энэ өдрийн ${tfName(g)} өгөгдөл (лаа, тик) өгөхгүй байна. ${tfName(g)}-ийн хамгийн эрт боломжтой өдөр ≈ ${d.toLocaleDateString("en-GB")}. Тэр өдрөөс хойш сонгоно уу.`)}
     const R=CH.rp;R.sym=sym;R.all=pb.concat(fb);R.idx=Math.max(1,pb.length);R.pos=null;R.markers=[];R.results=[];R.balance=currentBalance(enriched(S.trades));RT.pend=null;RT.pick=null;
-    const lag=(+fb[0].time-TZ)-start;if(lag>2*86400)toast(`Deriv ${tfName(g)}-ийн түүх ${new Date((fb[0].time-TZ)*1000).toLocaleDateString("en-GB")}-ээс л эхэлж байна. Илүү эртийн өдөр хэрэгтэй бол 5м эсвэл түүнээс дээш интервал сонгоно уу.`);
+    const lag=(+fb[0].time-TZ)-start;if(lag>2*86400)toast(`Deriv ${tfName(g)}-ийн түүх ${new Date((fb[0].time-TZ)*1000).toLocaleDateString("en-GB")}-ээс л эхэлж байна.`);
     CH.series.setData(R.all.slice(0,R.idx));CH.series.setMarkers([]);const b=R.all[R.idx-1];CH.last=b.close;CH.lastTime=b.time;
     CH.chart.timeScale().scrollToRealTime();chEmpty("");rpTimeLabel();
-    chStatus(`Давтан тоглуулах · ${sym} · ${fb.length} лаа бэлэн`);chUpdate();
+    chStatus(`Давтан тоглуулах · ${sym} · ${fb.length} лаа бэлэн${R.src==="tick"?" · тикээс бүтээсэн":""}`);chUpdate();
   }catch(e){if(seq!==CH.loadSeq)return;chStatus(dvErrMsg(e),true);chEmpty(esc(dvErrMsg(e)))}
 }
 async function rpMore(){const R=CH.rp;if(R.loading||!R.all.length)return false;const g=CH.gran,lastEp=R.all[R.all.length-1].time-TZ,now=Math.floor(Date.now()/1000);
   if(lastEp+g>=now-g)return false;R.loading=true;
-  try{const r=await dvSend({ticks_history:R.sym,style:"candles",granularity:g,start:lastEp+g,end:Math.min(now,lastEp+5000*g),count:5000});
-    const add=(r.candles||[]).map(toBar).filter(b=>b.time>R.all[R.all.length-1].time);R.all=R.all.concat(add);return add.length>0}
+  try{const n=R.src==="tick"?720:5000;const cs=await rpFetch(R.sym,g,lastEp+g,Math.min(now,lastEp+n*g));
+    const add=cs.map(toBar).filter(b=>b.time>R.all[R.all.length-1].time);R.all=R.all.concat(add);return add.length>0}
   catch(e){return false}finally{R.loading=false}}
 async function rpStep(){const R=CH.rp;if(!R.all.length){chStatus("Эхлээд Ачаалах дарна уу.",true);return}
-  if(R.idx>=R.all.length-3)rpMore();
+  if(R.idx>=R.all.length-(R.src=="tick"?300:50))rpMore();
   if(R.idx>=R.all.length){rpPause();chStatus("Өгөгдлийн төгсгөлд хүрлээ.");return}
   const bar=R.all[R.idx++];CH.series.update(bar);CH.last=bar.close;CH.lastTime=bar.time;rtFill(bar);rpCheck(bar);rpTimeLabel();chUpdate(true)}
 function rpTimeLabel(){const R=CH.rp,b=R.all[R.idx-1];$("#rpTime").textContent=b?new Date((b.time-TZ)*1000).toLocaleString("en-GB",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}):""}
