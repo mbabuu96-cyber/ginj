@@ -1221,6 +1221,7 @@ function chBuild(){
       <button type="button" class="btn sm" data-ch="rpLoad">Ачаалах</button><button type="button" class="btn sm ghost" data-ch="rtRandom" title="Санамсаргүй өдрөөс эхлүүлэх (сохроор дасгал)">🎲 Санамсаргүй</button>
       <button type="button" class="btn sm" data-ch="rpStep" title="Нэг лаа урагшлах">+1 лаа</button>
       <button type="button" class="btn sm primary" data-ch="rpPlay" id="rpPlay">▶ Тоглуулах</button>
+      <select id="rtIb" aria-label="Лаа бүрдүүлэх" title="Тоглуулахад лаа бүрийг нээлтээс хаалт хүртэл шууд явж байгаа мэт бүрдүүлнэ">${IB_MODES.map(([v,t])=>`<option value="${v}">${t}</option>`).join("")}</select>
       <select id="rpSpeed" aria-label="Хурд"><option value="1">1 лаа/сек</option><option value="2" selected>2 лаа/сек</option><option value="5">5 лаа/сек</option><option value="10">10 лаа/сек</option></select>
       <span class="mono muted" id="rpTime" style="font-size:12px"></span><button type="button" class="btn sm" data-ch="rtStatsTog" title="Backtest-ийн хүснэгт ба тайлан">📊 Backtest статистик</button>
       <span class="muted rt-keys">B Buy · S Sell · → 1 лаа · Shift+→ 10 · Space тоглуулах · X хаах · E BE · Esc цуцлах</span>
@@ -1267,6 +1268,7 @@ function chBuild(){
     else if(id==="npK"||id==="npM"||id==="npH"){NP[id.slice(2).toLowerCase()]=+e.target.value;npSave();npGo()}
     else if(id==="npShow"){NP.show=e.target.checked;npSave();drDirty()}
     else if(id==="npSrc"){NP.src=e.target.value;npSave();npGo()}
+    else if(id==="rtIb"){RT.ib=e.target.value;rtSave();if(CH.rp.timer){rpPause();rpPlay()}}
     else if(id==="rtSlSel"){RT.sl=e.target.value;rtSave();rtUi()}else if(id==="rtRrSel"){RT.rr=+e.target.value;rtSave();rtUi()}
     else if(id==="npSort"){NP.sort=e.target.value;npSave();patRender()}
     else if(id&&/^my[A-Z]/.test(id)){const k={myNEq:"nEq",myTol:"tol",myPh:"ph",myLb:"lb",myKc:"kc",myAnc:"anc",myEnt:"ent",mySl:"sl",myTp:"tp",myExp:"exp",mySide:"side",myMax:"maxB"}[id];if(!k)return;
@@ -1277,7 +1279,7 @@ function chBuild(){
     else if(id==="mtfSel"){DR.mtf=+e.target.value;drOptsSave();drDirty();MTF.key="";MTF.check=null;mtfStatus();mtfLoadReal();if(DR.mtf&&DR.mtf<=CH.gran)toast("Дээд интервал нь графикийн интервалаас их байх ёстой.")}
     else if(id==="sessChk"){DR.sess=e.target.checked;drOptsSave();drDirty();if(DR.sess&&CH.gran>3600)toast("Сешний бүс 1 цагаас бага интервал дээр харагдана.")}});
   const d=new Date(Date.now()-3*864e5);d.setHours(9,0,0,0);$("#rpStart").value=CH.rpStart||`${ymd(d)}T09:00`;$("#rpSpeed").value=String(CH.rp.speed||2);
-  $("#mtfSel").value=String(DR.mtf);$("#sessChk").checked=DR.sess;drInit();$("#rtSlSel").value=RT.sl;$("#rtRrSel").value=String(RT.rr);
+  $("#mtfSel").value=String(DR.mtf);$("#sessChk").checked=DR.sess;drInit();$("#rtSlSel").value=RT.sl;$("#rtRrSel").value=String(RT.rr);$("#rtIb").value=RT.ib;
   let wide=false;try{wide=localStorage.getItem("alkham-chart-wide")==="1"}catch(e){}chWide(wide);
   document.addEventListener("fullscreenchange",()=>{const on=document.fullscreenElement===$("#chPanel");$("#btnFull").textContent=on?"✕ Гарах":"⛶ Бүтэн дэлгэц";setTimeout(()=>{chZones();drDirty()},60)});
 }
@@ -1468,7 +1470,7 @@ async function rpLoad(){
     const pb=pastA.filter(c=>+c.epoch<start).map(toBar),fb=futA.filter(c=>+c.epoch>=start).map(toBar);
     if(!fb.length){const ep=await rpEarliest(sym,g);const d=new Date(ep*1000);
       throw new Error(`Deriv энэ өдрийн ${tfName(g)} өгөгдөл (лаа, тик) өгөхгүй байна. ${tfName(g)}-ийн хамгийн эрт боломжтой өдөр ≈ ${d.toLocaleDateString("en-GB")}. Тэр өдрөөс хойш сонгоно уу.`)}
-    const R=CH.rp;R.sym=sym;R.all=pb.concat(fb);R.idx=Math.max(1,pb.length);R.pos=null;R.markers=[];R.results=[];R.balance=currentBalance(enriched(S.trades));RT.pend=null;RT.pick=null;
+    const R=CH.rp;R.sym=sym;R.all=pb.concat(fb);R.idx=Math.max(1,pb.length);R.pos=null;R.markers=[];R.results=[];R.balance=currentBalance(enriched(S.trades));RT.pend=null;RT.pick=null;R.cur=null;R.seq=0;R.ib=new Map();R.ibBusy=false;ibPrefetch();
     const lag=(+fb[0].time-TZ)-start;if(lag>2*86400)toast(`Deriv ${tfName(g)}-ийн түүх ${new Date((fb[0].time-TZ)*1000).toLocaleDateString("en-GB")}-ээс л эхэлж байна.`);
     CH.series.setData(R.all.slice(0,R.idx));CH.series.setMarkers([]);const b=R.all[R.idx-1];CH.last=b.close;CH.lastTime=b.time;
     CH.chart.timeScale().scrollToRealTime();chEmpty("");rpTimeLabel();
@@ -1480,19 +1482,48 @@ async function rpMore(){const R=CH.rp;if(R.loading||!R.all.length)return false;c
   try{const n=R.src==="tick"?720:5000;const cs=await rpFetch(R.sym,g,lastEp+g,Math.min(now,lastEp+n*g));
     const add=cs.map(toBar).filter(b=>b.time>R.all[R.all.length-1].time);R.all=R.all.concat(add);return add.length>0}
   catch(e){return false}finally{R.loading=false}}
+// Лаа бүрдүүлэх: лаа бүрийг нээлтээс хаалт хүртэл замаар нь (бодит доод интервал эсвэл загвар) хөдөлгөнө
+const IB_MODES=[["real","Бодит (доод интервалаар)"],["synth","Загвар (O→L→H→C)"],["off","Шууд гаргах"]];
+function ibFrames(){const sp=CH.rp.speed||2;return Math.max(3,Math.min(30,Math.floor(1000/(sp*18))))}
+function ibDown(pts,n,bar){if(pts.length<=n)return pts;const imax=pts.indexOf(Math.max(...pts)),imin=pts.indexOf(Math.min(...pts));const keep=new Set([0,pts.length-1,imax,imin]);
+  const st=(pts.length-1)/(n-1);for(let k=0;k<n;k++)keep.add(Math.round(k*st));return [...keep].sort((x,y)=>x-y).map(i=>pts[i])}
+function ibSynth(bar,n){const o=bar.open,h=bar.high,l=bar.low,c=bar.close,leg=c>=o?[o,l,h,c]:[o,h,l,c];const d=[0];for(let i=1;i<4;i++)d.push(d[i-1]+Math.abs(leg[i]-leg[i-1]));const tot=d[3]||1,pts=[];
+  for(let k=0;k<n;k++){const t=tot*k/(n-1);let i=1;while(i<3&&d[i]<t)i++;const f=(t-d[i-1])/((d[i]-d[i-1])||1);pts.push(leg[i-1]+(leg[i]-leg[i-1])*f)}
+  const dec=decOf(CH.inst);return pts.map(v=>+v.toFixed(dec))}
+function ibPath(bar){const R=CH.rp,n=ibFrames();if(RT.ib==="off")return [bar.close];let pts=null;
+  if(RT.ib==="real"&&R.ib&&R.ib.has(bar.time)){pts=R.ib.get(bar.time).slice();if(pts.length<2)pts=null}
+  if(!pts)return ibSynth(bar,n);
+  pts[0]=bar.open;pts.push(bar.close);// эхлэл, төгсгөлийг лааныхтай тааруулна; оргил, ёроол дутвал нэмнэ
+  if(Math.max(...pts)<bar.high)pts.splice(Math.max(1,pts.indexOf(Math.max(...pts))),0,bar.high);if(Math.min(...pts)>bar.low)pts.splice(Math.max(1,pts.indexOf(Math.min(...pts))),0,bar.low);
+  return ibDown(pts,Math.max(n,4),bar)}
+async function ibPrefetch(){const R=CH.rp;if(RT.ib!=="real"||R.ibBusy||!R.sym||!R.all.length)return;R.ib=R.ib||new Map();const g=CH.gran;
+  let i0=R.idx;while(i0<R.all.length&&R.ib.has(R.all[i0].time))i0++;if(i0>=R.all.length||i0>R.idx+20)return;
+  const N=g<=60?45:Math.max(3,Math.floor(4800/(g/60))),i1=Math.min(R.all.length-1,i0+N),a=R.all[i0].time-TZ,b=R.all[i1].time-TZ+g-1;R.ibBusy=true;
+  try{const grp=new Map();const put=(ep,arr)=>{const k=Math.floor(ep/g)*g+TZ;if(!grp.has(k))grp.set(k,[]);grp.get(k).push(...arr)};
+    if(g<=60){const r=await dvSend({ticks_history:R.sym,style:"ticks",start:a,end:b,count:5000});const h=r.history||{};(h.times||[]).forEach((t,k)=>put(+t,[+h.prices[k]]))}
+    else{const cs=await rpCandles(R.sym,60,a,b);cs.forEach(c=>{const o=+c.open,hh=+c.high,ll=+c.low,cc=+c.close;put(+c.epoch,cc>=o?[o,ll,hh,cc]:[o,hh,ll,cc])})}
+    for(let k=i0;k<=i1;k++){const t=R.all[k].time;R.ib.set(t,grp.get(t)||[])}}
+  catch(e){for(let k=i0;k<=i1;k++)R.ib.set(R.all[k].time,[])}finally{R.ibBusy=false}}
+function rpBegin(){const R=CH.rp;if(R.idx>=R.all.length-(R.src==="tick"?300:50))rpMore();
+  if(R.idx>=R.all.length){rpPause();chStatus("Өгөгдлийн төгсгөлд хүрлээ.");return false}
+  const bar=R.all[R.idx];R.cur={bar,pts:ibPath(bar),k:0,hi:-Infinity,lo:Infinity,prev:bar.open};ibPrefetch();return true}
+function rpFrame(){const R=CH.rp,c=R.cur;if(!c)return true;const bar=c.bar,p=c.pts[c.k],prev=c.k?c.pts[c.k-1]:bar.open;
+  c.hi=Math.max(c.hi,p,prev);c.lo=Math.min(c.lo,p,prev);const last=c.k>=c.pts.length-1;
+  const part=last?bar:{time:bar.time,open:bar.open,high:c.hi,low:c.lo,close:p};CH.series.update(part);CH.last=p;CH.lastTime=bar.time;
+  const seg={time:bar.time,open:prev,high:Math.max(prev,p),low:Math.min(prev,p),close:p,seq:++R.seq};rtFill(seg);rpCheck(seg);
+  c.k++;if(last){R.idx++;R.cur=null;rpTimeLabel();chUpdate(true);return true}
+  rtUi();drDirty();return false}
 async function rpStep(){const R=CH.rp;if(!R.all.length){chStatus("Эхлээд Ачаалах дарна уу.",true);return}
-  if(R.idx>=R.all.length-(R.src=="tick"?300:50))rpMore();
-  if(R.idx>=R.all.length){rpPause();chStatus("Өгөгдлийн төгсгөлд хүрлээ.");return}
-  const bar=R.all[R.idx++];CH.series.update(bar);CH.last=bar.close;CH.lastTime=bar.time;rtFill(bar);rpCheck(bar);rpTimeLabel();chUpdate(true)}
+  if(!R.cur&&!rpBegin())return;let guard=0;while(!rpFrame()&&guard++<5000);}
 function rpTimeLabel(){const R=CH.rp,b=R.all[R.idx-1];$("#rpTime").textContent=b?new Date((b.time-TZ)*1000).toLocaleString("en-GB",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}):""}
 function rpPlay(){const R=CH.rp;if(R.timer){rpPause();return}if(!R.all.length){chStatus("Эхлээд Ачаалах дарна уу.",true);return}
-  R.timer=setInterval(rpStep,1000/(R.speed||2));$("#rpPlay").textContent="❚❚ Зогсоох"}
+  const fr=RT.ib==="off"?1:ibFrames();R.timer=setInterval(()=>{if(!R.cur&&!rpBegin())return;rpFrame()},1000/((R.speed||2)*fr));$("#rpPlay").textContent="❚❚ Зогсоох"}
 function rpPause(){const R=CH.rp;if(R.timer){clearInterval(R.timer);R.timer=null}const b=$("#rpPlay");if(b)b.textContent="▶ Тоглуулах"}
 function rpOpen(){const R=CH.rp;const o=chCalc();if(o.lots==null||o.sl==null)return;
-  const bar=R.all[R.idx-1];R.pos={dir:CH.dir,entry:bar.close,sl:o.sl,tp:o.tp,lots:o.lots,risk:o.risk,time:bar.time,epoch:bar.time-TZ,balance:R.balance};
+  const bar=R.cur?R.cur.bar:R.all[R.idx-1];R.pos={seq:R.seq||0,dir:CH.dir,entry:CH.last,sl:o.sl,tp:o.tp,lots:o.lots,risk:o.risk,time:bar.time,epoch:bar.time-TZ,balance:R.balance};
   R.markers.push({time:bar.time,position:CH.dir==="Buy"?"belowBar":"aboveBar",color:cssVar("--accent"),shape:CH.dir==="Buy"?"arrowUp":"arrowDown",text:CH.dir});
   CH.series.setMarkers(R.markers.slice().sort((a,b)=>a.time-b.time));chUpdate()}
-function rpCheck(bar){const R=CH.rp,p=R.pos;if(!p||bar.time<=p.time)return;const buy=p.dir==="Buy";
+function rpCheck(bar){const R=CH.rp,p=R.pos;if(!p)return;if(bar.seq!=null){if(bar.seq<=(p.seq||0))return}else if(bar.time<=p.time)return;const buy=p.dir==="Buy";
   const hitSl=buy?bar.low<=p.sl:bar.high>=p.sl;const hitTp=p.tp!=null&&(buy?bar.high>=p.tp:bar.low<=p.tp);
   if(hitSl)rpClose(p.sl,"SL",bar);else if(hitTp)rpClose(p.tp,"TP",bar)} // нэг лаанд хоёулаа хүрвэл SL гэж үзнэ (болгоомжтой)
 function rpClose(price,reason,bar){const R=CH.rp,p=R.pos;if(!p)return;bar=bar||R.all[R.idx-1];
@@ -2599,8 +2630,8 @@ function myDraw(ctx,box){const B=BOT.my,R=NP.res;if(!B||B.err||!R||!R.D||!PAT.op
 
 /* --- Давтан тоглуулалтын арилжаа: нэг товшилтын Buy/Sell, лимит/стоп, графикт чирэх SL/TP, товчлол, статистик --- */
 const RT=(()=>{let s={};try{s=JSON.parse(localStorage.getItem("alkham-rt")||"{}")}catch(e){}
-  return {ot:s.ot||"mkt",sl:s.sl||"atr1.5",rr:s.rr||2,pick:null,pend:null,drag:null,stats:!!s.stats}})();
-function rtSave(){try{localStorage.setItem("alkham-rt",JSON.stringify({ot:RT.ot,sl:RT.sl,rr:RT.rr,stats:RT.stats}))}catch(e){}}
+  return {ot:s.ot||"mkt",sl:s.sl||"atr1.5",rr:s.rr||2,ib:s.ib||"real",pick:null,pend:null,drag:null,stats:!!s.stats}})();
+function rtSave(){try{localStorage.setItem("alkham-rt",JSON.stringify({ot:RT.ot,sl:RT.sl,rr:RT.rr,ib:RT.ib,stats:RT.stats}))}catch(e){}}
 const rtOn=()=>CH.mode==="replay"&&CH.rp.all.length>0;
 const rtRound=v=>+(+v).toFixed(decOf(CH.inst));
 function rtBars(){const R=CH.rp;return R.all.slice(Math.max(0,R.idx-60),R.idx)}
@@ -2612,7 +2643,7 @@ function rtDefaults(dir,entry){const d=dir==="Buy"?1:-1,tick=+CH.inst.tick||0.01
 function rtLots(entry,sl){const ins=CH.inst,cs=+ins.cs||1,step=+ins.lotStep||0.01,minLot=+ins.minLot||step,dist=Math.abs(entry-sl);if(!dist)return minLot;
   const lots=Math.floor(CH.rp.balance*(CH.risk||1)/100/(dist*cs)/step+1e-9)*step;return +Math.max(minLot,lots).toFixed(4)}
 function rtOpenPos(dir,entry,sl,tp,lots,bar){const R=CH.rp,cs=+CH.inst.cs||1;
-  R.pos={dir,entry,sl,tp,lots,risk:Math.abs(entry-sl)*cs*lots,time:bar.time,epoch:bar.time-TZ,balance:R.balance,idx:R.idx};
+  R.pos={seq:R.seq||0,dir,entry,sl,tp,lots,risk:Math.abs(entry-sl)*cs*lots,time:bar.time,epoch:bar.time-TZ,balance:R.balance,idx:R.idx};
   R.markers.push({time:bar.time,position:dir==="Buy"?"belowBar":"aboveBar",color:dir==="Buy"?"#2962FF":"#F23645",shape:dir==="Buy"?"arrowUp":"arrowDown",text:`${dir} ${fm(lots,2)}`});
   CH.series.setMarkers(R.markers.slice().sort((a,b)=>a.time-b.time));CH.dir=dir;rtSync();chUpdate();drDirty()}
 function rtSync(){const p=CH.rp.pos||RT.pend;if(!p)return;$("#opSl").value=fmtP(p.sl);$("#opTp").value=p.tp==null?"":fmtP(p.tp);CH.dir=p.dir}
@@ -2620,13 +2651,13 @@ function rtSync(){const p=CH.rp.pos||RT.pend;if(!p)return;$("#opSl").value=fmtP(
 function rtGo(dir){const R=CH.rp;if(!rtOn()){toast("Эхлээд эхлэх цагаа сонгоод Ачаалах дарна уу.");return}
   if(R.pos){toast("Позиц нээлттэй байна. Эхлээд хаана уу (X).");return}
   if(RT.ot==="lmt"){RT.pick=dir;RT.pend=null;drHint(`${dir==="Buy"?"Buy":"Sell"} захиалгын үнэ дээр графикт дарна уу · Esc цуцлах`);$("#chWrap").classList.add("picking");rtUi();return}
-  const bar=R.all[R.idx-1],E=bar.close,{sl,tp}=rtDefaults(dir,E);rtOpenPos(dir,E,sl,tp,rtLots(E,sl),bar)}
-function rtPlace(dir,price){const R=CH.rp,c=R.all[R.idx-1].close,E=rtRound(price),{sl,tp}=rtDefaults(dir,E);
-  const type=dir==="Buy"?(E<c?"limit":"stop"):(E>c?"limit":"stop");RT.pend={dir,entry:E,sl,tp,type,lots:rtLots(E,sl),epoch:R.all[R.idx-1].time-TZ};
+  const bar=R.cur?R.cur.bar:R.all[R.idx-1],E=CH.last,{sl,tp}=rtDefaults(dir,E);rtOpenPos(dir,E,sl,tp,rtLots(E,sl),bar)}
+function rtPlace(dir,price){const R=CH.rp,c=CH.last,E=rtRound(price),{sl,tp}=rtDefaults(dir,E);
+  const type=dir==="Buy"?(E<c?"limit":"stop"):(E>c?"limit":"stop");RT.pend={dir,entry:E,sl,tp,type,lots:rtLots(E,sl),epoch:(R.cur?R.cur.bar:R.all[R.idx-1]).time-TZ,seq:R.seq||0};
   RT.pick=null;drHint("");$("#chWrap").classList.remove("picking");rtSync();chUpdate();drDirty()}
 function rtCancel(){RT.pick=null;RT.pend=null;drHint("");$("#chWrap").classList.remove("picking");chUpdate();drDirty()}
 // лаа бүрт: хүлээгдэж буй захиалга биелэх эсэх
-function rtFill(bar){const p=RT.pend,R=CH.rp;if(!p||R.pos)return;const buy=p.dir==="Buy";let px=null;
+function rtFill(bar){const p=RT.pend,R=CH.rp;if(!p||R.pos)return;if(bar.seq!=null&&bar.seq<=(p.seq||0))return;const buy=p.dir==="Buy";let px=null;
   if(p.type==="limit"){if(buy?bar.low<=p.entry:bar.high>=p.entry)px=buy?Math.min(p.entry,bar.open):Math.max(p.entry,bar.open)}
   else if(buy?bar.high>=p.entry:bar.low<=p.entry)px=buy?Math.max(p.entry,bar.open):Math.min(p.entry,bar.open);
   if(px==null)return;RT.pend=null;rtOpenPos(p.dir,px,p.sl,p.tp,p.lots,bar);
@@ -2641,7 +2672,7 @@ function rtDown(e){if(!rtOn()||!CH.chart||!e.target.closest("#chChart")||e.butto
   const k=rtHit(y);if(!k)return;stop();const o=CH.rp.pos||RT.pend;RT.drag={k,y0:y,orig:{entry:o.entry,sl:o.sl,tp:o.tp}}}
 function rtMove(e){if(!rtOn())return;const r=$("#chChart").getBoundingClientRect(),y=e.clientY-r.top;
   if(RT.drag){e.preventDefault();const g=RT.drag,o=CH.rp.pos||RT.pend;if(!o){RT.drag=null;return}const p=yP(y);if(p==null)return;const v=rtRound(p);
-    if(g.k==="entry"){const d=v-g.orig.entry;o.entry=v;o.sl=rtRound(g.orig.sl+d);o.tp=rtRound(g.orig.tp+d);const c=CH.rp.all[CH.rp.idx-1].close;o.type=o.dir==="Buy"?(v<c?"limit":"stop"):(v>c?"limit":"stop")}
+    if(g.k==="entry"){const d=v-g.orig.entry;o.entry=v;o.sl=rtRound(g.orig.sl+d);o.tp=rtRound(g.orig.tp+d);const c=CH.last;o.type=o.dir==="Buy"?(v<c?"limit":"stop"):(v>c?"limit":"stop")}
     else o[g.k]=v;
     if(RT.pend&&o===RT.pend)o.lots=rtLots(o.entry,o.sl);rtSync();drDirty();rtUi();return}
   if(e.target.closest&&e.target.closest("#chChart")&&!DR.drag&&DR.tool==="cursor"){const k=rtHit(y);if(k)$("#chChart").style.cursor="ns-resize";else if(RT.pick)$("#chChart").style.cursor="crosshair"}}
@@ -2674,7 +2705,7 @@ function rtStats(){const res=CH.rp.results,N=res.length,cs=+CH.inst.cs||1;const 
 function rtUi(){const on=CH.mode==="replay",bar=$("#rtBar"),hud=$("#rtHud"),pos=$("#rtPos"),st=$("#rtStats");if(!bar)return;
   $("#chWrap").classList.toggle("replaying",on);if(CH.chart&&RT._ro!==on){RT._ro=on;CH.chart.timeScale().applyOptions({rightOffset:on?30:8})}
   bar.hidden=hud.hidden=!on;pos.hidden=!on;if(!on){st.hidden=true;return}
-  const R=CH.rp,last=R.all[R.idx-1];$("#rtBid").textContent=last?fmtP(last.close):"—";$("#rtAsk").textContent=last?fmtP(last.close):"—";
+  const R=CH.rp,last=R.all[R.idx-1],px=CH.last!=null?fmtP(CH.last):"—";$("#rtBid").textContent=px;$("#rtAsk").textContent=px;
   $$("#rtOt button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===RT.ot)));
   if(last){const {sl}=rtDefaults("Buy",last.close);$("#rtLot").textContent=`${fm(rtLots(last.close,sl),2)} лот · ${CH.risk||1}%`}
   const p=R.pos,q=RT.pend,cs=+CH.inst.cs||1;
@@ -2807,7 +2838,7 @@ async function chClick(e){
     else if(g.id==="opDir"){CH.dir=seg.dataset.v;chUpdate()}
     else if(g.id==="chMode"){const m=seg.dataset.v;if(m===CH.mode)return;CH.mode=m;setTimeout(mtfStatus,0);$("#chReplay").hidden=m!=="replay";
       if(m==="live"){CH.rp.pos=null;chLoadLive()}else{rpPause();await chForget();CH.rp.balance=currentBalance(enriched(S.trades));
-        if(CH.rp.all.length){CH.series.setData(CH.rp.all.slice(0,CH.rp.idx));CH.series.setMarkers(CH.rp.markers);const b=CH.rp.all[CH.rp.idx-1];CH.last=b.close;CH.lastTime=b.time;chStatus("Давтан тоглуулах")}
+        if(CH.rp.all.length){CH.rp.cur=null;CH.series.setData(CH.rp.all.slice(0,CH.rp.idx));CH.series.setMarkers(CH.rp.markers);const b=CH.rp.all[CH.rp.idx-1];CH.last=b.close;CH.lastTime=b.time;chStatus("Давтан тоглуулах")}
         else{CH.last=null;chStatus("Эхлэх цагаа сонгоод Ачаалах дарна уу.")}chUpdate()}}
     return}
   const rk=e.target.closest("#opRisk button");if(rk){CH.risk=+rk.dataset.v;drOptsSave();chUpdate();return}
