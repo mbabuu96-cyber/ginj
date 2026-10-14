@@ -256,6 +256,18 @@ svg text{font-family:var(--f-mono)}
 .np-table tr.dim td{opacity:.55}
 .np-nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
 .np-nav .sp{flex:1}
+.rt-keys{font-size:11px;margin-left:auto}
+.rt-bar{position:absolute;top:6px;left:48px;z-index:8;display:flex;gap:6px;align-items:center;background:var(--tv-bg,#fff);border:1px solid var(--tv-border);border-radius:8px;padding:4px 6px;box-shadow:0 2px 8px rgba(19,23,34,.12);white-space:nowrap}
+.rt-bar select{width:auto;padding:3px 6px;font-size:12px}
+.rt-bar .seg button{padding:3px 8px;font-size:12px}
+.rt-sell,.rt-buy{border:0;border-radius:6px;color:#fff;cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1.1;padding:4px 12px;min-width:84px;font-family:inherit}
+.rt-sell{background:#F23645}.rt-buy{background:#2962FF}.rt-sell:hover,.rt-buy:hover{filter:brightness(1.08)}
+.rt-sell span,.rt-buy span{font-size:10px;font-weight:700;letter-spacing:.06em;opacity:.9}.rt-sell b,.rt-buy b{font-size:14px}
+.rt-pos{position:absolute;top:56px;left:48px;z-index:8;display:flex;gap:8px;align-items:center;background:var(--tv-bg,#fff);border:1px solid var(--tv-border);border-radius:8px;padding:4px 8px;font-size:12px;white-space:nowrap;box-shadow:0 2px 8px rgba(19,23,34,.10)}
+.rt-hud{position:absolute;bottom:34px;right:72px;z-index:8;display:flex;gap:10px;align-items:center;background:var(--tv-bg,#fff);border:1px solid var(--tv-border);border-radius:8px;padding:3px 8px;font-size:12px;white-space:nowrap}
+.rt-stats{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:10px}
+@media (max-width:900px){.rt-bar{flex-wrap:wrap;max-width:calc(100% - 52px)}.rt-pos{top:auto;bottom:70px}}
+.ch-wrap.replaying .dt-props{top:100px}
 .bot-pats{display:flex;flex-direction:column;gap:6px}
 .bot-g{display:flex;flex-wrap:wrap;gap:4px;align-items:center}.bot-g .lbl{width:120px;flex:none;font-size:11px}
 .bot-p{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer;font-family:inherit}
@@ -1188,14 +1200,23 @@ function chBuild(){
     </div>
     <div class="ch-replay" id="chReplay" hidden>
       <label class="lbl" for="rpStart">Эхлэх цаг</label><input type="datetime-local" id="rpStart">
-      <button type="button" class="btn sm" data-ch="rpLoad">Ачаалах</button>
+      <button type="button" class="btn sm" data-ch="rpLoad">Ачаалах</button><button type="button" class="btn sm ghost" data-ch="rtRandom" title="Санамсаргүй өдрөөс эхлүүлэх (сохроор дасгал)">🎲 Санамсаргүй</button>
       <button type="button" class="btn sm" data-ch="rpStep" title="Нэг лаа урагшлах">+1 лаа</button>
       <button type="button" class="btn sm primary" data-ch="rpPlay" id="rpPlay">▶ Тоглуулах</button>
       <select id="rpSpeed" aria-label="Хурд"><option value="1">1 лаа/сек</option><option value="2" selected>2 лаа/сек</option><option value="5">5 лаа/сек</option><option value="10">10 лаа/сек</option></select>
       <span class="mono muted" id="rpTime" style="font-size:12px"></span>
+      <span class="muted rt-keys">B Buy · S Sell · → 1 лаа · Shift+→ 10 · Space тоглуулах · X хаах · E BE · Esc цуцлах</span>
     </div>
     <div class="ch-wrap" id="chWrap"><div class="dt-bar" id="dtBar" role="toolbar" aria-label="Зурах хэрэгсэл"></div><div id="chChart"></div><canvas id="chDraw" aria-hidden="true"></canvas><div class="dt-props" id="dtProps" hidden></div><div class="zone tp" id="zTp" hidden></div><div class="zone sl" id="zSl" hidden></div>
-      <div class="ch-pickhint" id="chHint" hidden></div><div class="ch-empty" id="chEmpty">График ачаалж байна…</div></div>
+      <div class="ch-pickhint" id="chHint" hidden></div>
+      <div class="rt-bar" id="rtBar" hidden><button type="button" class="rt-sell" data-ch="rtSell" title="Sell (S)"><span>SELL</span><b id="rtBid">—</b></button><button type="button" class="rt-buy" data-ch="rtBuy" title="Buy (B)"><span>BUY</span><b id="rtAsk">—</b></button>
+        <div class="seg" id="rtOt" role="group" aria-label="Захиалгын төрөл"><button type="button" data-ch="rtOt" data-v="mkt">Зах зээл</button><button type="button" data-ch="rtOt" data-v="lmt" title="Графикт дарж лимит/стоп захиалга тавих">Лимит/Стоп</button></div>
+        <select id="rtSlSel" aria-label="Анхдагч SL" title="Анхдагч stop (дараа нь графикт чирж өөрчилнө)"><option value="atr1">SL 1×ATR</option><option value="atr1.5">SL 1.5×ATR</option><option value="atr2">SL 2×ATR</option><option value="atr3">SL 3×ATR</option><option value="swing">SL сүүлийн swing</option></select>
+        <select id="rtRrSel" aria-label="Анхдагч TP" title="Анхдагч зорилт (R)"><option value="1">TP 1R</option><option value="1.5">TP 1.5R</option><option value="2">TP 2R</option><option value="3">TP 3R</option><option value="4">TP 4R</option><option value="5">TP 5R</option></select>
+        <span class="muted mono" id="rtLot"></span></div>
+      <div class="rt-pos" id="rtPos" hidden></div><div class="rt-hud" id="rtHud" hidden></div>
+      <div class="ch-empty" id="chEmpty">График ачаалж байна…</div></div>
+    <div class="rt-stats" id="rtStats" hidden></div>
     <div class="pat-box" id="patBox" hidden></div>
     <div class="muted" style="font-size:11px">Үнийн өгөгдөл: Deriv нээлттэй API. MT5 дээрх үнээс бага зэрэг зөрж болно. График: TradingView Lightweight Charts.</div>
   </section>
@@ -1228,6 +1249,7 @@ function chBuild(){
     else if(id==="npK"||id==="npM"||id==="npH"){NP[id.slice(2).toLowerCase()]=+e.target.value;npSave();npGo()}
     else if(id==="npShow"){NP.show=e.target.checked;npSave();drDirty()}
     else if(id==="npSrc"){NP.src=e.target.value;npSave();npGo()}
+    else if(id==="rtSlSel"){RT.sl=e.target.value;rtSave();rtUi()}else if(id==="rtRrSel"){RT.rr=+e.target.value;rtSave();rtUi()}
     else if(id==="npSort"){NP.sort=e.target.value;npSave();patRender()}
     else if(id&&/^my[A-Z]/.test(id)){const k={myNEq:"nEq",myTol:"tol",myPh:"ph",myLb:"lb",myKc:"kc",myAnc:"anc",myEnt:"ent",mySl:"sl",myTp:"tp",myExp:"exp",mySide:"side",myMax:"maxB"}[id];if(!k)return;
       MY[k]=k==="side"?e.target.value:+e.target.value;BOT.my=null;BOT.mySel=null;mySave();patRender();drDirty()}
@@ -1237,7 +1259,7 @@ function chBuild(){
     else if(id==="mtfSel"){DR.mtf=+e.target.value;drOptsSave();drDirty();MTF.key="";MTF.check=null;mtfStatus();mtfLoadReal();if(DR.mtf&&DR.mtf<=CH.gran)toast("Дээд интервал нь графикийн интервалаас их байх ёстой.")}
     else if(id==="sessChk"){DR.sess=e.target.checked;drOptsSave();drDirty();if(DR.sess&&CH.gran>3600)toast("Сешний бүс 1 цагаас бага интервал дээр харагдана.")}});
   const d=new Date(Date.now()-3*864e5);d.setHours(9,0,0,0);$("#rpStart").value=CH.rpStart||`${ymd(d)}T09:00`;$("#rpSpeed").value=String(CH.rp.speed||2);
-  $("#mtfSel").value=String(DR.mtf);$("#sessChk").checked=DR.sess;drInit();
+  $("#mtfSel").value=String(DR.mtf);$("#sessChk").checked=DR.sess;drInit();$("#rtSlSel").value=RT.sl;$("#rtRrSel").value=String(RT.rr);
   let wide=false;try{wide=localStorage.getItem("alkham-chart-wide")==="1"}catch(e){}chWide(wide);
   document.addEventListener("fullscreenchange",()=>{const on=document.fullscreenElement===$("#chPanel");$("#btnFull").textContent=on?"✕ Гарах":"⛶ Бүтэн дэлгэц";setTimeout(()=>{chZones();drDirty()},60)});
 }
@@ -1368,11 +1390,13 @@ function chUpdate(fromTick){
   else{go.textContent="Тэмдэглэлд бүртгэх";go.dataset.ch="go";go.disabled=false}
   $("#opMode").textContent=replay?"Давтан тоглуулах":"Шууд";
   $$("#opDir button").forEach(b=>{b.setAttribute("aria-pressed",String(b.dataset.v===(CH.rp.pos?CH.rp.pos.dir:CH.dir)));b.disabled=!!CH.rp.pos});
-  chLines(o);rpRenderBox();
+  chLines(o);rpRenderBox();rtUi();
 }
 let zoneRaf=0;
 function chLines(o){
-  if(!CH.series)return;o=o||chCalc();
+  if(!CH.series)return;
+  if(CH.mode==="replay"){for(const k of Object.keys(CH.lines)){CH.series.removePriceLine(CH.lines[k]);delete CH.lines[k]}CH._zone=null;$("#zTp").hidden=$("#zSl").hidden=true;return}
+  o=o||chCalc();
   const want={entry:o.entry!=null&&(o.sl!=null||CH.rp.pos)?o.entry:null,sl:o.sl,tp:o.tp};
   const col={entry:cssVar("--accent"),sl:cssVar("--loss"),tp:cssVar("--gain")},title={entry:"Орох",sl:"SL",tp:"TP"};
   for(const k of ["entry","sl","tp"]){const v=want[k];const L=CH.lines[k];
@@ -1401,7 +1425,8 @@ async function rpLoad(){
     if(seq!==CH.loadSeq)return;
     const pb=(past.candles||[]).filter(c=>+c.epoch<start).map(toBar),fb=(fut.candles||[]).filter(c=>+c.epoch>=start).map(toBar);
     if(!fb.length)throw new Error("Сонгосон цагаас хойш өгөгдөл олдсонгүй. Өөр цаг сонгоно уу.");
-    const R=CH.rp;R.sym=sym;R.all=pb.concat(fb);R.idx=Math.max(1,pb.length);R.pos=null;R.markers=[];R.results=[];R.balance=currentBalance(enriched(S.trades));
+    const R=CH.rp;R.sym=sym;R.all=pb.concat(fb);R.idx=Math.max(1,pb.length);R.pos=null;R.markers=[];R.results=[];R.balance=currentBalance(enriched(S.trades));RT.pend=null;RT.pick=null;
+    const lag=(+fb[0].time-TZ)-start;if(lag>2*86400)toast(`Deriv ${tfName(g)}-ийн түүх ${new Date((fb[0].time-TZ)*1000).toLocaleDateString("en-GB")}-ээс л эхэлж байна. Илүү эртийн өдөр хэрэгтэй бол 5м эсвэл түүнээс дээш интервал сонгоно уу.`);
     CH.series.setData(R.all.slice(0,R.idx));CH.series.setMarkers([]);const b=R.all[R.idx-1];CH.last=b.close;CH.lastTime=b.time;
     CH.chart.timeScale().scrollToRealTime();chEmpty("");rpTimeLabel();
     chStatus(`Давтан тоглуулах · ${sym} · ${fb.length} лаа бэлэн`);chUpdate();
@@ -1415,7 +1440,7 @@ async function rpMore(){const R=CH.rp;if(R.loading||!R.all.length)return false;c
 async function rpStep(){const R=CH.rp;if(!R.all.length){chStatus("Эхлээд Ачаалах дарна уу.",true);return}
   if(R.idx>=R.all.length-3)rpMore();
   if(R.idx>=R.all.length){rpPause();chStatus("Өгөгдлийн төгсгөлд хүрлээ.");return}
-  const bar=R.all[R.idx++];CH.series.update(bar);CH.last=bar.close;CH.lastTime=bar.time;rpCheck(bar);rpTimeLabel();chUpdate(true)}
+  const bar=R.all[R.idx++];CH.series.update(bar);CH.last=bar.close;CH.lastTime=bar.time;rtFill(bar);rpCheck(bar);rpTimeLabel();chUpdate(true)}
 function rpTimeLabel(){const R=CH.rp,b=R.all[R.idx-1];$("#rpTime").textContent=b?new Date((b.time-TZ)*1000).toLocaleString("en-GB",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}):""}
 function rpPlay(){const R=CH.rp;if(R.timer){rpPause();return}if(!R.all.length){chStatus("Эхлээд Ачаалах дарна уу.",true);return}
   R.timer=setInterval(rpStep,1000/(R.speed||2));$("#rpPlay").textContent="❚❚ Зогсоох"}
@@ -1538,7 +1563,7 @@ function drRender(){
   const font=TVF;
   if(DR.sess&&CH.gran<=3600)drSessions(ctx,box,font);
   if(DR.mtf&&DR.mtf>CH.gran)drMtf(ctx,box);
-  patDraw(ctx,box);
+  patDraw(ctx,box);rtDraw(ctx,box);
   if(!DR.hidden)for(const d of drList())drShape(ctx,d,box,font,d===DR.sel,d===DR.hover);
   if(DR.draft)drShape(ctx,DR.draft,box,font,true,false);
   ctx.restore()}
@@ -1837,12 +1862,13 @@ function drInit(){
   const w=$("#chWrap"),bar=$("#dtBar");bar.innerHTML=drBarHtml();
   bar.addEventListener("click",e=>{const b=e.target.closest("button");if(b)drBarClick(b)});
   $("#dtProps").addEventListener("click",e=>{const b=e.target.closest("[data-prop]");if(b)drProp(b)});
-  w.addEventListener("pointerdown",drDown,true);
+  w.addEventListener("pointerdown",rtDown,true);w.addEventListener("pointerdown",drDown,true);
   w.addEventListener("dblclick",e=>{if(!e.target.closest("#chChart"))return;const p=evPt(e,true);const h=p&&drHit(p.x,p.y);if(h&&h.d.type==="fib"){e.preventDefault();e.stopPropagation();DR.sel=h.d;drSelUi();fibOpen(h.d)}},true);
   w.addEventListener("contextmenu",e=>{if(e.target.closest("#chChart")){const p=evPt(e,true);if(p&&drHit(p.x,p.y))e.preventDefault()}});
   ["mousedown","touchstart"].forEach(ev=>w.addEventListener(ev,e=>{if(e.target.closest("#dtBar,#dtProps"))return;if(DR.intercept||DR.tool!=="cursor"){e.stopPropagation();if(ev==="touchstart"&&DR.tool!=="cursor")e.preventDefault()}},{capture:true,passive:false}));
   w.addEventListener("touchmove",e=>{if(DR.intercept||DR.draft){e.stopPropagation();e.preventDefault()}},{capture:true,passive:false});
   window.addEventListener("pointermove",drMove,{passive:false});window.addEventListener("pointerup",drUp);window.addEventListener("pointercancel",drUp);
+  window.addEventListener("pointermove",rtMove,{passive:false});window.addEventListener("pointerup",rtUp);window.addEventListener("pointercancel",rtUp);document.addEventListener("keydown",rtKeys);
   document.addEventListener("keydown",e=>{if(S.view!=="chart"||!CH.active||(document.querySelector("dialog[open]")))return;const tag=(document.activeElement||{}).tagName;if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT")return;
     if(e.altKey&&!e.ctrlKey&&KEYMAP[e.key.toLowerCase()]){e.preventDefault();drSetTool(KEYMAP[e.key.toLowerCase()]);DR.sel=null;drSelUi();drDirty();return}
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){e.preventDefault();drUndo();return}
@@ -2528,6 +2554,118 @@ function myDraw(ctx,box){const B=BOT.my,R=NP.res;if(!B||B.err||!R||!R.D||!PAT.op
   B.nowPools.forEach(p=>{p.mem.forEach((m,k)=>line(pY(m.p),"#FF9800",k===p.need-1?[]:[6,4],`Өмнөх 4ц ${p.dir<0?"оргил":"ёроол"} ${fmtP(m.p)}`,X(m.i)));p.mem.forEach(m=>{const x=X(m.i),y=pY(m.p);if(x!=null&&y!=null){ctx.fillStyle="#FF9800";ctx.beginPath();ctx.arc(x,y,3.5,0,7);ctx.fill()}})});
   B.live.forEach(x=>{if(x.st!=="order")return;line(pY(x.E),"#2962FF",[],`Лимит ${x.dir<0?"Sell":"Buy"} ${fmtP(x.E)}`,X(x.place));line(pY(x.SL),"#F23645",[4,3],`SL ${fmtP(x.SL)}`,X(x.place));line(pY(x.TP),"#089981",[4,3],`TP ${fmtP(x.TP)}`,X(x.place))})}
 
+/* --- Давтан тоглуулалтын арилжаа: нэг товшилтын Buy/Sell, лимит/стоп, графикт чирэх SL/TP, товчлол, статистик --- */
+const RT=(()=>{let s={};try{s=JSON.parse(localStorage.getItem("alkham-rt")||"{}")}catch(e){}
+  return {ot:s.ot||"mkt",sl:s.sl||"atr1.5",rr:s.rr||2,pick:null,pend:null,drag:null,stats:!!s.stats}})();
+function rtSave(){try{localStorage.setItem("alkham-rt",JSON.stringify({ot:RT.ot,sl:RT.sl,rr:RT.rr,stats:RT.stats}))}catch(e){}}
+const rtOn=()=>CH.mode==="replay"&&CH.rp.all.length>0;
+const rtRound=v=>+(+v).toFixed(decOf(CH.inst));
+function rtBars(){const R=CH.rp;return R.all.slice(Math.max(0,R.idx-60),R.idx)}
+function rtATR(){const b=rtBars();if(b.length<3)return 0;let s=0,k=0;for(let i=Math.max(1,b.length-14);i<b.length;i++){s+=Math.max(b[i].high-b[i].low,Math.abs(b[i].high-b[i-1].close),Math.abs(b[i].low-b[i-1].close));k++}return k?s/k:0}
+function rtDefaults(dir,entry){const d=dir==="Buy"?1:-1,tick=+CH.inst.tick||0.01;let sl;
+  if(RT.sl==="swing"){const b=rtBars().slice(-20);sl=d>0?Math.min(...b.map(x=>x.low))-tick:Math.max(...b.map(x=>x.high))+tick;if((entry-sl)*d<=tick)sl=entry-d*rtATR()}
+  else{const m=+RT.sl.replace("atr","")||1.5;sl=entry-d*m*(rtATR()||entry*0.001)}
+  sl=rtRound(sl);const tp=rtRound(entry+d*Math.abs(entry-sl)*RT.rr);return {sl,tp}}
+function rtLots(entry,sl){const ins=CH.inst,cs=+ins.cs||1,step=+ins.lotStep||0.01,minLot=+ins.minLot||step,dist=Math.abs(entry-sl);if(!dist)return minLot;
+  const lots=Math.floor(CH.rp.balance*(CH.risk||1)/100/(dist*cs)/step+1e-9)*step;return +Math.max(minLot,lots).toFixed(4)}
+function rtOpenPos(dir,entry,sl,tp,lots,bar){const R=CH.rp,cs=+CH.inst.cs||1;
+  R.pos={dir,entry,sl,tp,lots,risk:Math.abs(entry-sl)*cs*lots,time:bar.time,epoch:bar.time-TZ,balance:R.balance,idx:R.idx};
+  R.markers.push({time:bar.time,position:dir==="Buy"?"belowBar":"aboveBar",color:dir==="Buy"?"#2962FF":"#F23645",shape:dir==="Buy"?"arrowUp":"arrowDown",text:`${dir} ${fm(lots,2)}`});
+  CH.series.setMarkers(R.markers.slice().sort((a,b)=>a.time-b.time));CH.dir=dir;rtSync();chUpdate();drDirty()}
+function rtSync(){const p=CH.rp.pos||RT.pend;if(!p)return;$("#opSl").value=fmtP(p.sl);$("#opTp").value=p.tp==null?"":fmtP(p.tp);CH.dir=p.dir}
+// Buy/Sell товч: зах зээлийн үнээр шууд, эсвэл лимит/стоп горимд графикаас үнэ сонгоно
+function rtGo(dir){const R=CH.rp;if(!rtOn()){toast("Эхлээд эхлэх цагаа сонгоод Ачаалах дарна уу.");return}
+  if(R.pos){toast("Позиц нээлттэй байна. Эхлээд хаана уу (X).");return}
+  if(RT.ot==="lmt"){RT.pick=dir;RT.pend=null;drHint(`${dir==="Buy"?"Buy":"Sell"} захиалгын үнэ дээр графикт дарна уу · Esc цуцлах`);$("#chWrap").classList.add("picking");rtUi();return}
+  const bar=R.all[R.idx-1],E=bar.close,{sl,tp}=rtDefaults(dir,E);rtOpenPos(dir,E,sl,tp,rtLots(E,sl),bar)}
+function rtPlace(dir,price){const R=CH.rp,c=R.all[R.idx-1].close,E=rtRound(price),{sl,tp}=rtDefaults(dir,E);
+  const type=dir==="Buy"?(E<c?"limit":"stop"):(E>c?"limit":"stop");RT.pend={dir,entry:E,sl,tp,type,lots:rtLots(E,sl),epoch:R.all[R.idx-1].time-TZ};
+  RT.pick=null;drHint("");$("#chWrap").classList.remove("picking");rtSync();chUpdate();drDirty()}
+function rtCancel(){RT.pick=null;RT.pend=null;drHint("");$("#chWrap").classList.remove("picking");chUpdate();drDirty()}
+// лаа бүрт: хүлээгдэж буй захиалга биелэх эсэх
+function rtFill(bar){const p=RT.pend,R=CH.rp;if(!p||R.pos)return;const buy=p.dir==="Buy";let px=null;
+  if(p.type==="limit"){if(buy?bar.low<=p.entry:bar.high>=p.entry)px=buy?Math.min(p.entry,bar.open):Math.max(p.entry,bar.open)}
+  else if(buy?bar.high>=p.entry:bar.low<=p.entry)px=buy?Math.max(p.entry,bar.open):Math.min(p.entry,bar.open);
+  if(px==null)return;RT.pend=null;rtOpenPos(p.dir,px,p.sl,p.tp,p.lots,bar);
+  const q=R.pos;if(buy?bar.low<=q.sl:bar.high>=q.sl)rpClose(q.sl,"SL",bar)}// нэг лаанд SL-д хүрвэл (болгоомжтой)
+function rtBE(){const p=CH.rp.pos;if(!p)return;p.sl=p.entry;rtSync();chUpdate();drDirty();toast("Stop-ийг орох үнэ рүү (BE) зөөлөө")}
+// чирэх
+function rtLines(){const p=CH.rp.pos,q=RT.pend,L=[];if(p){L.push(["sl",p.sl]);if(p.tp!=null)L.push(["tp",p.tp])}else if(q){L.push(["entry",q.entry],["sl",q.sl],["tp",q.tp])}return L}
+function rtHit(y){for(const [k,v] of rtLines()){const yy=pY(v);if(yy!=null&&Math.abs(yy-y)<=6)return k}return null}
+function rtDown(e){if(!rtOn()||!CH.chart||!e.target.closest("#chChart")||e.button>0)return;const r=$("#chChart").getBoundingClientRect(),y=e.clientY-r.top;
+  const stop=()=>{e.preventDefault();e.stopImmediatePropagation();DR.intercept=true};
+  if(RT.pick){const p=yP(y);if(p!=null){stop();rtPlace(RT.pick,p);setTimeout(()=>{DR.intercept=false},0)}return}
+  const k=rtHit(y);if(!k)return;stop();const o=CH.rp.pos||RT.pend;RT.drag={k,y0:y,orig:{entry:o.entry,sl:o.sl,tp:o.tp}}}
+function rtMove(e){if(!rtOn())return;const r=$("#chChart").getBoundingClientRect(),y=e.clientY-r.top;
+  if(RT.drag){e.preventDefault();const g=RT.drag,o=CH.rp.pos||RT.pend;if(!o){RT.drag=null;return}const p=yP(y);if(p==null)return;const v=rtRound(p);
+    if(g.k==="entry"){const d=v-g.orig.entry;o.entry=v;o.sl=rtRound(g.orig.sl+d);o.tp=rtRound(g.orig.tp+d);const c=CH.rp.all[CH.rp.idx-1].close;o.type=o.dir==="Buy"?(v<c?"limit":"stop"):(v>c?"limit":"stop")}
+    else o[g.k]=v;
+    if(RT.pend&&o===RT.pend)o.lots=rtLots(o.entry,o.sl);rtSync();drDirty();rtUi();return}
+  if(e.target.closest&&e.target.closest("#chChart")&&!DR.drag&&DR.tool==="cursor"){const k=rtHit(y);if(k)$("#chChart").style.cursor="ns-resize";else if(RT.pick)$("#chChart").style.cursor="crosshair"}}
+function rtUp(){if(!RT.drag)return;const g=RT.drag;RT.drag=null;const o=CH.rp.pos||RT.pend;
+  if(o){const d=o.dir==="Buy"?1:-1;if((o.sl-o.entry)*d>=0){Object.assign(o,{sl:g.orig.sl});toast(`Stop нь орох үнийн ${d>0?"доор":"дээр"} байх ёстой`)}
+    if(o.tp!=null&&(o.tp-o.entry)*d<=0){o.tp=g.orig.tp;toast(`Зорилт нь орох үнийн ${d>0?"дээр":"доор"} байх ёстой`)}}
+  rtSync();chUpdate();drDirty();setTimeout(()=>{DR.intercept=false},0)}
+// графикт зурах (TradingView-ийн Long/Short хэрэгсэл шиг)
+function rtDraw(ctx,box){if(!rtOn())return;const p=CH.rp.pos,q=RT.pend,o=p||q;if(!o)return;const cs=+CH.inst.cs||1,d=o.dir==="Buy"?1:-1,cur=CH.last;
+  const yE=pY(o.entry),yS=pY(o.sl),yT=o.tp!=null?pY(o.tp):null;if(yE==null||yS==null)return;let x0=dX(p?p.epoch:q.epoch);if(x0==null||x0<0)x0=0;
+  ctx.fillStyle="rgba(242,54,69,0.12)";ctx.fillRect(x0,Math.min(yE,yS),box.w-x0,Math.abs(yS-yE));
+  if(yT!=null){ctx.fillStyle="rgba(8,153,129,0.12)";ctx.fillRect(x0,Math.min(yE,yT),box.w-x0,Math.abs(yT-yE))}
+  const line=(y,col,dash,w)=>{ctx.strokeStyle=col;ctx.lineWidth=w||1.5;ctx.setLineDash(dash);ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(box.w,y);ctx.stroke();ctx.setLineDash([])};
+  line(yE,"#2962FF",p?[]:[6,4],2);line(yS,"#F23645",[5,3]);if(yT!=null)line(yT,"#089981",[5,3]);
+  const risk=Math.abs(o.entry-o.sl)*cs*o.lots,money0=v=>`${v>=0?"+":"−"}${S.settings.currency}${fm(Math.abs(v))}`;
+  const lab=(y,txt,col,handle)=>{ctx.font=`600 11px ${TVF}`;const w=ctx.measureText(txt).width+(handle?26:12);const x=Math.max(4,box.w-w-8);ctx.fillStyle=col;ctx.fillRect(x,y-10,w,20);ctx.fillStyle="#fff";ctx.textBaseline="middle";ctx.fillText(txt,x+6,y);
+    if(handle){ctx.fillStyle="rgba(255,255,255,.85)";for(let k=0;k<3;k++)ctx.fillRect(x+w-14,y-5+k*4,8,1.5)}};
+  const steps=v=>CH.inst.kind==="step"&&+CH.inst.tick?` · ${Math.round(v/CH.inst.tick)} алхам`:"";
+  lab(yS,`SL ${fmtP(o.sl)}${steps(Math.abs(o.entry-o.sl))} · −1R · ${money0(-risk)}`,"#F23645",true);
+  if(yT!=null){const rr=Math.abs(o.tp-o.entry)/Math.abs(o.entry-o.sl);lab(yT,`TP ${fmtP(o.tp)} · +${rr.toFixed(2)}R · ${money0(Math.abs(o.tp-o.entry)*cs*o.lots)}`,"#089981",true)}
+  if(p){const pl=(cur-p.entry)*d*cs*p.lots;lab(yE,`${p.dir.toUpperCase()} ${fm(p.lots,2)} @ ${fmtP(p.entry)} · ${money0(pl)} · ${(p.risk?pl/p.risk:0)>=0?"+":""}${(p.risk?pl/p.risk:0).toFixed(2)}R`,pl>=0?"#089981":"#F23645",false)}
+  else lab(yE,`${q.type==="limit"?"Лимит":"Стоп"} ${q.dir} ${fm(q.lots,2)} @ ${fmtP(q.entry)} · хүлээж байна`,"#2962FF",true)}
+// статистик
+function rtStats(){const res=CH.rp.results,N=res.length,cs=+CH.inst.cs||1;const Rs=res.map(r=>r.R||0),wins=res.filter(r=>r.pnl>0),loss=res.filter(r=>r.pnl<=0);
+  let cum=0,peak=0,dd=0,ws=0,ls=0,bw=0,bl=0;const curve=[0];res.forEach(r=>{cum+=r.R||0;curve.push(cum);peak=Math.max(peak,cum);dd=Math.max(dd,peak-cum);if(r.pnl>0){ws++;ls=0;bw=Math.max(bw,ws)}else{ls++;ws=0;bl=Math.max(bl,ls)}});
+  const gw=wins.reduce((a,r)=>a+r.pnl,0),gl=-loss.reduce((a,r)=>a+r.pnl,0),side=dir=>{const L=res.filter(r=>r.dir===dir);return {N:L.length,win:L.length?L.filter(r=>r.pnl>0).length/L.length:0,R:L.reduce((a,r)=>a+(r.R||0),0)}};
+  const hold=res.filter(r=>r.closeEp&&r.openEp).map(r=>(r.closeEp-r.openEp)/CH.gran);
+  return {N,win:N?wins.length/N:0,sumR:Rs.reduce((a,v)=>a+v,0),avgR:N?Rs.reduce((a,v)=>a+v,0)/N:0,pnl:res.reduce((a,r)=>a+r.pnl,0),pf:gl?gw/gl:(gw?Infinity:0),dd,bw,bl,best:N?Math.max(...Rs):0,worst:N?Math.min(...Rs):0,
+    buy:side("Buy"),sell:side("Sell"),hold:hold.length?hold.reduce((a,v)=>a+v,0)/hold.length:0,curve,avgW:wins.length?wins.reduce((a,r)=>a+(r.R||0),0)/wins.length:0,avgL:loss.length?loss.reduce((a,r)=>a+(r.R||0),0)/loss.length:0}}
+function rtUi(){const on=CH.mode==="replay",bar=$("#rtBar"),hud=$("#rtHud"),pos=$("#rtPos"),st=$("#rtStats");if(!bar)return;
+  $("#chWrap").classList.toggle("replaying",on);if(CH.chart&&RT._ro!==on){RT._ro=on;CH.chart.timeScale().applyOptions({rightOffset:on?30:8})}
+  bar.hidden=hud.hidden=!on;pos.hidden=!on;if(!on){st.hidden=true;return}
+  const R=CH.rp,last=R.all[R.idx-1];$("#rtBid").textContent=last?fmtP(last.close):"—";$("#rtAsk").textContent=last?fmtP(last.close):"—";
+  $$("#rtOt button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===RT.ot)));
+  if(last){const {sl}=rtDefaults("Buy",last.close);$("#rtLot").textContent=`${fm(rtLots(last.close,sl),2)} лот · ${CH.risk||1}%`}
+  const p=R.pos,q=RT.pend,cs=+CH.inst.cs||1;
+  if(p){const pl=(CH.last-p.entry)*(p.dir==="Buy"?1:-1)*cs*p.lots;pos.innerHTML=`<span class="dir ${p.dir==="Sell"?"sell":"buy"}">${p.dir}</span><b class="num">${fm(p.lots,2)} @ ${fmtP(p.entry)}</b><b class="num ${cls(pl)}">${money(pl)} · ${rfmt(p.risk?pl/p.risk:null)}</b>
+      <button type="button" class="btn sm" data-ch="rtBE" title="Stop-ийг орох үнэ рүү (E)">BE</button><button type="button" class="btn sm danger" data-ch="rpCloseNow" title="Одоо хаах (X)">Хаах ✕</button>`}
+  else if(q)pos.innerHTML=`<span class="dir ${q.dir==="Sell"?"sell":"buy"}">${q.type==="limit"?"Лимит":"Стоп"} ${q.dir}</span><b class="num">${fm(q.lots,2)} @ ${fmtP(q.entry)}</b><span class="muted">SL ${fmtP(q.sl)} · TP ${fmtP(q.tp)}</span><button type="button" class="btn sm" data-ch="rtCancel" title="Цуцлах (Esc)">Цуцлах</button>`;
+  else if(RT.pick)pos.innerHTML=`<span class="muted">${RT.pick} захиалгын үнэ дээр графикт дарна уу</span><button type="button" class="btn sm" data-ch="rtCancel">Цуцлах</button>`;
+  else pos.innerHTML="";pos.hidden=!pos.innerHTML;
+  const s=rtStats();hud.innerHTML=`<span>${s.N} арилжаа</span><span>${s.N?pct(s.win):"—"}</span><b class="${cls(s.sumR)}">${rfmt(s.sumR)}</b><b class="${cls(s.pnl)}">${money(s.pnl)}</b><button type="button" class="btn sm ghost" data-ch="rtStatsTog" aria-pressed="${RT.stats}">Статистик ${RT.stats?"▴":"▾"}</button>`;
+  st.hidden=!RT.stats;if(RT.stats)rtStatsHtml(s)}
+function rtStatsHtml(s){const st=$("#rtStats"),R=CH.rp,kv=(l,v,c="",sub="")=>`<div class="np-kv"><span class="lbl">${l}</span><b class="${c}">${v}</b><span class="muted">${sub}</span></div>`;
+  let h=`<div class="panel-h"><h2>Давтан тоглуулалтын статистик</h2><span class="muted" style="font-size:12px">${CH.inst.name} · ${tfName(CH.gran)} · энэ сешн</span>
+    <button type="button" class="btn sm ghost" data-ch="rtReset" title="Статистикийг тэглэх">Шинэ сешн</button></div>`;
+  if(!s.N){h+=`<div class="muted" style="font-size:13px">Арилжаа хийгдээгүй байна. Графикийн дээрх <b>BUY</b> / <b>SELL</b> товч эсвэл <b>B</b> / <b>S</b> товчлуураар позиц нээгээд, <b>→</b> (нэг лаа), <b>Shift+→</b> (10 лаа), <b>Space</b> (тоглуулах) -аар урагшлуулна.</div>`;st.innerHTML=h;return}
+  h+=`<div class="bot-kpis">${kv("Арилжаа",s.N,"",`Buy ${s.buy.N} · Sell ${s.sell.N}`)}${kv("Хожлын хувь",pct(s.win),"",`дундаж хожил ${rfmt(s.avgW)} · алдагдал ${rfmt(s.avgL)}`)}
+    ${kv("Нийт R",rfmt(s.sumR),cls(s.sumR),`дундаж ${rfmt(s.avgR)}`)}${kv("Нийт P/L",money(s.pnl),cls(s.pnl),`profit factor ${isFinite(s.pf)?s.pf.toFixed(2):"∞"}`)}
+    ${kv("Хамгийн их уналт","−"+s.dd.toFixed(2)+"R","neg",`шилдэг ${rfmt(s.best)} · муу ${rfmt(s.worst)}`)}${kv("Дараалал",`${s.bw} хожил · ${s.bl} алдагдал`,"","хамгийн урт")}
+    ${kv("Buy",s.buy.N?pct(s.buy.win):"—","",rfmt(s.buy.R))}${kv("Sell",s.sell.N?pct(s.sell.win):"—","",rfmt(s.sell.R))}${kv("Барих хугацаа",`${s.hold.toFixed(0)} лаа`,"","дунджаар")}</div>
+    ${botCurve({curve:s.curve,rand:0})}`;
+  const unsaved=R.results.filter(r=>!r.saved).length;
+  h+=unsaved?`<button type="button" class="btn" data-ch="rpSave">${unsaved} арилжааг тэмдэглэлд хадгалах (backtest)</button>`:`<div class="muted" style="font-size:12px">Бүгд тэмдэглэлд хадгалагдсан (Арилжаанууд → «Давтан тоглуулалт»).</div>`;
+  st.innerHTML=h}
+function rtKeys(e){if(S.view!=="chart"||CH.mode!=="replay"||document.querySelector("dialog[open]"))return;const tag=(document.activeElement||{}).tagName;if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT")return;if(e.altKey||e.ctrlKey||e.metaKey)return;
+  const c=e.code;
+  if(c==="KeyB"){e.preventDefault();rtGo("Buy")}else if(c==="KeyS"){e.preventDefault();rtGo("Sell")}
+  else if(c==="ArrowRight"){e.preventDefault();rpPause();const n=e.shiftKey?10:1;for(let i=0;i<n;i++)rpStep()}
+  else if(c==="Space"){e.preventDefault();rpPlay()}
+  else if(c==="KeyX"){if(CH.rp.pos){e.preventDefault();rpClose(CH.last,"Гараар")}}
+  else if(c==="KeyE"){if(CH.rp.pos){e.preventDefault();rtBE()}}
+  else if(c==="Escape"){if(RT.pick||RT.pend)rtCancel()}}
+// санамсаргүй эхлэх цаг (сохроор дасгал хийх)
+function rtRandom(){const g=CH.gran,days=g<=60?25:g<=300?120:300,now=Date.now()-86400e3*2,t=new Date(now-Math.random()*days*86400e3);t.setSeconds(0,0);
+  $("#rpStart").value=localStr(Math.floor(t.getTime()/1000));CH.rpStart=$("#rpStart").value;drOptsSave();rpLoad()}
+
 /* --- clicks inside chart tab --- */
 async function chClick(e){
   if(e.target.closest("#dtBar,#dtProps"))return;
@@ -2576,6 +2714,12 @@ async function chClick(e){
   else if(act==="rpOpen")rpOpen();
   else if(act==="rpCloseNow"){rpClose(CH.last,"Гараар")}
   else if(act==="rpSave")rpSave();
+  else if(act==="rtBuy")rtGo("Buy");else if(act==="rtSell")rtGo("Sell");
+  else if(act==="rtOt"){RT.ot=b.dataset.v;rtSave();if(RT.pick)rtCancel();rtUi()}
+  else if(act==="rtCancel")rtCancel();else if(act==="rtBE")rtBE();
+  else if(act==="rtStatsTog"){RT.stats=!RT.stats;rtSave();rtUi()}
+  else if(act==="rtReset"){const R=CH.rp;if(R.results.some(r=>!r.saved)&&!confirm("Хадгалаагүй арилжаанууд устах уу?"))return;R.results=[];R.markers=[];CH.series.setMarkers([]);R.balance=currentBalance(enriched(S.trades));chUpdate()}
+  else if(act==="rtRandom")rtRandom();
 }
 
 /* ---------------- events ---------------- */
