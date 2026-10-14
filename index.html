@@ -2094,7 +2094,7 @@ const npIdb=(()=>{let dbp=null;const open=()=>dbp||(dbp=new Promise((res,rej)=>{
 async function npYear(force){const key=npYearKey();if(!force&&NPY.key===key&&NPY.t&&!NPY.err)return NPY;if(NPY.busy&&NPY.busyKey===key)return NPY.busy;
   const g=CH.gran,now=Math.floor(Date.now()/1000),start=Math.floor((now-NP_DAYS*86400)/g)*g,span=5000*g;
   const wins=[];for(let s=start;s<=now;s+=span)wins.push([s,Math.min(now,s+span-g)]);
-  NPY.busyKey=key;NPY.done=0;NPY.total=wins.length;NPY.err=null;NPY.retry=0;
+  NPY.busyKey=key;NPY.done=0;NPY.total=wins.length;NPY.err=null;NPY.retry=0;NPY.empty=0;
   NPY.busy=(async()=>{
     const cache=force?null:await npIdb.get("npy:"+key);
     // хадгалсан өгөгдлийн цонх бүрт хэдэн лаа байгааг тоолж, дутуу цонхыг л татна
@@ -2105,7 +2105,10 @@ async function npYear(force){const key=npYearKey();if(!force&&NPY.key===key&&NPY
     const todo=wins.map((w,i)=>i).filter(i=>need[i]);NPY.total=todo.length;NPY.cached=wins.length-todo.length;
     const parts=new Map();let next=0;const fail=new Set();
     const fetchOne=async w=>{let tries=0;for(;;){if(npYearKey()!==key)throw new Error("cancel");
-        try{const r=await dvSend({ticks_history:CH.sym,style:"candles",granularity:g,start:wins[w][0],end:wins[w][1],count:5000});parts.set(w,r.candles||[]);fail.delete(w);return}
+        try{// графикийн хуучин лаа ачаалахтай ижил: дуусах цаг + тоо (start-гүй); хоосон ирвэл start/end-ээр дахин
+          let r=await dvSend({ticks_history:CH.sym,style:"candles",granularity:g,end:wins[w][1],count:5000,adjust_start_time:1});let cs=(r.candles||[]).filter(c=>+c.epoch>=wins[w][0]);
+          if(!cs.length){r=await dvSend({ticks_history:CH.sym,style:"candles",granularity:g,start:wins[w][0],end:wins[w][1],count:5000});cs=r.candles||[]}
+          if(!cs.length)NPY.empty=(NPY.empty||0)+1;parts.set(w,cs);fail.delete(w);return}
         catch(e){NPY.retry++;const rl=/rate|limit|too many/i.test((e&&(e.code||"")+" "+(e.message||""))||"");if(++tries>=(rl?8:4)){fail.add(w);return}
           await new Promise(r=>setTimeout(r,(rl?4000:1500)*tries))}}};
     const worker=async()=>{while(next<todo.length){const w=todo[next++];await fetchOne(w);NPY.done++;npProg();await new Promise(r=>setTimeout(r,250))}};
@@ -2492,7 +2495,7 @@ function myHtml(){const R=NP.res;const sel=(id,vals,cur,fmt)=>`<select id="${id}
     else if(x.st==="order")st.push(`<div class="np-card now"><div class="np-card-h">${npDirTag(x.dir)}<b>Лимит ${side} ${fmtP(x.E)}</b></div><div class="muted" style="font-size:12px">SL ${fmtP(x.SL)} · TP ${fmtP(x.TP)} · ${x.R.toFixed(2)}R · фибо ${MY.anc} = ${fmtP(x.dir<0?x.lo:x.hi)}, 0 = ${fmtP(x.dir<0?x.hi:x.lo)}</div><button type="button" class="btn sm primary" data-ch="myOrder" data-k="${k}">Захиалгад ашиглах</button></div>`)});
   B.nowPools.forEach(p=>st.push(`<div class="np-card"><div class="np-card-h">${npDirTag(p.dir)}<b>Өмнөх 4ц ${p.dir<0?"оргил":"ёроол"} ${fmtP(p.lv)}</b></div><div class="muted" style="font-size:12px">Үнэ үүнээс ${p.dir<0?"дээш":"доош"} гарвал inducement болж, дараа нь CHoCH хүлээнэ.</div></div>`));
   h+=`<div class="np-now"><div class="lbl">Одоогийн төлөв</div>${st.length?`<div class="np-cards">${st.join("")}</div>`:`<div class="muted" style="font-size:12px">Ойролцоо хадгалагдсан liquidity, идэвхтэй setup алга.</div>`}</div>
-  ${(()=>{const exp=(D.t[D.n-1]-D.t[0])/CH.gran+1,cov=D.n/exp,gold=isGoldInst(CH.inst);return `<div class="muted" style="font-size:12px">Түүх: ${D.n.toLocaleString("en-US")} лаа · ${tfName(CH.gran)} · ${Math.round(R.days)} хоног · бүрэн байдал ${(cov*100).toFixed(0)}%${NPY.fails?` · ${NPY.fails} хэсэг татагдаагүй`:""}${gold?" (алтанд амралтын өдөр, завсарлагатай тул ~70% хэвийн)":""}${!gold&&cov<0.9||gold&&cov<0.6?` <b class="neg">— Deriv-ээс түүх дутуу ирсэн</b>`:""} <button type="button" class="btn sm ghost" data-ch="myReload">Түүхийг дахин татах</button></div>`})()}
+  ${(()=>{const exp=(D.t[D.n-1]-D.t[0])/CH.gran+1,cov=D.n/exp,gold=isGoldInst(CH.inst);return `<div class="muted" style="font-size:12px">Түүх: ${D.n.toLocaleString("en-US")} лаа · ${tfName(CH.gran)} · ${Math.round(R.days)} хоног · бүрэн байдал ${(cov*100).toFixed(0)}%${NPY.fails?` · ${NPY.fails} хэсэг татагдаагүй`:""}${NPY.empty?` · ${NPY.empty} хэсэг Deriv-ээс хоосон ирсэн`:""}${gold?" (алтанд амралтын өдөр, завсарлагатай тул ~70% хэвийн)":""}${!gold&&cov<0.9||gold&&cov<0.6?` <b class="neg">— Deriv-ээс түүх дутуу ирсэн</b>`:""} <button type="button" class="btn sm ghost" data-ch="myReload">Түүхийг дахин татах</button></div>`})()}
   <div class="my-funnel">${[["4ц inducement",B.cnt.sweep],["CHoCH",B.cnt.choch],["Лимит тавьсан",B.cnt.placed],["Биелсэн",B.cnt.fill],["Арилжаа",B.N]].map(([t,v])=>`<span><b>${v}</b> ${t}</span>`).join("<i>→</i>")}
     <span class="muted">· алгассан: sweep-ээс давсан ${B.cnt.inval}, лимит тавихаас өмнө 0.618-аас өнгөрсөн ${B.cnt.missed}, TP хүртэл явсан ${B.cnt.cancel}, хугацаа дууссан ${B.cnt.expired}, өмнөх позиц нээлттэй ${B.cnt.fill-B.N}</span></div>
   <div class="bot-kpis">
