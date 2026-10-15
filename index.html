@@ -1548,7 +1548,7 @@ function rpCheck(bar){const R=CH.rp,p=R.pos;if(!p)return;if(bar.seq!=null){if(ba
 function rpClose(price,reason,bar){const R=CH.rp,p=R.pos;if(!p)return;bar=bar||R.all[R.idx-1];
   const cs=+CH.inst.cs||1,pnl=(price-p.entry)*(p.dir==="Buy"?1:-1)*p.lots*cs,Rv=p.risk?pnl/p.risk:null;
   R.results.push({inst:CH.inst.name,dir:p.dir,entry:p.entry,sl:p.sl,tp:p.tp,exit:price,lots:p.lots,pnl,R:Rv,reason,openEp:p.epoch,closeEp:bar.time-TZ,balance:p.balance,saved:false});
-  R.balance+=pnl;R.pos=null;
+  R.balance+=pnl;R.pos=null;rpSave(true);
   R.markers.push({time:bar.time,position:"inBar",color:pnl>=0?cssVar("--gain"):cssVar("--loss"),shape:"circle",text:`${reason} ${rfmt(Rv)}`});
   CH.series.setMarkers(R.markers.slice().sort((a,b)=>a.time-b.time));
   $("#opSl").value="";$("#opTp").value="";chUpdate()}
@@ -1564,14 +1564,14 @@ function rpRenderBox(){const box=$("#rpBox");if(CH.mode!=="replay"){box.hidden=t
       <div><span class="lbl">Нийт P/L</span><b class="${cls(sumP)}">${money(sumP)}</b></div><div><span class="lbl">Дундаж R</span><b class="${cls(sumR)}">${rfmt(sumR/res.length)}</b></div></div>
     <div class="tw"><table><thead><tr><th>#</th><th>Чиглэл</th><th class="r">Орох</th><th class="r">Гарах</th><th>Шалтгаан</th><th class="r">R</th></tr></thead><tbody>
     ${res.map((r,i)=>`<tr><td class="num">${i+1}</td><td><span class="dir ${r.dir==="Sell"?"sell":"buy"}">${r.dir}</span></td><td class="r num">${fmtP(r.entry)}</td><td class="r num">${fmtP(r.exit)}</td><td>${r.reason==="TP"?"Зорилт":r.reason==="SL"?"Stop":"Гараар"}</td><td class="r num ${cls(r.R)}">${rfmt(r.R)}</td></tr>`).join("")}</tbody></table></div>
-    ${unsaved?`<button type="button" class="btn" data-ch="rpSave">${unsaved} арилжааг тэмдэглэлд хадгалах (backtest)</button>`:`<div class="muted" style="font-size:12px">Бүгд тэмдэглэлд хадгалагдсан. Арилжаанууд таб → шүүлтүүр “Давтан тоглуулалт”.</div>`}`}
+    <div class="muted" style="font-size:12px">Арилжаа бүр хаагдмагц автоматаар хадгалагдана → «Backtest арилжаа» таб.</div>`}
   else h+=`<div class="muted" style="font-size:13px">Ачаалах дараад SL, TP-ээ тавиад позиц нээнэ. Дараа нь +1 лаа эсвэл Тоглуулах товчоор урагшлуулна. Backtest-ийн арилжаа таны жинхэнэ статистикт орохгүй.</div>`;
   box.innerHTML=h}
-async function rpSave(){const R=CH.rp;const list=R.results.filter(r=>!r.saved);if(!list.length)return;
-  for(const r of list){await put("trades",uid(),{kind:"backtest",inst:r.inst,dir:r.dir,open:localStr(r.openEp),close:localStr(r.closeEp),entry:r.entry,sl:r.sl,tp:r.tp??"",exit:r.exit,lots:r.lots,fees:0,actual:"",balance:+r.balance.toFixed(2),
+async function rpSave(auto){const R=CH.rp;const list=R.results.filter(r=>!r.saved);if(!list.length)return;
+  for(const r of list){r.saved=true;r.id=uid();put("trades",r.id,{kind:"backtest",inst:r.inst,dir:r.dir,open:localStr(r.openEp),close:localStr(r.closeEp),entry:r.entry,sl:r.sl,tp:r.tp??"",exit:r.exit,lots:r.lots,fees:0,actual:"",balance:+r.balance.toFixed(2),
     setup:"Backtest",emotion:"Тайван",exitReason:r.reason==="TP"?"Зорилтод хүрсэн":r.reason==="SL"?"Stop-д хүрсэн":"Дүрмээр гарсан",accepted:"y",movedStop:"n",addedLoser:"n",addedWinner:"n",followed:"y",exercise:"",calm:"",
-    notes:`Давтан тоглуулалт · ${CH.inst.name} · ${GRANS.find(x=>x[0]===CH.gran)[1]}`,chart:""});r.saved=true}
-  toast(`${list.length} backtest арилжаа хадгаллаа`);rpRenderBox()}
+    notes:`Давтан тоглуулалт · ${r.inst} · ${(GRANS.find(x=>x[0]===CH.gran)||[0,""])[1]}`,chart:""})}
+  toast(auto?`Backtest арилжаа хадгалагдлаа (${list[0].reason==="TP"?"TP":list[0].reason==="SL"?"SL":"гараар"} · ${money(list[0].pnl)})`:`${list.length} backtest арилжаа хадгаллаа`);rpRenderBox()}
 
 /* ---------------- Зурах хэрэгсэл, дээд интервалын лаа, сешн ---------------- */
 const DCOLORS=["#2962FF","#FF9800","#089981","#F23645","#9C27B0","#787B86"];
@@ -2757,7 +2757,7 @@ function rtStatsHtml(s){const st=$("#rtStats"),R=CH.rp,kv=(l,v,c="",sub="")=>`<d
     ${kv("Buy",s.buy.N?pct(s.buy.win):"—","",rfmt(s.buy.R))}${kv("Sell",s.sell.N?pct(s.sell.win):"—","",rfmt(s.sell.R))}${kv("Барих хугацаа",`${s.hold.toFixed(0)} лаа`,"","дунджаар")}</div>
     ${botCurve({curve:s.curve,rand:0})}`;
   const unsaved=R.results.filter(r=>!r.saved).length;
-  h+=unsaved?`<button type="button" class="btn" data-ch="rpSave">${unsaved} арилжааг тэмдэглэлд хадгалах (backtest)</button>`:`<div class="muted" style="font-size:12px">Бүгд тэмдэглэлд хадгалагдсан (Арилжаанууд → «Давтан тоглуулалт»).</div>`;
+  h+=`<div class="muted" style="font-size:12px">Арилжаа бүр хаагдмагц автоматаар хадгалагдана («Backtest арилжаа» таб).</div>`;
   st.innerHTML=h}
 function rtKeys(e){if(S.view!=="chart"||CH.mode!=="replay"||document.querySelector("dialog[open]"))return;const tag=(document.activeElement||{}).tagName;if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT")return;if(e.altKey||e.ctrlKey||e.metaKey)return;
   const c=e.code;
