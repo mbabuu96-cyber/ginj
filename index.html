@@ -1529,7 +1529,7 @@ function rpBegin(){const R=CH.rp;if(R.idx>=R.all.length-(R.src==="tick"?300:50))
 function rpFrame(){const R=CH.rp,c=R.cur;if(!c)return true;const bar=c.bar,p=c.pts[c.k],prev=c.k?c.pts[c.k-1]:bar.open;
   c.hi=Math.max(c.hi,p,prev);c.lo=Math.min(c.lo,p,prev);const last=c.k>=c.pts.length-1;
   const part=last?bar:{time:bar.time,open:bar.open,high:c.hi,low:c.lo,close:p};CH.series.update(part);CH.last=p;CH.lastTime=bar.time;
-  const seg={time:bar.time,open:prev,high:Math.max(prev,p),low:Math.min(prev,p),close:p,seq:++R.seq};rtFill(seg);rpCheck(seg);
+  const seg={time:bar.time,open:prev,high:Math.max(prev,p),low:Math.min(prev,p),close:p,seq:++R.seq};rtFill(seg);rpCheck(seg);rpDrawCheck(seg);
   c.k++;if(last){R.idx++;R.cur=null;rpTimeLabel();chUpdate(true);return true}
   rtUi();drDirty();return false}
 async function rpStep(){const R=CH.rp;if(!R.all.length){chStatus("Эхлээд Ачаалах дарна уу.",true);return}
@@ -1542,6 +1542,19 @@ function rpOpen(){const R=CH.rp;const o=chCalc();if(o.lots==null||o.sl==null)ret
   const bar=R.cur?R.cur.bar:R.all[R.idx-1];R.pos={seq:R.seq||0,dir:CH.dir,entry:CH.last,sl:o.sl,tp:o.tp,lots:o.lots,risk:o.risk,time:bar.time,epoch:bar.time-TZ,balance:R.balance};rpPersistOpen(R.pos);
   R.markers.push({time:bar.time,position:CH.dir==="Buy"?"belowBar":"aboveBar",color:cssVar("--accent"),shape:CH.dir==="Buy"?"arrowUp":"arrowDown",text:CH.dir});
   CH.series.setMarkers(R.markers.slice().sort((a,b)=>a.time-b.time));chUpdate()}
+// Давтан тоглуулалтад зурсан Long/Short позицын хэрэгсэл = арилжаа (TradingView шиг): үнэ орох түвшинд хүрмэгц нээгдэж, SL/TP-д хүрмэгц Backtest-д хадгалагдана
+function rpDrawCheck(bar){if(CH.mode!=="replay"||!S.drawings)return;const R=CH.rp;RT.dp=RT.dp||{};const ep=bar.time-TZ;
+  for(const d of drList()){if(!d.rp||(d.type!=="long"&&d.type!=="short")||!d.a||d.sl==null||d.tp==null)continue;let st=RT.dp[d.id];if(st&&st.done)continue;
+    const buy=d.type==="long",e=+d.a.p,sl=+d.sl,tp=+d.tp;
+    if(!st){if(ep+R._g<=d.a.t)continue;if(!(bar.low<=e&&bar.high>=e))continue;
+      const c=posCalc(d);st=RT.dp[d.id]={entry:e,lots:c.lots,risk:c.risk,openEp:ep,balance:R.balance,seq:bar.seq};
+      R.markers.push({time:bar.time,position:buy?"belowBar":"aboveBar",color:buy?"#2962FF":"#F23645",shape:buy?"arrowUp":"arrowDown",text:`${buy?"Long":"Short"} ${fm(c.lots,2)}`});CH.series.setMarkers(R.markers.slice().sort((a,b)=>a.time-b.time));continue}
+    if(bar.seq!=null&&bar.seq<=st.seq)continue;
+    const hs=buy?bar.low<=sl:bar.high>=sl,ht=buy?bar.high>=tp:bar.low<=tp;if(!hs&&!ht)continue;
+    const reason=hs?"SL":"TP",x=hs?sl:tp,cs=+CH.inst.cs||1,pnl=(x-st.entry)*(buy?1:-1)*st.lots*cs;st.done=true;
+    R.results.push({inst:CH.inst.name,dir:buy?"Buy":"Sell",entry:st.entry,sl,tp,exit:x,lots:st.lots,pnl,R:st.risk?pnl/st.risk:null,reason,openEp:st.openEp,closeEp:ep,balance:st.balance,saved:false});
+    R.balance+=pnl;R.markers.push({time:bar.time,position:"inBar",color:pnl>=0?cssVar("--gain"):cssVar("--loss"),shape:"circle",text:`${reason} ${rfmt(st.risk?pnl/st.risk:null)}`});
+    CH.series.setMarkers(R.markers.slice().sort((a,b)=>a.time-b.time));rpSave(true)}}
 function rpCheck(bar){const R=CH.rp,p=R.pos;if(!p)return;if(bar.seq!=null){if(bar.seq<=(p.seq||0))return}else if(bar.time<=p.time)return;const buy=p.dir==="Buy";
   const hitSl=buy?bar.low<=p.sl:bar.high>=p.sl;const hitTp=p.tp!=null&&(buy?bar.high>=p.tp:bar.low<=p.tp);
   if(hitSl)rpClose(p.sl,"SL",bar);else if(hitTp)rpClose(p.tp,"TP",bar)} // нэг лаанд хоёулаа хүрвэл SL гэж үзнэ (болгоомжтой)
@@ -1619,7 +1632,7 @@ try{const o=JSON.parse(localStorage.getItem("alkham-chart-opts")||"{}");DR.mtf=+
 function drOptsSave(){try{localStorage.setItem("alkham-chart-opts",JSON.stringify({mtf:DR.mtf,sess:DR.sess,color:DR.color,magnet2:DR.magnet,lock:DR.lock,gran:CH.gran,rpStart:CH.rpStart,rpSpeed:CH.rp.speed,risk:CH.risk}))}catch(e){}}
 function drKey(){return CH.inst?CH.inst.name:""}
 function drList(){S.drawings=S.drawings||{};const k=drKey();if(!S.drawings[k])S.drawings[k]=[];return S.drawings[k]}
-const drClean=d=>{const o={};for(const k of ["id","type","a","b","sl","tp","t2","color","width","dash","ext","levels","fopt"])if(d[k]!==undefined)o[k]=d[k];return o};
+const drClean=d=>{const o={};for(const k of ["id","type","a","b","sl","tp","t2","color","width","dash","ext","levels","fopt","rp"])if(d[k]!==undefined)o[k]=d[k];return o};
 function drSave(){const k=drKey(),items=drList().map(drClean);
   clearTimeout(DR.saveT[k]);DR.saveT[k]=setTimeout(()=>{
     if(S.mode==="supa")supaQueue({t:"put",coll:"settings",id:"draw:"+k,data:{items}});
@@ -1814,7 +1827,7 @@ function drNew(type,pt){const st=styleFor(type)||{};const base={id:uid(),color:s
   if(type==="hline"||type==="hray"||type==="vline")return Object.assign(base,{type,a:{t:pt.t,p:pt.p}});
   if(type==="long"||type==="short"){const r=CH.series.priceToCoordinate(pt.p),box=plotBox();
     const off=Math.abs((yP(r-box.h*0.08)||pt.p)-pt.p)||pt.p*0.002,dir=type==="long"?1:-1,dec=decOf(CH.inst);
-    return Object.assign(base,{type,color:st.color||"#5B6670",a:{t:pt.t,p:pt.p},sl:+(pt.p-dir*off).toFixed(dec),tp:+(pt.p+dir*off*2).toFixed(dec),t2:pt.t+CH.gran*30})}
+    return Object.assign(base,{type,rp:CH.mode==="replay"||undefined,color:st.color||"#5B6670",a:{t:pt.t,p:pt.p},sl:+(pt.p-dir*off).toFixed(dec),tp:+(pt.p+dir*off*2).toFixed(dec),t2:pt.t+CH.gran*30})}
   if(type==="fib"){const f=fibDefault();return Object.assign(base,{type,a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p},levels:f.levels,fopt:f.opt})}
   return Object.assign(base,{type:type==="ray"?"trend":type,ext:st.ext||(type==="ray"?"right":"none"),a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p}})}
 const ONE_CLICK=["hline","hray","vline","long","short"];
