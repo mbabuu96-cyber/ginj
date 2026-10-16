@@ -268,6 +268,7 @@ svg text{font-family:var(--f-mono)}
 .bt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}@media (max-width:820px){.bt-grid{grid-template-columns:1fr}}
 .bt-fig{margin:0;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface)}.bt-fig figcaption{font-size:12px;font-weight:600;margin-bottom:2px}
 .rt-keys{font-size:11px;margin-left:auto}
+.ch-wrap.rtpick .rt-bar{pointer-events:none;opacity:.35}.ch-wrap.rtpick .rt-pos{pointer-events:none}.ch-wrap.rtpick .rt-pos button{pointer-events:auto}
 .rt-bar{position:absolute;top:6px;left:48px;z-index:8;display:flex;gap:6px;align-items:center;background:var(--tv-bg,#fff);border:1px solid var(--tv-border);border-radius:8px;padding:4px 6px;box-shadow:0 2px 8px rgba(19,23,34,.12);white-space:nowrap}
 .rt-bar select{width:auto;padding:3px 6px;font-size:12px}
 .rt-bar .seg button{padding:3px 8px;font-size:12px}
@@ -1489,7 +1490,7 @@ async function rpLoad(keep){
       throw new Error(`Deriv энэ өдрийн ${tfName(g)} өгөгдөл (лаа, тик) өгөхгүй байна. ${tfName(g)}-ийн хамгийн эрт боломжтой өдөр ≈ ${d.toLocaleDateString("en-GB")}. Тэр өдрөөс хойш сонгоно уу.`)}
     const R=CH.rp;R._g=g;R.sym=sym;R.all=pb.concat(fb);R.idx=Math.max(1,pb.length);
     if(keep===true){R.markers=R.markers.map(m=>Object.assign({},m,{time:Math.floor((m.time-TZ)/g)*g+TZ}));if(R.pos){R.pos.time=Math.floor((R.pos.time-TZ)/g)*g+TZ}}
-    else{R.pos=null;R.markers=[];R.results=[];R.balance=currentBalance(enriched(S.trades))}RT.pend=keep===true?RT.pend:null;RT.pick=null;RT.selBar=false;R.cur=null;R.seq=0;R.ib=new Map();R.ibBusy=false;ibPrefetch();
+    else{R.pos=null;R.markers=[];R.results=[];R.balance=currentBalance(enriched(S.trades))}RT.pend=keep===true?RT.pend:null;RT.pick=null;RT.selBar=false;drHint("");$("#chWrap").classList.remove("picking","rtpick");R.cur=null;R.seq=0;R.ib=new Map();R.ibBusy=false;ibPrefetch();
     const lag=(+fb[0].time-TZ)-start;if(lag>2*86400)toast(`Deriv ${tfName(g)}-ийн түүх ${new Date((fb[0].time-TZ)*1000).toLocaleDateString("en-GB")}-ээс л эхэлж байна.`);
     CH.series.setData(R.all.slice(0,R.idx));CH.series.setMarkers(R.markers.slice().sort((a,b)=>a.time-b.time));const b=R.all[R.idx-1];CH.last=b.close;CH.lastTime=b.time;
     CH.chart.timeScale().scrollToRealTime();chEmpty("");rpTimeLabel();
@@ -2702,12 +2703,12 @@ function rtSync(){const p=CH.rp.pos||RT.pend;if(!p)return;$("#opSl").value=fmtP(
 // Buy/Sell товч: зах зээлийн үнээр шууд, эсвэл лимит/стоп горимд графикаас үнэ сонгоно
 function rtGo(dir){const R=CH.rp;if(!rtOn()){toast("Эхлээд эхлэх цагаа сонгоод Ачаалах дарна уу.");return}if(rpNeedStart())return;
   if(R.pos){toast("Позиц нээлттэй байна. Эхлээд хаана уу (X).");return}
-  if(RT.ot==="lmt"){RT.pick=dir;RT.pend=null;drHint(`${dir==="Buy"?"Buy":"Sell"} захиалгын үнэ дээр графикт дарна уу · Esc цуцлах`);$("#chWrap").classList.add("picking");rtUi();return}
+  if(RT.ot==="lmt"){RT.pick=dir;RT.pend=null;drHint(`${dir==="Buy"?"Buy":"Sell"} захиалгын үнэ дээр графикт дарна уу · Esc цуцлах`);$("#chWrap").classList.add("picking","rtpick");rtUi();return}
   const bar=R.cur?R.cur.bar:R.all[R.idx-1],E=CH.last,{sl,tp}=rtDefaults(dir,E);rtOpenPos(dir,E,sl,tp,rtLots(E,sl),bar)}
 function rtPlace(dir,price){const R=CH.rp,c=CH.last,E=rtRound(price),{sl,tp}=rtDefaults(dir,E);
   const type=dir==="Buy"?(E<c?"limit":"stop"):(E>c?"limit":"stop");RT.pend={dir,entry:E,sl,tp,type,lots:rtLots(E,sl),epoch:(R.cur?R.cur.bar:R.all[R.idx-1]).time-TZ,seq:R.seq||0};
-  RT.pick=null;drHint("");$("#chWrap").classList.remove("picking");rtSync();chUpdate();drDirty()}
-function rtCancel(){RT.pick=null;RT.pend=null;drHint("");$("#chWrap").classList.remove("picking");chUpdate();drDirty()}
+  RT.pick=null;drHint("");$("#chWrap").classList.remove("picking","rtpick");rtSync();chUpdate();drDirty()}
+function rtCancel(){RT.pick=null;RT.pend=null;drHint("");$("#chWrap").classList.remove("picking","rtpick");chUpdate();drDirty()}
 // лаа бүрт: хүлээгдэж буй захиалга биелэх эсэх
 function rtFill(bar){const p=RT.pend,R=CH.rp;if(!p||R.pos)return;if(bar.seq!=null&&bar.seq<=(p.seq||0))return;const buy=p.dir==="Buy";let px=null;
   if(p.type==="limit"){if(buy?bar.low<=p.entry:bar.high>=p.entry)px=buy?Math.min(p.entry,bar.open):Math.max(p.entry,bar.open)}
