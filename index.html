@@ -1532,10 +1532,15 @@ function rpFrame(){const R=CH.rp,c=R.cur;if(!c)return true;const bar=c.bar,p=c.p
   const seg={time:bar.time,open:prev,high:Math.max(prev,p),low:Math.min(prev,p),close:p,seq:++R.seq};rtFill(seg);rpCheck(seg);rpDrawCheck(seg);
   c.k++;if(last){R.idx++;R.cur=null;rpTimeLabel();chUpdate(true);return true}
   rtUi();drDirty();return false}
-async function rpStep(){const R=CH.rp;if(!R.all.length){chStatus("Эхлээд Ачаалах дарна уу.",true);return}
+// Эхлэх лаа сонгоогүй (графикийн төгсгөлд байгаа) үед товч “ажиллахгүй” мэт санагдуулахгүйн тулд сонгох горимыг асааж сануулна
+function rpNeedStart(){const R=CH.rp;if(CH.mode!=="replay"||!R.all.length)return false;
+  if(RT.selBar){toast("Эхлээд графикаас эхлэх лаагаа дарж сонгоно уу (Лаа сонгох).");return true}
+  if(!R.cur&&R.idx>=R.all.length){if(!RT.selBar)rpSelect();toast("Графикийн төгсгөлд байна — урагшлах лаа алга. Эхлэх лаагаа графикаас дарж сонгоно уу.");return true}
+  return false}
+async function rpStep(){const R=CH.rp;if(!R.all.length){chStatus("Эхлээд Ачаалах дарна уу.",true);return}if(rpNeedStart())return;
   if(!R.cur&&!rpBegin())return;let guard=0;while(!rpFrame()&&guard++<5000);}
 function rpTimeLabel(){const R=CH.rp,b=R.all[R.idx-1];$("#rpTime").textContent=b?new Date((b.time-TZ)*1000).toLocaleString("en-GB",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}):""}
-function rpPlay(){const R=CH.rp;if(R.timer){rpPause();return}if(!R.all.length){chStatus("Эхлээд Ачаалах дарна уу.",true);return}
+function rpPlay(){const R=CH.rp;if(R.timer){rpPause();return}if(!R.all.length){chStatus("Эхлээд Ачаалах дарна уу.",true);return}if(rpNeedStart())return;
   const fr=RT.ib==="off"?1:ibFrames();R.timer=setInterval(()=>{if(!R.cur&&!rpBegin())return;rpFrame()},1000/((R.speed||2)*fr));$("#rpPlay").textContent="❚❚"}
 function rpPause(){const R=CH.rp;if(R.timer){clearInterval(R.timer);R.timer=null}const b=$("#rpPlay");if(b)b.textContent="▶"}
 function rpOpen(){const R=CH.rp;const o=chCalc();if(o.lots==null||o.sl==null)return;
@@ -2695,7 +2700,7 @@ function rtOpenPos(dir,entry,sl,tp,lots,bar){const R=CH.rp,cs=+CH.inst.cs||1;
   CH.series.setMarkers(R.markers.slice().sort((a,b)=>a.time-b.time));CH.dir=dir;rtSync();chUpdate();drDirty()}
 function rtSync(){const p=CH.rp.pos||RT.pend;if(!p)return;$("#opSl").value=fmtP(p.sl);$("#opTp").value=p.tp==null?"":fmtP(p.tp);CH.dir=p.dir}
 // Buy/Sell товч: зах зээлийн үнээр шууд, эсвэл лимит/стоп горимд графикаас үнэ сонгоно
-function rtGo(dir){const R=CH.rp;if(!rtOn()){toast("Эхлээд эхлэх цагаа сонгоод Ачаалах дарна уу.");return}
+function rtGo(dir){const R=CH.rp;if(!rtOn()){toast("Эхлээд эхлэх цагаа сонгоод Ачаалах дарна уу.");return}if(rpNeedStart())return;
   if(R.pos){toast("Позиц нээлттэй байна. Эхлээд хаана уу (X).");return}
   if(RT.ot==="lmt"){RT.pick=dir;RT.pend=null;drHint(`${dir==="Buy"?"Buy":"Sell"} захиалгын үнэ дээр графикт дарна уу · Esc цуцлах`);$("#chWrap").classList.add("picking");rtUi();return}
   const bar=R.cur?R.cur.bar:R.all[R.idx-1],E=CH.last,{sl,tp}=rtDefaults(dir,E);rtOpenPos(dir,E,sl,tp,rtLots(E,sl),bar)}
