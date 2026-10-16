@@ -265,6 +265,7 @@ svg text{font-family:var(--f-mono)}
 .bt-table td{white-space:nowrap}.bt-table tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--surface-2) 45%,transparent)}
 .bt-res{font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--surface-2)}.bt-res.tp{background:#089981;color:#fff}.bt-res.sl{background:#F23645;color:#fff}
 .bt-h3{margin:4px 0 0;font-size:14px}
+.bt-grid.one{grid-template-columns:1fr}
 .bt-cals{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,460px),1fr));gap:12px}
 .bt-cal{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface)}
 .bt-cal-h{display:flex;justify-content:space-between;gap:8px;align-items:baseline;font-size:12px;margin-bottom:6px;flex-wrap:wrap}
@@ -2825,7 +2826,7 @@ const btFmtT=ep=>{const d=new Date(ep*1000),p=n=>String(n).padStart(2,"0");retur
 const btDur=m=>m==null?"—":m<60?`${Math.round(m)} мин`:m<1440?`${(m/60).toFixed(1)} ц`:`${(m/1440).toFixed(1)} өдөр`;
 // Графикийн хэрэгслүүд (SVG): нэг тэнхлэг, нимгэн зураас, ашиг = ногоон, алдагдал = улаан + шошго
 const BT_POS="#089981",BT_NEG="#F23645";
-function btBars(title,cats,vals,sub,unit){const W=520,H=220,pl=40,pr=10,pt=26,pb=40,n=cats.length;
+function btBars(title,cats,vals,sub,unit,Wd){const W=Wd||520,H=220,pl=40,pr=10,pt=26,pb=40,n=cats.length;
   const mx=Math.max(0.5,...vals.map(v=>Math.abs(v))),lo=Math.min(0,...vals),hi=Math.max(0,...vals),rg=(hi-lo)||1;
   const Y=v=>pt+(H-pt-pb)*(1-(v-lo)/rg),bw=(W-pl-pr)/n,y0=Y(0);let g="";
   for(let k=0;k<=4;k++){const v=lo+rg*k/4,y=Y(v);g+=`<line x1="${pl}" x2="${W-pr}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width=".6"/><text x="${pl-6}" y="${(y+3).toFixed(1)}" font-size="10" text-anchor="end" fill="var(--muted)">${v.toFixed(1)}</text>`}
@@ -2894,6 +2895,13 @@ function btPeriods(all){const L=all.filter(r=>r.open!=null);if(!L.length)return 
     h+=`<tr><td><b>${mName(k)}</b></td><td class="r num">${a.N}</td><td class="r num">${a.W}/${a.N-a.W}</td><td class="r num">${pct(a.W/a.N)}</td><td class="r num ${cls(a.pip)}">${pipf(a.pip)}</td><td class="r num ${cls(a.R)}"><b>${rfmt(a.R)}</b></td><td class="r num ${cls(a.P)}">${money(a.P)}</td><td class="r num">${gd}/${days.length}</td></tr>`});
   h+=`</tbody></table></div>`;
   if(mKeys.length>1)h+=`<div class="bt-grid">${btBars("Сараар (нийт R)",mKeys.map(k=>k.slice(2).replace("-","/")),mKeys.map(k=>M[k].R),mKeys.map(k=>`${M[k].N} · ${pct(M[k].W/M[k].N)}`),"R")}${btBars("Сараар (нийт пип)",mKeys.map(k=>k.slice(2).replace("-","/")),mKeys.map(k=>M[k].pip),mKeys.map(k=>String(M[k].N)),"пип")}</div>`;
+  // Сарын аль өдөр/долоо хоногт сетап ажилладаг вэ — бүх сарыг нэгтгэнэ
+  {const dom=[...Array(31)].map(agg),wom=[...Array(5)].map(agg);L.forEach(r=>{const d=new Date(r.open*1000).getDate();add(dom[d-1],r);add(wom[Math.min(4,Math.floor((d-1)/7))],r)});
+   const sub=a=>a.N?`${a.N}·${Math.round(100*a.W/a.N)}%`:"";
+   h+=`<h3 class="bt-h3">Сарын аль өдрүүдэд сетап ажилладаг вэ (бүх сарыг нэгтгэсэн)</h3>`;
+   h+=`<div class="bt-grid one">${btBars("Сарын өдрөөр 1–31 (нийт R) · доор: арилжаа·хожил%",dom.map((_,i)=>String(i+1)),dom.map(a=>a.R),dom.map(sub),"R",1060)}</div>`;
+   h+=`<div class="bt-grid">${btBars("Сарын долоо хоногоор (нийт R)",["1–7","8–14","15–21","22–28","29–31"],wom.map(a=>a.R),wom.map(a=>a.N?`${a.N} · ${pct(a.W/a.N)}`:"—"),"R")}${btBars("Сарын долоо хоногоор (дундаж R / арилжаа)",["1–7","8–14","15–21","22–28","29–31"],wom.map(a=>a.N?a.R/a.N:0),wom.map(a=>a.N?String(a.N):"—"),"R")}</div>`;
+   h+=`<p class="muted" style="font-size:12px;margin:0">${L.length<100?`<b>Анхаар:</b> одоогоор ${L.length} арилжаа байна. Өдөр бүрт дор хаяж 10–20 арилжаа хуримтлагдахаас өмнө ногоон/улаан багана санамсаргүй тохиолдол байж болно — эхлээд долоо хоногийн графикийг хар.`:"Ногоон багана = тэр өдрүүдэд сетап ашигтай, улаан = алдагдалтай. Арилжаа цөөн баганыг бүү итгэ."}</p>`}
   // өдрийн хуанли — сар бүр
   h+=`<h3 class="bt-h3">Өдрийн статистик</h3><div class="bt-cals">`;
   mKeys.slice().reverse().forEach(k=>{const [y,m]=k.split("-").map(Number),first=new Date(y,m-1,1),nd=new Date(y,m,0).getDate(),off=(first.getDay()+6)%7,a=M[k];
