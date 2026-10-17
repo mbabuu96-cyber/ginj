@@ -265,6 +265,9 @@ svg text{font-family:var(--f-mono)}
 .bt-table td{white-space:nowrap}.bt-table tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--surface-2) 45%,transparent)}
 .bt-res{font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--surface-2)}.bt-res.tp{background:#089981;color:#fff}.bt-res.sl{background:#F23645;color:#fff}.bt-res.be{background:#787B86;color:#fff}
 .bt-h3{margin:4px 0 0;font-size:14px}
+.bt-psy{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface-2)}
+.bt-psy-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.bt-flags{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:13px}.bt-flags li.neg{color:var(--loss)}.bt-flags li.pos{color:var(--gain)}
 .bt-grid.one{grid-template-columns:1fr}
 .bt-cals{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,460px),1fr));gap:12px}
 .bt-cal{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface)}
@@ -1006,7 +1009,7 @@ function viewBacktest(){return `<div class="grid"><section class="panel c12 bt-p
 document.addEventListener("click",e=>{if(!e.target.closest("#app"))return;const b=e.target.closest("[data-bt]");
   if(b){if(b.dataset.bt==="csv")btCsv();else if(b.dataset.bt==="delOpen"){const live=CH.rp.pos&&CH.rp.pos.id;enriched(S.trades,"backtest").filter(t=>!t._.closed&&t.id!==live).forEach(t=>del("trades",t.id))}else if(b.dataset.bt==="save")rpSave().then(()=>render());else if(b.dataset.bt==="goReplay"){S.view="chart";render();setTimeout(()=>{const m=document.querySelector('#chMode button[data-v=replay]');if(m&&CH.mode!=="replay")m.click()},300)}return}
   const s=e.target.closest("[data-bts]");if(s){const k=s.dataset.bts;if(BT.sort===k)BT.desc=!BT.desc;else{BT.sort=k;BT.desc=k!=="open"}render()}});
-document.addEventListener("change",e=>{if(!e.target.closest("#app"))return;const id=e.target.id;if(id==="btSrc")BT.src=e.target.value;else if(id==="btInst")BT.inst=e.target.value;else if(id==="btDir")BT.dir=e.target.value;else return;render()});
+document.addEventListener("change",e=>{if(!e.target.closest("#app"))return;const id=e.target.id;if(id==="btSrc")BT.src=e.target.value;else if(id==="btInst")BT.inst=e.target.value;else if(id==="btDir")BT.dir=e.target.value;else if(id==="btRv")BT.rv=+e.target.value;else return;render()});
 
 /* ---------------- trade form ---------------- */
 let editing=null;
@@ -2811,7 +2814,7 @@ function rtRandom(){const g=CH.gran,days=g<=60?25:g<=300?120:300,now=Date.now()-
   $("#rpStart").value=localStr(Math.floor(t.getTime()/1000));CH.rpStart=$("#rpStart").value;drOptsSave();rpLoad()}
 
 /* --- Backtest статистикийн цонх: хүснэгт + график тайлан --- */
-const BT={src:"all",inst:"all",dir:"all",sort:"open",desc:false};
+const BT={src:"all",inst:"all",dir:"all",sort:"open",desc:false,rv:15};
 const BT_WD=["Ням","Даваа","Мягмар","Лхагва","Пүрэв","Баасан","Бямба"],BT_WD_ORDER=[1,2,3,4,5,6,0];
 const btEp=s=>{if(s==null||s==="")return null;if(typeof s==="number")return s;const t=new Date(s).getTime();return isFinite(t)?t/1000:null};
 function btRows(){const rows=[];
@@ -2819,7 +2822,8 @@ function btRows(){const rows=[];
   if(BT.src!=="session")enriched(S.trades,"backtest").forEach(t=>{if(!t._.closed)return;rows.push({src:"Хадгалсан",id:t.id,inst:t.inst,dir:t.dir,open:btEp(t.open),close:btEp(t.close),entry:num(t.entry),exit:num(t.exit),sl:num(t.sl),tp:num(t.tp),lots:num(t.lots),pnl:t._.pnl,R:t._.R,
     reason:/Зорилт/.test(t.exitReason||"")?"TP":/Breakeven/.test(t.exitReason||"")?"BE":/Stop/.test(t.exitReason||"")?"SL":"Гараар"})});
   rows.forEach(r=>{const ins=instOf(r.inst),ps=ins.kind==="step"?(+ins.tick||0.1):0.1;r.ps=ps;
-    if(r.reason==="SL"&&r.sl!=null&&r.entry!=null&&Math.abs(r.sl-r.entry)<1e-9){r.reason="BE";if(r.R==null)r.R=0} // хуучин BE арилжааr.pips=r.entry!=null&&r.exit!=null?Math.round((r.exit-r.entry)*(r.dir==="Sell"?-1:1)/ps*10)/10:null;
+    if(r.reason==="SL"&&r.sl!=null&&r.entry!=null&&Math.abs(r.sl-r.entry)<1e-9){r.reason="BE";if(r.R==null)r.R=0}/* хуучин BE арилжаа */
+    r.pips=r.entry!=null&&r.exit!=null?Math.round((r.exit-r.entry)*(r.dir==="Sell"?-1:1)/ps*10)/10:null;
     const d=r.open?new Date(r.open*1000):null;r.wd=d?d.getDay():null;r.hr=d?d.getHours():null;r.dur=r.open&&r.close?(r.close-r.open)/60:null});
   rows.sort((a,b)=>(a.open||0)-(b.open||0)).forEach((r,i)=>r.idx=i+1);
   return rows.filter(r=>(BT.inst==="all"||r.inst===BT.inst)&&(BT.dir==="all"||r.dir===BT.dir))}
@@ -2873,7 +2877,7 @@ function btHtml(page){const all=btRows(),S0=btSummary(all),insts=[...new Set([..
       <td><span class="dir ${r.dir==="Sell"?"sell":"buy"}">${r.dir}</span></td><td class="r num">${r.entry!=null?fmtP(r.entry,instOf(r.inst)):"—"}</td><td class="r num">${r.exit!=null?fmtP(r.exit,instOf(r.inst)):"—"}</td>
       <td class="r num ${cls(r.pips)}"><b>${pip(r.pips)}</b></td><td class="r num ${cls(r.R)}">${rfmt(r.R)}</td><td class="r num ${cls(r.pnl)}">${money(r.pnl)}</td><td><span class="bt-res ${r.reason==="TP"?"tp":r.reason==="SL"?"sl":r.reason==="BE"?"be":""}">${r.reason}</span></td><td class="r num muted">${btDur(r.dur)}</td></tr>`).join("")}
   </tbody></table></div>
-  <h3 class="bt-h3">Тайлан</h3>${btCurve(all)}<div class="bt-grid">`;
+  <h3 class="bt-h3">Тайлан</h3>${btPsych(all)}${btCurve(all)}<div class="bt-grid">`;
   const wd=btGroup(all,r=>r.wd,BT_WD_ORDER.map(k=>({k})));
   h+=btBars("Гарагаар (нийт R)",BT_WD_ORDER.map(k=>BT_WD[k].slice(0,2)),wd.map(x=>x.R),wd.map(x=>x.N?`${x.N} · ${pct(x.win)}`:"—"),"R");
   const hrs=[...Array(24).keys()],hg=btGroup(all,r=>r.hr,hrs.map(k=>({k})));
@@ -2885,6 +2889,47 @@ function btHtml(page){const all=btRows(),S0=btSummary(all),insts=[...new Set([..
   h+=btHist("R-ийн тархалт (арилжааны тоо)",bins.map(b=>b[0]),bc);
   h+=`</div>${btSlTp(all)}${btPeriods(all)}`;
   h+=`<p class="muted" style="font-size:11px;margin:0">Пип: Step Index-д 1 пип = 1 алхам (0.1), XAUUSD-д 1 пип = 0.1 ам.доллар. Цаг таны компьютерийн цагийн бүсээр. Графикийн багана дээр очиход дэлгэрэнгүй гарна.</p></div>`;
+  return h}
+// Revenge (алдагдлын дараа яаран орох) ба Overtrade (хэт олон арилжаа)
+function btPsych(all){const L=all.filter(r=>r.open!=null).slice().sort((a,b)=>a.open-b.open);if(L.length<2)return "";
+  const win=r=>(r.pnl||0)>0,loss=r=>(r.pnl||0)<0,mins=BT.rv||15,maxD=+S.settings.maxTradesDay||5,p2=n=>String(n).padStart(2,"0");
+  const dk=r=>{const d=new Date(r.open*1000);return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`};
+  const agg=a=>({N:a.length,W:a.filter(win).length,R:a.reduce((s,r)=>s+(r.R||0),0)}),wr=g=>g.N?pct(g.W/g.N):"—",ar=g=>g.N?rfmt(g.R/g.N):"—";
+  // дараалал: өмнөх арилжааны дүн, завсар
+  L.forEach((r,i)=>{const pv=L[i-1];r._prev=pv||null;r._gap=pv&&pv.close!=null?(r.open-pv.close)/60:null;
+    r._rev=!!(pv&&loss(pv)&&r._gap!=null&&r._gap>=0&&r._gap<=mins);const rk=x=>x&&x.R?Math.abs((x.pnl||0)/x.R):null,a1=rk(r),a0=rk(pv);r._bigger=!!(pv&&loss(pv)&&a0&&a1&&a1>a0*1.2);
+    let k=0;for(let j=i-1;j>=0&&loss(L[j]);j--)k++;r._ls=k});
+  const rev=L.filter(r=>r._rev),afterL=L.filter(r=>r._prev&&loss(r._prev)),afterW=L.filter(r=>r._prev&&win(r._prev)),normal=L.filter(r=>!r._rev),bigger=L.filter(r=>r._bigger);
+  const gR=agg(rev),gN=agg(normal),gAL=agg(afterL),gAW=agg(afterW);
+  // өдрийн N-р арилжаа
+  const D={};L.forEach(r=>{(D[dk(r)]=D[dk(r)]||[]).push(r)});Object.values(D).forEach(a=>a.forEach((r,i)=>r._nth=i+1));
+  const days=Object.entries(D),over=days.filter(([,a])=>a.length>maxD),overT=over.reduce((s,[,a])=>s+a.length-maxD,0);
+  const nthK=["1","2","3","4","5+"],nth=nthK.map((k,i)=>agg(L.filter(r=>i<4?r._nth===i+1:r._nth>=5)));
+  const dcK=["1","2","3","4–5","6+"],dcF=[n=>n===1,n=>n===2,n=>n===3,n=>n>=4&&n<=5,n=>n>=6],dc=dcF.map(f=>{const a=days.filter(([,x])=>f(x.length));return {N:a.length,R:a.reduce((s,[,x])=>s+x.reduce((t,r)=>t+(r.R||0),0),0)}});
+  const lsK=["0","1","2","3+"],ls=lsK.map((k,i)=>agg(L.filter(r=>i<3?r._ls===i:r._ls>=3)));
+  const revWorse=gR.N>=3&&gR.R/gR.N<gN.R/Math.max(1,gN.N)-0.2,tilt=gAL.N>=5&&gAW.N>=5&&gAL.R/gAL.N<gAW.R/gAW.N-0.3,lateWorse=nth[0].N>=3&&(nth[2].N+nth[3].N+nth[4].N)>=3&&((nth[2].R+nth[3].R+nth[4].R)/(nth[2].N+nth[3].N+nth[4].N))<nth[0].R/nth[0].N-0.3;
+  const flag=(bad,ok,t)=>`<li class="${bad?"neg":ok?"pos":""}">${bad?"⚠":ok?"✓":"•"} ${t}</li>`;
+  const kv=(l,v,c="",sub="")=>`<div class="np-kv"><span class="lbl">${l}</span><b class="${c}">${v}</b><span class="muted">${sub}</span></div>`;
+  let h=`<div class="bt-psy"><div class="bt-psy-h"><h3 class="bt-h3">Revenge ба Overtrade шалгалт</h3>
+    <label class="muted" style="font-size:12px">Алдагдлын дараа <select id="btRv" class="rp-sel">${[5,15,30,60].map(v=>`<option value="${v}" ${v===mins?"selected":""}>${v} мин</option>`).join("")}</select> дотор орвол revenge</label></div>
+    <div class="bot-kpis">
+    ${kv("Revenge арилжаа",`${gR.N} · ${pct(gR.N/L.length)}`,gR.N?"neg":"pos",`хожил ${wr(gR)} · дундаж ${ar(gR)} (бусад ${ar(gN)})`)}
+    ${kv("Алдагдлын дараах арилжаа",wr(gAL),"",`${gAL.N} арилжаа · дундаж ${ar(gAL)}`)}
+    ${kv("Хожлын дараах арилжаа",wr(gAW),"",`${gAW.N} арилжаа · дундаж ${ar(gAW)}`)}
+    ${kv("Алдагдлын дараа эрсдэл (лот) өсгөсөн",String(bigger.length),bigger.length?"neg":"pos",bigger.length?`#${bigger.slice(0,8).map(r=>r.idx).join(", #")}${bigger.length>8?"…":""}`:"тийм зүйл алга")}
+    ${kv(`Хязгаараас (${maxD}/өдөр) хэтэрсэн өдөр`,`${over.length} / ${days.length}`,over.length?"neg":"pos",over.length?`илүү ${overT} арилжаа`:"хэтрээгүй")}
+    ${kv("Өдөрт дундаж / дээд",`${(L.length/days.length).toFixed(1)} / ${Math.max(...days.map(([,a])=>a.length))}`,"","арилжаа")}</div>
+    <ul class="bt-flags">
+    ${flag(revWorse,gR.N===0,gR.N?`Алдагдлын дараа ${mins} минутын дотор ${gR.N} удаа орсон${revWorse?" — эдгээр нь бусад арилжаанаас муу үр дүнтэй: revenge-ийн шинж":""}. ${rev.length?`(#${rev.slice(0,10).map(r=>r.idx).join(", #")}${rev.length>10?"…":""})`:""}`:`Алдагдлын дараа ${mins} минутын дотор орсон арилжаа алга — revenge-ийн шинж илрээгүй.`)}
+    ${flag(tilt,gAL.N>=5&&!tilt,gAL.N>=5&&gAW.N>=5?(tilt?"Алдагдлын дараах арилжаа хожлын дараахаас мэдэгдэхүйц муу — tilt (сэтгэл хөдлөлөөр арилжаалах) шинж.":"Алдагдлын дараах үр дүн хожлын дараахтай ойролцоо — сэтгэл санаа тогтвортой."):"Алдагдал/хожлын дараах харьцуулалтад дор хаяж 5+5 арилжаа хэрэгтэй.")}
+    ${flag(over.length>0||lateWorse,over.length===0&&!lateWorse,over.length?`${over.length} өдөр хязгаар (${maxD})-аас хэтэрсэн${lateWorse?", өдрийн 3 дахь арилжаанаас хойш үр дүн муудаж байна — overtrade-ийн шинж":""}.`:lateWorse?"Өдрийн 3 дахь арилжаанаас хойш үр дүн муудаж байна — өдөрт цөөн арилжаа хийх нь дээр.":"Өдрийн хязгаараас хэтрээгүй.")}
+    ${flag(bigger.length>0,bigger.length===0,bigger.length?`Алдагдлын дараа ${bigger.length} удаа эрсдэлээ (лот × SL) 20%-аас илүү өсгөсөн — алдагдлаа нөхөх гэсэн шинж.`:"Алдагдлын дараа эрсдэлээ өсгөөгүй.")}
+    </ul><div class="bt-grid">`;
+  h+=btBars("Өдрийн хэд дэх арилжаа (дундаж R) — overtrade",nthK.map(k=>k+"-р"),nth.map(g=>g.N?g.R/g.N:0),nth.map(g=>g.N?`${g.N} · ${wr(g)}`:"—"),"R");
+  h+=btBars("Өдөрт хэдэн арилжаа хийсэн (өдрийн дундаж R)",dcK.map(k=>k+" ар"),dc.map(g=>g.N?g.R/g.N:0),dc.map(g=>g.N?`${g.N} өдөр`:"—"),"R");
+  h+=btBars("Дараалсан алдагдлын дараах арилжаа (дундаж R) — tilt",lsK.map(k=>k+" алдагдал"),ls.map(g=>g.N?g.R/g.N:0),ls.map(g=>g.N?`${g.N} · ${wr(g)}`:"—"),"R");
+  h+=btBars(`Revenge (≤${mins} мин) ба бусад (дундаж R)`,["Revenge","Бусад","Алд. дараа","Хож. дараа"],[gR,gN,gAL,gAW].map(g=>g.N?g.R/g.N:0),[gR,gN,gAL,gAW].map(g=>g.N?`${g.N} · ${wr(g)}`:"—"),"R");
+  h+=`</div><p class="muted" style="font-size:12px;margin:0">Давтан тоглуулалтад цаг нь зах зээлийн (графикийн) цагаар тооцогдоно. Өдрийн хязгаарыг Тохиргоо → «Өдрийн арилжааны дээд тоо»-оос өөрчилнө. Дүгнэлт найдвартай болохын тулд 50+ арилжаа хэрэгтэй.</p></div>`;
   return h}
 // SL ба TP-ийн статистик
 function btSlTp(all){const L=all.filter(r=>r.entry!=null);if(!L.length)return "";
@@ -2960,7 +3005,7 @@ function btHist(title,cats,vals){const W=520,H=220,pl=34,pr=10,pt=26,pb=28,n=cat
 function btOpen(){let d=$("#btDlg");if(!d){d=document.createElement("dialog");d.id="btDlg";d.className="bt-dlg";document.body.appendChild(d);
     d.addEventListener("click",e=>{const b=e.target.closest("[data-bt]");if(b){if(b.dataset.bt==="close")d.close();else if(b.dataset.bt==="csv")btCsv();else if(b.dataset.bt==="delOpen"){const live=CH.rp.pos&&CH.rp.pos.id;enriched(S.trades,"backtest").filter(t=>!t._.closed&&t.id!==live).forEach(t=>del("trades",t.id));btRender()}else if(b.dataset.bt==="save")rpSave().then(()=>btRender());return}
       const s=e.target.closest("[data-bts]");if(s){const k=s.dataset.bts;if(BT.sort===k)BT.desc=!BT.desc;else{BT.sort=k;BT.desc=k==="open"?false:true}btRender()}});
-    d.addEventListener("change",e=>{const id=e.target.id;if(id==="btSrc")BT.src=e.target.value;else if(id==="btInst")BT.inst=e.target.value;else if(id==="btDir")BT.dir=e.target.value;else return;btRender()})}
+    d.addEventListener("change",e=>{const id=e.target.id;if(id==="btSrc")BT.src=e.target.value;else if(id==="btInst")BT.inst=e.target.value;else if(id==="btDir")BT.dir=e.target.value;else if(id==="btRv")BT.rv=+e.target.value;else return;btRender()})}
   btRender();if(!d.open)d.showModal()}
 function btRender(){const d=$("#btDlg");if(d)d.innerHTML=btHtml()}
 function btCsv(){const rows=btRows().sort((a,b)=>(a.open||0)-(b.open||0));const head=["#","Хэрэгсэл","Огноо","Цаг","Гараг","Чиглэл","Орох","Гарах","Пип","R","P/L","Үр дүн","Хугацаа (мин)"];
