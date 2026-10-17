@@ -1486,7 +1486,7 @@ async function rpFetch(sym,g,a,b,prog){let cs=await rpCandles(sym,g,a,b);const s
   if(g<=300&&cs.length<span*0.5){const tb=await rpTicks(sym,g,a,b,prog);if(tb.length>cs.length){CH.rp.src="tick";return tb}}
   if(cs.length)CH.rp.src="candle";return cs}
 async function rpLoad(keep){
-  rpPause();if(keep!==true)rpFlushOpen();await chForget();const seq=++CH.loadSeq;const ins=CH.inst,g=CH.gran;
+  rpPause();if(keep!==true){rpFlushOpen();if(CH.mode==="replay"&&drList().length){drPush();drList().length=0;DR.sel=null;drSave();drDirty();toast("Шинэ сешн — өмнөх давтан тоглуулалтын зургийг арилгалаа (Ctrl+Z буцаана)")}}await chForget();const seq=++CH.loadSeq;const ins=CH.inst,g=CH.gran;
   const v=$("#rpStart").value;const start=Math.floor(new Date(v).getTime()/1000);
   if(!v||!isFinite(start)){chStatus("Эхлэх цагаа сонгоно уу.",true);return}
   if(start>Date.now()/1000-g*5){chStatus("Эхлэх цаг өнгөрсөн хугацаанд байх ёстой.",true);return}
@@ -1647,7 +1647,10 @@ const DR={tool:"cursor",color:DCOLORS[0],sel:null,hover:null,draft:null,drag:nul
 try{const o=JSON.parse(localStorage.getItem("alkham-chart-opts")||"{}");DR.mtf=+o.mtf||0;DR.sess=!!o.sess;if(o.color)DR.color=o.color;if(o.magnet2!=null)DR.magnet=!!o.magnet2;DR.lock=!!o.lock;
   if([60,300,900,3600,14400,86400].includes(+o.gran))CH.gran=+o.gran;if(o.rpStart)CH.rpStart=o.rpStart;if(+o.rpSpeed)CH.rp.speed=+o.rpSpeed;if(+o.risk)CH.riskSaved=+o.risk}catch(e){}
 function drOptsSave(){try{localStorage.setItem("alkham-chart-opts",JSON.stringify({mtf:DR.mtf,sess:DR.sess,color:DR.color,magnet2:DR.magnet,lock:DR.lock,gran:CH.gran,rpStart:CH.rpStart,rpSpeed:CH.rp.speed,risk:CH.risk}))}catch(e){}}
-function drKey(){return CH.inst?CH.inst.name:""}
+// Давтан тоглуулалтын зураг шууд графикийнхаас тусдаа хадгалагдана (холилдохгүй)
+function drKey(){return CH.inst?CH.inst.name+(CH.mode==="replay"?"|rp":""):""}
+// Давтан тоглуулалтад одоогийн лаанаас хойш (ирээдүйд) зурагдсан зургийг нууна
+function drVis(d){if(CH.mode!=="replay"||!d||!d.a||CH.lastTime==null)return true;const now=CH.lastTime-TZ+(CH.gran||60),t0=Math.min(d.a.t,d.b&&d.b.t!=null?d.b.t:d.a.t);return t0<=now}
 function drList(){S.drawings=S.drawings||{};const k=drKey();if(!S.drawings[k])S.drawings[k]=[];return S.drawings[k]}
 const drClean=d=>{const o={};for(const k of ["id","type","a","b","sl","tp","t2","color","width","dash","ext","levels","fopt","rp"])if(d[k]!==undefined)o[k]=d[k];return o};
 function drSave(){const k=drKey(),items=drList().map(drClean);
@@ -1692,7 +1695,7 @@ function drRender(){
   if(DR.sess&&CH.gran<=3600)drSessions(ctx,box,font);
   if(DR.mtf&&DR.mtf>CH.gran)drMtf(ctx,box);
   patDraw(ctx,box);rtDraw(ctx,box);
-  if(!DR.hidden)for(const d of drList())drShape(ctx,d,box,font,d===DR.sel,d===DR.hover);
+  if(!DR.hidden)for(const d of drList())if(drVis(d))drShape(ctx,d,box,font,d===DR.sel,d===DR.hover);
   if(DR.draft)drShape(ctx,DR.draft,box,font,true,false);
   ctx.restore()}
 function drSessions(ctx,box,font){const t0=xEp(0),t1=xEp(box.w);if(t0==null||t1==null)return;const day=86400;
@@ -1822,9 +1825,9 @@ function drHandles(d){const xa=dX(d.a.t),ya=pY(d.a.p);if(xa==null||ya==null)retu
 /* --- хит тест --- */
 function segDist(px,py,x1,y1,x2,y2){const dx=x2-x1,dy=y2-y1,L=dx*dx+dy*dy;let t=L?((px-x1)*dx+(py-y1)*dy)/L:0;t=Math.max(0,Math.min(1,t));return Math.hypot(px-(x1+t*dx),py-(y1+t*dy))}
 function drHit(x,y){if(DR.hidden)return null;const box=plotBox();
-  const order=[DR.sel,DR.hover].filter(Boolean).concat(drList().slice().reverse());
+  const order=[DR.sel,DR.hover].filter(Boolean).concat(drList().slice().reverse()).filter(drVis);
   for(const d of order)for(const h of drHandles(d))if(Math.hypot(x-h.x,y-h.y)<11)return {d,h:h.k};
-  const list=drList();for(let i=list.length-1;i>=0;i--){const d=list[i],xa=dX(d.a.t),ya=pY(d.a.p);if(xa==null||ya==null)continue;
+  const list=drList().filter(drVis);for(let i=list.length-1;i>=0;i--){const d=list[i],xa=dX(d.a.t),ya=pY(d.a.p);if(xa==null||ya==null)continue;
     if(d.type==="hline"){if(Math.abs(y-ya)<6&&x<box.w)return {d,h:"move"};continue}
     if(d.type==="hray"){if(Math.abs(y-ya)<6&&x>=xa-6&&x<box.w)return {d,h:"move"};continue}
     if(d.type==="vline"){if(Math.abs(x-xa)<6)return {d,h:"move"};continue}
@@ -2944,7 +2947,7 @@ async function chClick(e){
   if(seg){const g=seg.parentElement;if(seg.disabled)return;$$("button",g).forEach(b=>b.setAttribute("aria-pressed",String(b===seg)));
     if(g.id==="chGran"){CH.gran=+seg.dataset.v;drOptsSave();PAT.lastN=0;PAT.res=null;PAT.focus=null;NP.res=null;NP.lastN=0;NP.sel=null;NP.idx=null;chReload()}
     else if(g.id==="opDir"){CH.dir=seg.dataset.v;chUpdate()}
-    else if(g.id==="chMode"){const m=seg.dataset.v;if(m===CH.mode)return;if(m==="live")rpFlushOpen();CH.mode=m;setTimeout(mtfStatus,0);$("#chReplay").hidden=m!=="replay";
+    else if(g.id==="chMode"){const m=seg.dataset.v;if(m===CH.mode)return;if(m==="live")rpFlushOpen();CH.mode=m;DR.sel=null;DR.hover=null;if(typeof drLoadLocal==="function")drLoadLocal();drDirty();setTimeout(mtfStatus,0);$("#chReplay").hidden=m!=="replay";
       if(m==="live"){CH.rp.pos=null;chLoadLive()}else{rpPause();await chForget();CH.rp.balance=currentBalance(enriched(S.trades));
         if(CH.rp.all.length){CH.rp.cur=null;CH.series.setData(CH.rp.all.slice(0,CH.rp.idx));CH.series.setMarkers(CH.rp.markers);const b=CH.rp.all[CH.rp.idx-1];CH.last=b.close;CH.lastTime=b.time;chStatus("Давтан тоглуулах")}
         else{const live=CH.series.data().map(b=>({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close}));
