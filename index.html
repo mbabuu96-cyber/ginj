@@ -263,7 +263,7 @@ svg text{font-family:var(--f-mono)}
 .bt-tw{max-height:46vh;overflow:auto}
 .bt-table th.sort{cursor:pointer;user-select:none;white-space:nowrap}.bt-table th.sort:hover{color:var(--ink)}
 .bt-table td{white-space:nowrap}.bt-table tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--surface-2) 45%,transparent)}
-.bt-res{font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--surface-2)}.bt-res.tp{background:#089981;color:#fff}.bt-res.sl{background:#F23645;color:#fff}
+.bt-res{font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--surface-2)}.bt-res.tp{background:#089981;color:#fff}.bt-res.sl{background:#F23645;color:#fff}.bt-res.be{background:#787B86;color:#fff}
 .bt-h3{margin:4px 0 0;font-size:14px}
 .bt-grid.one{grid-template-columns:1fr}
 .bt-cals{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,460px),1fr));gap:12px}
@@ -1556,7 +1556,7 @@ function rpPlay(){const R=CH.rp;if(R.timer){rpPause();return}if(!R.all.length){c
   const fr=RT.ib==="off"?1:ibFrames();R.timer=setInterval(()=>{if(!R.cur&&!rpBegin())return;rpFrame()},1000/((R.speed||2)*fr));$("#rpPlay").textContent="❚❚"}
 function rpPause(){const R=CH.rp;if(R.timer){clearInterval(R.timer);R.timer=null}const b=$("#rpPlay");if(b)b.textContent="▶"}
 function rpOpen(){const R=CH.rp;const o=chCalc();if(o.lots==null||o.sl==null)return;
-  const bar=R.cur?R.cur.bar:R.all[R.idx-1];R.pos={seq:R.seq||0,dir:CH.dir,entry:CH.last,sl:o.sl,tp:o.tp,lots:o.lots,risk:o.risk,time:bar.time,epoch:bar.time-TZ,balance:R.balance};rpPersistOpen(R.pos);
+  const bar=R.cur?R.cur.bar:R.all[R.idx-1];R.pos={seq:R.seq||0,dir:CH.dir,entry:CH.last,sl:o.sl,sl0:o.sl,tp:o.tp,lots:o.lots,risk:o.risk,time:bar.time,epoch:bar.time-TZ,balance:R.balance};rpPersistOpen(R.pos);
   R.markers.push({time:bar.time,position:CH.dir==="Buy"?"belowBar":"aboveBar",color:cssVar("--accent"),shape:CH.dir==="Buy"?"arrowUp":"arrowDown",text:CH.dir});
   CH.series.setMarkers(R.markers.slice().sort((a,b)=>a.time-b.time));chUpdate()}
 // Давтан тоглуулалтад зурсан Long/Short позицын хэрэгсэл = арилжаа (TradingView шиг): үнэ орох түвшинд хүрмэгц нээгдэж, SL/TP-д хүрмэгц Backtest-д хадгалагдана
@@ -1577,7 +1577,8 @@ function rpCheck(bar){const R=CH.rp,p=R.pos;if(!p)return;if(bar.seq!=null){if(ba
   if(hitSl)rpClose(p.sl,"SL",bar);else if(hitTp)rpClose(p.tp,"TP",bar)} // нэг лаанд хоёулаа хүрвэл SL гэж үзнэ (болгоомжтой)
 function rpClose(price,reason,bar){const R=CH.rp,p=R.pos;if(!p)return;bar=bar||R.all[R.idx-1];
   const cs=+CH.inst.cs||1,pnl=(price-p.entry)*(p.dir==="Buy"?1:-1)*p.lots*cs,Rv=p.risk?pnl/p.risk:null;
-  R.results.push({inst:CH.inst.name,dir:p.dir,entry:p.entry,sl:p.sl,tp:p.tp,exit:price,lots:p.lots,pnl,R:Rv,reason,openEp:p.epoch,closeEp:bar.time-TZ,balance:p.balance,saved:false,id:p.id});
+  if(reason==="SL"&&Math.abs(p.sl-p.entry)<1e-9)reason="BE"; // stop-ийг орох үнэ рүү зөөсөн бол
+  R.results.push({inst:CH.inst.name,dir:p.dir,entry:p.entry,sl:p.sl0??p.sl,slEnd:p.sl,tp:p.tp,exit:price,lots:p.lots,pnl,R:Rv,reason,openEp:p.epoch,closeEp:bar.time-TZ,balance:p.balance,saved:false,id:p.id});
   R.balance+=pnl;R.pos=null;rpSave(true);
   R.markers.push({time:bar.time,position:"inBar",color:pnl>=0?cssVar("--gain"):cssVar("--loss"),shape:"circle",text:`${reason} ${rfmt(Rv)}`});
   CH.series.setMarkers(R.markers.slice().sort((a,b)=>a.time-b.time));
@@ -1598,7 +1599,7 @@ function rpRenderBox(){const box=$("#rpBox");if(CH.mode!=="replay"){box.hidden=t
   else h+=`<div class="muted" style="font-size:13px">Ачаалах дараад SL, TP-ээ тавиад позиц нээнэ. Дараа нь +1 лаа эсвэл Тоглуулах товчоор урагшлуулна. Backtest-ийн арилжаа таны жинхэнэ статистикт орохгүй.</div>`;
   box.innerHTML=h}
 function rpDoc(r,open){return {kind:"backtest",inst:r.inst,dir:r.dir,open:localStr(r.openEp),close:open?"":localStr(r.closeEp),entry:r.entry,sl:r.sl,tp:r.tp??"",exit:open?"":r.exit,lots:r.lots,fees:0,actual:"",balance:+(+r.balance||0).toFixed(2),
-    setup:"Backtest",emotion:"Тайван",exitReason:open?"":r.reason==="TP"?"Зорилтод хүрсэн":r.reason==="SL"?"Stop-д хүрсэн":"Дүрмээр гарсан",accepted:"y",movedStop:"n",addedLoser:"n",addedWinner:"n",followed:"y",exercise:"",calm:"",
+    setup:"Backtest",emotion:"Тайван",exitReason:open?"":r.reason==="TP"?"Зорилтод хүрсэн":r.reason==="SL"?"Stop-д хүрсэн":r.reason==="BE"?"Breakeven (BE)":"Дүрмээр гарсан",slEnd:open||r.slEnd==null?"":r.slEnd,accepted:"y",movedStop:"n",addedLoser:"n",addedWinner:"n",followed:"y",exercise:"",calm:"",
     notes:`Давтан тоглуулалт · ${r.inst} · ${(GRANS.find(x=>x[0]===CH.gran)||[0,""])[1]}`,chart:""}}
 // позиц нээгдмэгц тэмдэглэлд «нээлттэй» гэж бичнэ — хаагдахад мөн id-гаар шинэчилнэ
 function rpPersistOpen(p){try{p.id=p.id||uid();put("trades",p.id,rpDoc({inst:CH.inst.name,dir:p.dir,entry:p.entry,sl:p.sl,tp:p.tp,lots:p.lots,balance:p.balance,openEp:p.epoch},true))}catch(e){console.warn(e)}}
@@ -2710,7 +2711,7 @@ function rtDefaults(dir,entry){const d=dir==="Buy"?1:-1,tick=+CH.inst.tick||0.01
 function rtLots(entry,sl){const ins=CH.inst,cs=+ins.cs||1,step=+ins.lotStep||0.01,minLot=+ins.minLot||step,dist=Math.abs(entry-sl);if(!dist)return minLot;
   const lots=Math.floor(CH.rp.balance*(CH.risk||1)/100/(dist*cs)/step+1e-9)*step;return +Math.max(minLot,lots).toFixed(4)}
 function rtOpenPos(dir,entry,sl,tp,lots,bar){const R=CH.rp,cs=+CH.inst.cs||1;
-  R.pos={seq:R.seq||0,dir,entry,sl,tp,lots,risk:Math.abs(entry-sl)*cs*lots,time:bar.time,epoch:bar.time-TZ,balance:R.balance,idx:R.idx};rpPersistOpen(R.pos);
+  R.pos={seq:R.seq||0,dir,entry,sl,sl0:sl,tp,lots,risk:Math.abs(entry-sl)*cs*lots,time:bar.time,epoch:bar.time-TZ,balance:R.balance,idx:R.idx};rpPersistOpen(R.pos);
   R.markers.push({time:bar.time,position:dir==="Buy"?"belowBar":"aboveBar",color:dir==="Buy"?"#2962FF":"#F23645",shape:dir==="Buy"?"arrowUp":"arrowDown",text:`${dir} ${fm(lots,2)}`});
   CH.series.setMarkers(R.markers.slice().sort((a,b)=>a.time-b.time));CH.dir=dir;rtSync();chUpdate();drDirty()}
 function rtSync(){const p=CH.rp.pos||RT.pend;if(!p)return;$("#opSl").value=fmtP(p.sl);$("#opTp").value=p.tp==null?"":fmtP(p.tp);CH.dir=p.dir}
@@ -2814,10 +2815,11 @@ const BT={src:"all",inst:"all",dir:"all",sort:"open",desc:false};
 const BT_WD=["Ням","Даваа","Мягмар","Лхагва","Пүрэв","Баасан","Бямба"],BT_WD_ORDER=[1,2,3,4,5,6,0];
 const btEp=s=>{if(s==null||s==="")return null;if(typeof s==="number")return s;const t=new Date(s).getTime();return isFinite(t)?t/1000:null};
 function btRows(){const rows=[];
-  if(BT.src!=="saved")CH.rp.results.forEach(r=>{if(BT.src==="all"&&r.saved)return;rows.push({src:"Сешн",inst:r.inst,dir:r.dir,open:r.openEp,close:r.closeEp,entry:r.entry,exit:r.exit,sl:r.sl,tp:r.tp,lots:r.lots,pnl:r.pnl,R:r.R,reason:r.reason==="TP"?"TP":r.reason==="SL"?"SL":"Гараар"})});
+  if(BT.src!=="saved")CH.rp.results.forEach(r=>{if(BT.src==="all"&&r.saved)return;rows.push({src:"Сешн",inst:r.inst,dir:r.dir,open:r.openEp,close:r.closeEp,entry:r.entry,exit:r.exit,sl:r.sl,tp:r.tp,lots:r.lots,pnl:r.pnl,R:r.R,reason:r.reason==="TP"?"TP":r.reason==="SL"?"SL":r.reason==="BE"?"BE":"Гараар"})});
   if(BT.src!=="session")enriched(S.trades,"backtest").forEach(t=>{if(!t._.closed)return;rows.push({src:"Хадгалсан",id:t.id,inst:t.inst,dir:t.dir,open:btEp(t.open),close:btEp(t.close),entry:num(t.entry),exit:num(t.exit),sl:num(t.sl),tp:num(t.tp),lots:num(t.lots),pnl:t._.pnl,R:t._.R,
-    reason:/Зорилт/.test(t.exitReason||"")?"TP":/Stop/.test(t.exitReason||"")?"SL":"Гараар"})});
-  rows.forEach(r=>{const ins=instOf(r.inst),ps=ins.kind==="step"?(+ins.tick||0.1):0.1;r.pips=r.entry!=null&&r.exit!=null?Math.round((r.exit-r.entry)*(r.dir==="Sell"?-1:1)/ps*10)/10:null;
+    reason:/Зорилт/.test(t.exitReason||"")?"TP":/Breakeven/.test(t.exitReason||"")?"BE":/Stop/.test(t.exitReason||"")?"SL":"Гараар"})});
+  rows.forEach(r=>{const ins=instOf(r.inst),ps=ins.kind==="step"?(+ins.tick||0.1):0.1;r.ps=ps;
+    if(r.reason==="SL"&&r.sl!=null&&r.entry!=null&&Math.abs(r.sl-r.entry)<1e-9){r.reason="BE";if(r.R==null)r.R=0} // хуучин BE арилжааr.pips=r.entry!=null&&r.exit!=null?Math.round((r.exit-r.entry)*(r.dir==="Sell"?-1:1)/ps*10)/10:null;
     const d=r.open?new Date(r.open*1000):null;r.wd=d?d.getDay():null;r.hr=d?d.getHours():null;r.dur=r.open&&r.close?(r.close-r.open)/60:null});
   rows.sort((a,b)=>(a.open||0)-(b.open||0)).forEach((r,i)=>r.idx=i+1);
   return rows.filter(r=>(BT.inst==="all"||r.inst===BT.inst)&&(BT.dir==="all"||r.dir===BT.dir))}
@@ -2829,13 +2831,13 @@ const btFmtT=ep=>{const d=new Date(ep*1000),p=n=>String(n).padStart(2,"0");retur
 const btDur=m=>m==null?"—":m<60?`${Math.round(m)} мин`:m<1440?`${(m/60).toFixed(1)} ц`:`${(m/1440).toFixed(1)} өдөр`;
 // Графикийн хэрэгслүүд (SVG): нэг тэнхлэг, нимгэн зураас, ашиг = ногоон, алдагдал = улаан + шошго
 const BT_POS="#089981",BT_NEG="#F23645";
-function btBars(title,cats,vals,sub,unit,Wd){const W=Wd||520,H=220,pl=40,pr=10,pt=26,pb=40,n=cats.length;
+function btBars(title,cats,vals,sub,unit,Wd,cols){const W=Wd||520,H=220,pl=40,pr=10,pt=26,pb=40,n=cats.length;
   const mx=Math.max(0.5,...vals.map(v=>Math.abs(v))),lo=Math.min(0,...vals),hi=Math.max(0,...vals),rg=(hi-lo)||1;
   const Y=v=>pt+(H-pt-pb)*(1-(v-lo)/rg),bw=(W-pl-pr)/n,y0=Y(0);let g="";
   for(let k=0;k<=4;k++){const v=lo+rg*k/4,y=Y(v);g+=`<line x1="${pl}" x2="${W-pr}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width=".6"/><text x="${pl-6}" y="${(y+3).toFixed(1)}" font-size="10" text-anchor="end" fill="var(--muted)">${v.toFixed(1)}</text>`}
   cats.forEach((c,i)=>{const v=vals[i],x=pl+i*bw+bw*0.18,w=Math.max(2,bw*0.64),y=v>=0?Y(v):y0,h=Math.max(v?1:0,Math.abs(Y(v)-y0));
     g+=`<g><title>${esc(c)}: ${v>=0?"+":""}${v.toFixed(2)}${unit} · ${sub[i]}</title><rect x="${(pl+i*bw).toFixed(1)}" y="${pt}" width="${bw.toFixed(1)}" height="${H-pt-pb}" fill="transparent"/>
-      <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${v>=0?BT_POS:BT_NEG}"/></g>
+      <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${cols&&cols[i]?cols[i]:v>=0?BT_POS:BT_NEG}"/></g>
       <text x="${(x+w/2).toFixed(1)}" y="${H-pb+14}" font-size="10" text-anchor="middle" fill="var(--ink)">${esc(c)}</text><text x="${(x+w/2).toFixed(1)}" y="${H-pb+27}" font-size="9" text-anchor="middle" fill="var(--muted)">${esc(sub[i])}</text>`});
   g+=`<line x1="${pl}" x2="${W-pr}" y1="${y0}" y2="${y0}" stroke="var(--muted)" stroke-width="1"/>`;
   return `<figure class="bt-fig"><figcaption>${esc(title)}</figcaption><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(title)}">${g}</svg></figure>`}
@@ -2869,7 +2871,7 @@ function btHtml(page){const all=btRows(),S0=btSummary(all),insts=[...new Set([..
   <div class="tw bt-tw"><table class="bt-table"><thead><tr>${th("idx","#",true)}${th("inst","Хэрэгсэл")}${th("open","Огноо")}<th>Цаг</th>${th("wd","Гараг")}${th("dir","Чиглэл")}${th("entry","Орох",true)}${th("exit","Гарах",true)}${th("pips","Пип (±)",true)}${th("R","R",true)}${th("pnl","P/L",true)}${th("reason","Үр дүн")}${th("dur","Хугацаа",true)}</tr></thead><tbody>
     ${rows.map((r,i)=>`<tr><td class="r num muted">${r.idx}</td><td>${esc(r.inst)}${r.src==="Сешн"?' <span class="pill neutral" style="font-size:10px">сешн</span>':""}</td><td class="num">${r.open?btFmtD(r.open):"—"}</td><td class="num">${r.open?btFmtT(r.open):"—"}</td><td>${r.wd!=null?BT_WD[r.wd]:"—"}</td>
       <td><span class="dir ${r.dir==="Sell"?"sell":"buy"}">${r.dir}</span></td><td class="r num">${r.entry!=null?fmtP(r.entry,instOf(r.inst)):"—"}</td><td class="r num">${r.exit!=null?fmtP(r.exit,instOf(r.inst)):"—"}</td>
-      <td class="r num ${cls(r.pips)}"><b>${pip(r.pips)}</b></td><td class="r num ${cls(r.R)}">${rfmt(r.R)}</td><td class="r num ${cls(r.pnl)}">${money(r.pnl)}</td><td><span class="bt-res ${r.reason==="TP"?"tp":r.reason==="SL"?"sl":""}">${r.reason}</span></td><td class="r num muted">${btDur(r.dur)}</td></tr>`).join("")}
+      <td class="r num ${cls(r.pips)}"><b>${pip(r.pips)}</b></td><td class="r num ${cls(r.R)}">${rfmt(r.R)}</td><td class="r num ${cls(r.pnl)}">${money(r.pnl)}</td><td><span class="bt-res ${r.reason==="TP"?"tp":r.reason==="SL"?"sl":r.reason==="BE"?"be":""}">${r.reason}</span></td><td class="r num muted">${btDur(r.dur)}</td></tr>`).join("")}
   </tbody></table></div>
   <h3 class="bt-h3">Тайлан</h3>${btCurve(all)}<div class="bt-grid">`;
   const wd=btGroup(all,r=>r.wd,BT_WD_ORDER.map(k=>({k})));
@@ -2881,8 +2883,34 @@ function btHtml(page){const all=btRows(),S0=btSummary(all),insts=[...new Set([..
   const bins=[["≤−1",r=>r.R<=-0.999],["−1…0",r=>r.R>-0.999&&r.R<0],["0…1",r=>r.R>=0&&r.R<1],["1…2",r=>r.R>=1&&r.R<2],["2…3",r=>r.R>=2&&r.R<3],["3+",r=>r.R>=3]];
   const bc=bins.map(([,f])=>all.filter(r=>r.R!=null&&f(r)).length);
   h+=btHist("R-ийн тархалт (арилжааны тоо)",bins.map(b=>b[0]),bc);
-  h+=`</div>${btPeriods(all)}`;
+  h+=`</div>${btSlTp(all)}${btPeriods(all)}`;
   h+=`<p class="muted" style="font-size:11px;margin:0">Пип: Step Index-д 1 пип = 1 алхам (0.1), XAUUSD-д 1 пип = 0.1 ам.доллар. Цаг таны компьютерийн цагийн бүсээр. Графикийн багана дээр очиход дэлгэрэнгүй гарна.</p></div>`;
+  return h}
+// SL ба TP-ийн статистик
+function btSlTp(all){const L=all.filter(r=>r.entry!=null);if(!L.length)return "";
+  const K=["TP","SL","BE","Гараар"],G=K.map(k=>{const a=L.filter(r=>r.reason===k);return {k,N:a.length,R:a.reduce((s,r)=>s+(r.R||0),0),pip:a.reduce((s,r)=>s+(r.pips||0),0)}});
+  const N=L.length,dist=r=>r.sl!=null?Math.abs(r.entry-r.sl)/r.ps:null,tdist=r=>r.tp!=null?Math.abs(r.tp-r.entry)/r.ps:null,rr=r=>{const d=dist(r),t=tdist(r);return d&&t!=null?t/d:null};
+  const avg=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:null,sl=L.map(dist).filter(v=>v),tp=L.map(tdist).filter(v=>v),rrs=L.map(rr).filter(v=>v!=null);
+  const kv=(l,v,c="",sub="")=>`<div class="np-kv"><span class="lbl">${l}</span><b class="${c}">${v}</b><span class="muted">${sub}</span></div>`;
+  let h=`<h3 class="bt-h3">SL ба TP-ийн статистик</h3><div class="bot-kpis">
+    ${kv("TP-д хүрсэн",`${G[0].N} · ${pct(G[0].N/N)}`,"pos",rfmt(G[0].R))}${kv("SL-д хүрсэн",`${G[1].N} · ${pct(G[1].N/N)}`,"neg",rfmt(G[1].R))}
+    ${kv("Breakeven (BE)",`${G[2].N} · ${pct(G[2].N/N)}`,"","0R")}${kv("Гараар хаасан",`${G[3].N} · ${pct(G[3].N/N)}`,cls(G[3].R),rfmt(G[3].R))}
+    ${kv("Дундаж SL зай",sl.length?`${avg(sl).toFixed(1)} пип`:"—","",sl.length?`${Math.min(...sl).toFixed(0)}–${Math.max(...sl).toFixed(0)}`:"")}
+    ${kv("Дундаж TP зай",tp.length?`${avg(tp).toFixed(1)} пип`:"—","",rrs.length?`төлөвлөсөн R:R ${avg(rrs).toFixed(2)}`:"")}</div><div class="bt-grid">`;
+  h+=btBars("Хаагдсан шалтгаанаар (арилжааны тоо)",K,G.map(g=>g.N),G.map(g=>pct(N?g.N/N:0)),"",undefined,["#089981","#F23645","#787B86","#2962FF"]);
+  h+=btBars("Хаагдсан шалтгаанаар (нийт R)",K,G.map(g=>g.R),G.map(g=>`${g.N} арилжаа`),"R");
+  // төлөвлөсөн R:R бүрээр TP хүрэх хувь
+  const rb=[["<1",v=>v<0.95],["1R",v=>v>=0.95&&v<1.25],["1.5R",v=>v>=1.25&&v<1.75],["2R",v=>v>=1.75&&v<2.5],["3R",v=>v>=2.5&&v<3.5],["4R+",v=>v>=3.5]];
+  const rg=rb.map(([k,f])=>{const a=L.filter(r=>{const v=rr(r);return v!=null&&f(v)});return {k,N:a.length,tp:a.filter(r=>r.reason==="TP").length,R:a.reduce((s,r)=>s+(r.R||0),0)}});
+  h+=btBars("Төлөвлөсөн R:R-ээр TP-д хүрэх хувь",rg.map(g=>g.k),rg.map(g=>g.N?100*g.tp/g.N:0),rg.map(g=>g.N?`${g.tp}/${g.N}`:"—"),"%");
+  h+=btBars("Төлөвлөсөн R:R-ээр нийт R",rg.map(g=>g.k),rg.map(g=>g.R),rg.map(g=>g.N?`${g.N} арилжаа`:"—"),"R");
+  // SL зайгаар
+  if(sl.length){const q=sl.slice().sort((a,b)=>a-b),cut=[q[Math.floor(q.length/3)],q[Math.floor(2*q.length/3)]];
+    const sb=[[`≤${cut[0].toFixed(0)}`,v=>v<=cut[0]],[`${cut[0].toFixed(0)}–${cut[1].toFixed(0)}`,v=>v>cut[0]&&v<=cut[1]],[`>${cut[1].toFixed(0)}`,v=>v>cut[1]]];
+    const sg=sb.map(([k,f])=>{const a=L.filter(r=>{const v=dist(r);return v&&f(v)});return {k,N:a.length,sl:a.filter(r=>r.reason==="SL").length,R:a.reduce((s,r)=>s+(r.R||0),0)}});
+    h+=btBars("SL зайгаар (пип): SL-д хүрэх хувь",sg.map(g=>g.k),sg.map(g=>g.N?100*g.sl/g.N:0),sg.map(g=>g.N?`${g.sl}/${g.N}`:"—"),"%",undefined,["#F23645","#F23645","#F23645"]);
+    h+=btBars("SL зайгаар (пип): нийт R",sg.map(g=>g.k),sg.map(g=>g.R),sg.map(g=>g.N?`${g.N} арилжаа`:"—"),"R")}
+  h+=`</div><p class="muted" style="font-size:12px;margin:0">R:R = (TP зай) ÷ (анхны SL зай). BE = stop-ийг орох үнэ рүү зөөсний дараа хаагдсан. «SL зайгаар» нь арилжаануудыг SL-ийн хэмжээгээр гурван тэнцүү бүлэгт хуваана — аль SL хэмжээ танд илүү ажилладгийг харуулна.</p>`;
   return h}
 // Өдөр ба сарын статистик (арилжаа нээсэн огноогоор, таны цагийн бүсээр)
 function btPeriods(all){const L=all.filter(r=>r.open!=null);if(!L.length)return "";
