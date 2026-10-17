@@ -2877,7 +2877,7 @@ function btHtml(page){const all=btRows(),S0=btSummary(all),insts=[...new Set([..
       <td><span class="dir ${r.dir==="Sell"?"sell":"buy"}">${r.dir}</span></td><td class="r num">${r.entry!=null?fmtP(r.entry,instOf(r.inst)):"—"}</td><td class="r num">${r.exit!=null?fmtP(r.exit,instOf(r.inst)):"—"}</td>
       <td class="r num ${cls(r.pips)}"><b>${pip(r.pips)}</b></td><td class="r num ${cls(r.R)}">${rfmt(r.R)}</td><td class="r num ${cls(r.pnl)}">${money(r.pnl)}</td><td><span class="bt-res ${r.reason==="TP"?"tp":r.reason==="SL"?"sl":r.reason==="BE"?"be":""}">${r.reason}</span></td><td class="r num muted">${btDur(r.dur)}</td></tr>`).join("")}
   </tbody></table></div>
-  <h3 class="bt-h3">Тайлан</h3>${btPsych(all)}${btCurve(all)}<div class="bt-grid">`;
+  <h3 class="bt-h3">Тайлан</h3>${btStreaks(all)}${btPsych(all)}${btCurve(all)}<div class="bt-grid">`;
   const wd=btGroup(all,r=>r.wd,BT_WD_ORDER.map(k=>({k})));
   h+=btBars("Гарагаар (нийт R)",BT_WD_ORDER.map(k=>BT_WD[k].slice(0,2)),wd.map(x=>x.R),wd.map(x=>x.N?`${x.N} · ${pct(x.win)}`:"—"),"R");
   const hrs=[...Array(24).keys()],hg=btGroup(all,r=>r.hr,hrs.map(k=>({k})));
@@ -2889,6 +2889,36 @@ function btHtml(page){const all=btRows(),S0=btSummary(all),insts=[...new Set([..
   h+=btHist("R-ийн тархалт (арилжааны тоо)",bins.map(b=>b[0]),bc);
   h+=`</div>${btSlTp(all)}${btPeriods(all)}`;
   h+=`<p class="muted" style="font-size:11px;margin:0">Пип: Step Index-д 1 пип = 1 алхам (0.1), XAUUSD-д 1 пип = 0.1 ам.доллар. Цаг таны компьютерийн цагийн бүсээр. Графикийн багана дээр очиход дэлгэрэнгүй гарна.</p></div>`;
+  return h}
+// Дараалсан SL / TP (цуврал): хэдэн SL-ийн дараа TP, хэдэн TP-ийн дараа SL, цаг хугацаанд өөрчлөгдөж байна уу
+function btStreaks(all){const L=all.filter(r=>r.open!=null&&r.R!=null&&Math.abs(r.R)>0.005).slice().sort((a,b)=>a.open-b.open);if(L.length<3)return "";
+  const S0=[];L.forEach(r=>{const w=r.R>0,c=S0[S0.length-1];if(c&&c.w===w){c.n++;c.end=r}else S0.push({w,n:1,start:r,end:r})});
+  const Ls=S0.filter(x=>!x.w),Ws=S0.filter(x=>x.w),avg=a=>a.length?a.reduce((s,x)=>s+x.n,0)/a.length:0,mx=a=>a.length?Math.max(...a.map(x=>x.n)):0;
+  const cur=S0[S0.length-1],p2=n=>String(n).padStart(2,"0"),dd=r=>{const d=new Date(r.open*1000);return `${p2(d.getMonth()+1)}/${p2(d.getDate())}`};
+  const kv=(l,v,c="",sub="")=>`<div class="np-kv"><span class="lbl">${l}</span><b class="${c}">${v}</b><span class="muted">${sub}</span></div>`;
+  let h=`<div class="bt-psy"><h3 class="bt-h3">Дараалсан SL ба TP (цуврал)</h3><div class="bot-kpis">
+    ${kv("Хамгийн урт SL цуврал",`${mx(Ls)} дараалан`,"neg",`дунджаар ${avg(Ls).toFixed(1)} SL-ийн дараа TP`)}
+    ${kv("Хамгийн урт TP цуврал",`${mx(Ws)} дараалан`,"pos",`дунджаар ${avg(Ws).toFixed(1)} TP-ийн дараа SL`)}
+    ${kv("Одоогийн цуврал",`${cur.n} ${cur.w?"TP":"SL"}`,cur.w?"pos":"neg",`${S0.length} цуврал · ${L.length} арилжаа`)}</div>`;
+  // хагасаар харьцуулах — сайжирч байна уу
+  if(S0.length>=6){const half=Math.floor(L.length/2),cut=L[half].open,A=S0.filter(x=>x.start.open<cut),B=S0.filter(x=>x.start.open>=cut);
+    const aL=A.filter(x=>!x.w),bL=B.filter(x=>!x.w),aW=A.filter(x=>x.w),bW=B.filter(x=>x.w);
+    const ar=(a,b,good)=>{const d=b-a;return Math.abs(d)<0.15?`<span class="muted">≈ өөрчлөлтгүй</span>`:(good==="down"?d<0:d>0)?`<b class="pos">✓ ${good==="down"?"багассан":"ихэссэн"}</b>`:`<b class="neg">⚠ ${good==="down"?"ихэссэн":"багассан"}</b>`};
+    h+=`<div class="tw"><table class="bt-table bt-per"><thead><tr><th></th><th class="r">Эхний хагас (${dd(L[0])}–)</th><th class="r">Сүүлийн хагас (${dd(L[half])}–)</th><th>Дүгнэлт</th></tr></thead><tbody>
+      <tr><td>Дундаж дараалсан SL</td><td class="r num">${avg(aL).toFixed(2)}</td><td class="r num">${avg(bL).toFixed(2)}</td><td>${ar(avg(aL),avg(bL),"down")}</td></tr>
+      <tr><td>Хамгийн урт SL цуврал</td><td class="r num">${mx(aL)}</td><td class="r num">${mx(bL)}</td><td>${ar(mx(aL),mx(bL),"down")}</td></tr>
+      <tr><td>Дундаж дараалсан TP</td><td class="r num">${avg(aW).toFixed(2)}</td><td class="r num">${avg(bW).toFixed(2)}</td><td>${ar(avg(aW),avg(bW),"up")}</td></tr>
+      <tr><td>Хамгийн урт TP цуврал</td><td class="r num">${mx(aW)}</td><td class="r num">${mx(bW)}</td><td>${ar(mx(aW),mx(bW),"up")}</td></tr></tbody></table></div>`}
+  // цувралын дараалал (цаг хугацаагаар)
+  const sh=S0.slice(-40);
+  h+=`<div class="bt-grid one">${btBars(`Цувралууд цаг хугацааны дарааллаар${S0.length>40?" (сүүлийн 40)":""} — дээш ногоон = дараалсан TP, доош улаан = дараалсан SL`,sh.map(x=>String(x.n)),sh.map(x=>x.w?x.n:-x.n),sh.map(x=>dd(x.start)),"",1060)}</div>`;
+  const K=["1","2","3","4","5","6+"],cnt=a=>K.map((k,i)=>a.filter(x=>i<5?x.n===i+1:x.n>=6).length);
+  // k дараалсан SL-ийн дараа дараагийнх нь TP байх магадлал
+  const pk=[1,2,3,4,5].map(k=>{let n=0,w=0;S0.forEach((x,i)=>{if(x.w||x.n<k)return;const last=i===S0.length-1;if(x.n===k&&last)return;n++;if(x.n===k)w++});return {n,w}}); // k SL-ийн дараа: цуврал яг k-д дуусвал дараагийнх TP
+  h+=`<div class="bt-grid">${btBars("SL цувралын урт (хэдэн удаа тохиолдсон)",K.map(k=>k+" SL"),cnt(Ls),cnt(Ls).map(v=>v?String(v):""),"",undefined,K.map(()=>"#F23645"))}
+    ${btBars("TP цувралын урт (хэдэн удаа тохиолдсон)",K.map(k=>k+" TP"),cnt(Ws),cnt(Ws).map(v=>v?String(v):""),"",undefined,K.map(()=>"#089981"))}
+    ${btBars("N дараалсан SL-ийн дараах арилжаа TP байх хувь",["1 SL","2 SL","3 SL","4 SL","5 SL"],pk.map(g=>g.n?100*g.w/g.n:0),pk.map(g=>g.n?`${g.w}/${g.n}`:"—"),"%",undefined,pk.map(()=>"#089981"))}</div>
+    <p class="muted" style="font-size:12px;margin:0">TP = ашигтай (R &gt; 0), SL = алдагдалтай (R &lt; 0) арилжаа; BE (0R) цувралыг таслахгүй. «Хагасаар харьцуулах» нь арилжаануудаа хоёр тэнцүү хувааж, сүүлийн үед дараалсан SL багасаж, TP ихэсч байна уу гэдгийг харуулна.</p></div>`;
   return h}
 // Revenge (алдагдлын дараа яаран орох) ба Overtrade (хэт олон арилжаа)
 function btPsych(all){const L=all.filter(r=>r.open!=null).slice().sort((a,b)=>a.open-b.open);if(L.length<2)return "";
