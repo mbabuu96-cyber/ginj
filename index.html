@@ -1627,6 +1627,7 @@ function styleFor(tool){const st=(prefsGet().styles||{})[tool];return st?JSON.pa
 function styleRemember(d){const key=d.type==="trend"&&d.ext==="right"&&d._tool==="ray"?"ray":d.type;const pr=prefsGet();pr.styles=pr.styles||{};
   const st={color:d.color,width:d.width,dash:!!d.dash};if(d.type==="trend")st.ext=d.ext||"none";
   if(d.type==="fib"){st.levels=JSON.parse(JSON.stringify(d.levels||[]));st.fopt=Object.assign({},d.fopt||{})}
+  if(d.type==="pitchfork")st.pf=JSON.parse(JSON.stringify(pfOf(d)));
   pr.styles[key]=st;if(d.type==="fib")pr.fib={levels:st.levels,opt:st.fopt};prefsSave()}
 function fibDefault(){const pf=prefsGet().fib;if(pf&&Array.isArray(pf.levels)&&pf.levels.length)return JSON.parse(JSON.stringify({levels:pf.levels,opt:Object.assign({},FIB_BASE.opt,pf.opt)}));
   try{const o=JSON.parse(localStorage.getItem("alkham-fib-default")||"null");if(o&&Array.isArray(o.levels)&&o.levels.length)return JSON.parse(JSON.stringify({levels:o.levels,opt:Object.assign({},FIB_BASE.opt,o.opt)}))}catch(e){}return JSON.parse(JSON.stringify(FIB_BASE))}
@@ -1657,7 +1658,7 @@ function drKey(){return CH.inst?CH.inst.name+(CH.mode==="replay"?"|rp":""):""}
 // Давтан тоглуулалтад одоогийн лаанаас хойш (ирээдүйд) зурагдсан зургийг нууна
 function drVis(d){if(CH.mode!=="replay"||!d||!d.a||CH.lastTime==null)return true;const now=CH.lastTime-TZ+(CH.gran||60),t0=Math.min(d.a.t,d.b&&d.b.t!=null?d.b.t:d.a.t);return t0<=now}
 function drList(){S.drawings=S.drawings||{};const k=drKey();if(!S.drawings[k])S.drawings[k]=[];return S.drawings[k]}
-const drClean=d=>{const o={};for(const k of ["id","type","a","b","sl","tp","t2","color","width","dash","ext","levels","fopt","rp","c"])if(d[k]!==undefined)o[k]=d[k];return o};
+const drClean=d=>{const o={};for(const k of ["id","type","a","b","sl","tp","t2","color","width","dash","ext","levels","fopt","rp","c","pf"])if(d[k]!==undefined)o[k]=d[k];return o};
 function drSave(){const k=drKey(),items=drList().map(drClean);
   clearTimeout(DR.saveT[k]);DR.saveT[k]=setTimeout(()=>{
     if(S.mode==="supa")supaQueue({t:"put",coll:"settings",id:"draw:"+k,data:{items}});
@@ -1811,15 +1812,20 @@ function drShape(ctx,d,box,font,sel,hov){
       if(txt&&R>4&&(Math.abs(l.y-lastLbl)>=13||key)){const tw=ctx.measureText(txt).width;
         let tx=o.side==="right"?R+8:L-tw-8;if(tx+tw>box.w-2)tx=Math.min(R,box.w)-tw-4;if(tx<2)tx=Math.max(L,0)+4;
         ctx.fillText(txt,tx,yy);lastLbl=l.y}}}
-  else if(d.type==="pitchfork"&&xb!=null){const P=pfGeom(d,box);if(!P)return;
+  else if(d.type==="pitchfork"&&xb!=null){const P=pfGeom(d,box);if(!P)return;const O=pfOf(d);
     if(!P.c){ctx.beginPath();ctx.moveTo(xa,ya);ctx.lineTo(xb,yb);ctx.stroke()}
-    else{const col=d.color,hx=col.startsWith("#");
-      // сэрээний хооронд бүдэг өнгө
-      const fb=P.tine(1),fc=P.tine(-1);ctx.fillStyle=hx?rgba(col,0.07):col;ctx.beginPath();ctx.moveTo(fb[0],fb[1]);ctx.lineTo(fb[2],fb[3]);ctx.lineTo(fc[2],fc[3]);ctx.lineTo(fc[0],fc[1]);ctx.closePath();ctx.fill();
-      ctx.beginPath();ctx.moveTo(P.a[0],P.a[1]);ctx.lineTo(P.med[2],P.med[3]);ctx.stroke(); // голч шугам
-      for(const f of [1,-1]){const L=P.tine(f);ctx.beginPath();ctx.moveTo(L[0],L[1]);ctx.lineTo(L[2],L[3]);ctx.stroke()}
-      ctx.save();ctx.setLineDash([4,4]);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.b[0],P.b[1]);ctx.lineTo(P.c[0],P.c[1]);ctx.stroke();
-      for(const f of [0.5,-0.5]){const L=P.tine(f);ctx.globalAlpha=.7;ctx.beginPath();ctx.moveTo(L[0],L[1]);ctx.lineTo(L[2],L[3]);ctx.stroke()}ctx.restore()}}
+    else{const colOf=c=>O.one?d.color:c;
+      const lv=O.levels.filter(l=>l.on&&isFinite(+l.v)&&+l.v>0).map(l=>({v:+l.v,c:colOf(l.c)})).sort((a,b)=>a.v-b.v);
+      // дэвсгэр: голчоос эхлэн түвшин бүрийн хооронд (TradingView шиг)
+      if(O.bg){let prev=0;for(const l of lv){for(const sg of [1,-1]){const A=P.line(prev*sg),B=P.line(l.v*sg);ctx.fillStyle=rgba(l.c.startsWith("#")?l.c:"#2962FF",O.alpha);
+          ctx.beginPath();ctx.moveTo(A[0],A[1]);ctx.lineTo(A[2],A[3]);ctx.lineTo(B[2],B[3]);ctx.lineTo(B[0],B[1]);ctx.closePath();ctx.fill()}prev=l.v}}
+      ctx.setLineDash([]);
+      for(const l of lv)for(const sg of [1,-1]){const L=P.line(l.v*sg);ctx.strokeStyle=l.c;ctx.lineWidth=d.width||1.5;ctx.setLineDash(d.dash?[6,4]:[]);ctx.beginPath();ctx.moveTo(L[0],L[1]);ctx.lineTo(L[2],L[3]);ctx.stroke()}
+      // голч шугам (origin-оос)
+      ctx.strokeStyle=colOf(O.mc);ctx.lineWidth=d.width||1.5;ctx.setLineDash(d.dash?[6,4]:[]);ctx.beginPath();ctx.moveTo(P.o[0],P.o[1]);ctx.lineTo(P.med[2],P.med[3]);ctx.stroke();
+      // B–C шугам ба Schiff-ийн бариул
+      ctx.save();ctx.lineWidth=1;ctx.strokeStyle=colOf(O.mc);ctx.beginPath();ctx.moveTo(P.b[0],P.b[1]);ctx.lineTo(P.c[0],P.c[1]);ctx.stroke();
+      if(O.style!=="orig"){ctx.setLineDash([3,3]);ctx.globalAlpha=.6;ctx.beginPath();ctx.moveTo(P.a[0],P.a[1]);ctx.lineTo(P.b[0],P.b[1]);ctx.stroke()}ctx.restore()}}
   else if((d.type==="long"||d.type==="short")&&d.t2!=null){const x2=dX(d.t2),ys=pY(d.sl),yt=pY(d.tp);if(x2==null||ys==null||yt==null)return;
     const L=Math.min(xa,x2),W=Math.abs(x2-xa),gain=cssVar("--gain")||"#1C7449",loss=cssVar("--loss")||"#B13636",gx=gain.startsWith("#"),lx=loss.startsWith("#");
     ctx.setLineDash([]);ctx.fillStyle=gx?rgba(gain,0.18):gain;ctx.fillRect(L,Math.min(ya,yt),W,Math.abs(yt-ya));
@@ -1830,14 +1836,21 @@ function drShape(ctx,d,box,font,sel,hov){
     drLabel(ctx,`Stop ${(+d.sl).toFixed(dec)} · ${CH.inst.kind==="step"?c.steps+" алхам":c.dist.toFixed(dec)} · ${cur}${fm(c.risk)}`,lx0,ys+(ys>ya?12:-12),lx?rgba(loss,0.95):loss,"#fff");
     if(sel||hov)drLabel(ctx,`${d.type==="long"?"Long":"Short"} ${fm(c.lots,2)} лот @ ${(+d.a.p).toFixed(dec)}`,lx0,ya+(d.type==="long"?12:-12),rgba("#202826",0.9),"#fff")}
   if(sel||hov){ctx.setLineDash([]);for(const h of drHandles(d)){ctx.fillStyle=cssVar("--surface")||"#fff";ctx.beginPath();ctx.arc(h.x,h.y,sel?6:5,0,Math.PI*2);ctx.fill();ctx.strokeStyle=d.color||cssVar("--ink");ctx.lineWidth=2;ctx.stroke()}}}
-// Сэрээний геометр (пикселээр): A-аас B,C-ийн дунд цэг рүү голч шугам, B ба C-ээр дайрсан параллель шугамууд, баруун тийш сунгана
+// Сэрээ (TradingView-ийн Pitchfork): Original — A-аас; Schiff — A-ийн цаг, A ба B-ийн дундаж үнэ; Modified Schiff — A ба B-ийн дунд цэг.
+// Голч шугам эхлэлээс B,C-ийн дунд цэг (M) рүү, f түвшний шугам M+f·(B−M)-ээс голчтой параллель.
+const PF_BASE={style:"orig",ext:false,bg:true,one:false,alpha:0.12,mc:"#F23645",
+  levels:[[0.25,0,"#FFB74D"],[0.382,0,"#81C784"],[0.5,1,"#089981"],[0.618,0,"#089981"],[0.75,0,"#00BCD4"],[1,1,"#2962FF"],[1.5,0,"#9575CD"],[1.75,0,"#BA68C8"],[2,0,"#F06292"]].map(([v,on,c])=>({v,on:!!on,c}))};
+function pfDefault(){const st=styleFor("pitchfork");return JSON.parse(JSON.stringify(st&&st.pf?Object.assign({},PF_BASE,st.pf):PF_BASE))}
+function pfOf(d){return d.pf?Object.assign({},PF_BASE,d.pf):PF_BASE}
 function pfGeom(d,box){const a=[dX(d.a.t),pY(d.a.p)];if(a[0]==null||a[1]==null||!d.b)return null;const b=[dX(d.b.t),pY(d.b.p)];if(b[0]==null||b[1]==null)return null;
   let c=null;if(d.c){c=[dX(d.c.t),pY(d.c.p)];if(c[0]==null||c[1]==null)c=null}if(!c)return {a,b,c:null};
-  const m=[(b[0]+c[0])/2,(b[1]+c[1])/2];let vx=m[0]-a[0],vy=m[1]-a[1];if(Math.hypot(vx,vy)<1){vx=1;vy=0}
+  const O=pfOf(d),m=[(b[0]+c[0])/2,(b[1]+c[1])/2];
+  const o=O.style==="schiff"?[a[0],(a[1]+b[1])/2]:O.style==="mschiff"?[(a[0]+b[0])/2,(a[1]+b[1])/2]:a;
+  let vx=m[0]-o[0],vy=m[1]-o[1];if(Math.hypot(vx,vy)<1){vx=1;vy=0}
   const W=(box&&box.w)||plotBox().w,H=(box&&box.h)||plotBox().h;
-  const end=(px,py)=>{let k;if(Math.abs(vx)>1e-6)k=vx>0?(W-px)/vx:(-px)/vx;else k=(2*H)/Math.abs(vy);k=Math.max(k,1);k=Math.min(k,1e4);return [px+vx*k,py+vy*k]};
-  const tine=f=>{const sx=m[0]+(b[0]-m[0])*f,sy=m[1]+(b[1]-m[1])*f;const e=end(sx,sy);return [sx,sy,e[0],e[1]]};
-  const me=end(m[0],m[1]);return {a,b,c,m,med:[a[0],a[1],me[0],me[1]],tine}}
+  const end=(px,py)=>{if(!O.ext)return [px+vx,py+vy];let k;if(Math.abs(vx)>1e-6)k=vx>0?(W-px)/vx:(-px)/vx;else k=(2*H)/Math.abs(vy);k=Math.min(Math.max(k,1),1e4);return [px+vx*k,py+vy*k]};
+  const line=f=>{const sx=m[0]+(b[0]-m[0])*f,sy=m[1]+(b[1]-m[1])*f;const e=end(sx,sy);return [sx,sy,e[0],e[1]]};
+  const me=end(m[0],m[1]);return {a,b,c,m,o,med:[o[0],o[1],me[0],me[1]],line,tine:line}}
 function drHandles(d){const xa=dX(d.a.t),ya=pY(d.a.p);if(xa==null||ya==null)return [];const H=[];
   if(d.type==="trend"||d.type==="rect"||d.type==="fib"){H.push({k:"a",x:xa,y:ya});const xb=dX(d.b.t),yb=pY(d.b.p);if(xb!=null&&yb!=null)H.push({k:"b",x:xb,y:yb})}
   else if(d.type==="hray")H.push({k:"a",x:xa,y:ya});
@@ -1856,7 +1869,7 @@ function drHit(x,y){if(DR.hidden)return null;const box=plotBox();
     if(d.type==="vline"){if(Math.abs(x-xa)<6)return {d,h:"move"};continue}
     if(d.type==="long"||d.type==="short"){const x2=dX(d.t2),ys=pY(d.sl),yt=pY(d.tp);if(x2==null)continue;const t=Math.min(ys,yt,ya),b=Math.max(ys,yt,ya);
       if(x>=Math.min(xa,x2)-4&&x<=Math.max(xa,x2)+4&&y>=t-4&&y<=b+4)return {d,h:"move"};continue}
-    if(d.type==="pitchfork"){const P=pfGeom(d,box);if(!P||!P.c)continue;const segs=[P.med,P.tine(1),P.tine(-1),[P.b[0],P.b[1],P.c[0],P.c[1]]];
+    if(d.type==="pitchfork"){const P=pfGeom(d,box);if(!P||!P.c)continue;const segs=[P.med,[P.b[0],P.b[1],P.c[0],P.c[1]]];pfOf(d).levels.filter(l=>l.on&&+l.v>0).forEach(l=>segs.push(P.line(+l.v),P.line(-l.v)));
       if(segs.some(L=>segDist(x,y,L[0],L[1],L[2],L[3])<6))return {d,h:"move"};continue}
     const xb=dX(d.b.t),yb=pY(d.b.p);if(xb==null||yb==null)continue;
     if(d.type==="trend"){const [p,q,r,s]=extendLine(xa,ya,xb,yb,d.ext,box.w);if(segDist(x,y,p,q,r,s)<6)return {d,h:"move"}}
@@ -1873,7 +1886,7 @@ function drNew(type,pt){const st=styleFor(type)||{};const base={id:uid(),color:s
   if(type==="long"||type==="short"){const r=CH.series.priceToCoordinate(pt.p),box=plotBox();
     const off=Math.abs((yP(r-box.h*0.08)||pt.p)-pt.p)||pt.p*0.002,dir=type==="long"?1:-1,dec=decOf(CH.inst);
     return Object.assign(base,{type,rp:CH.mode==="replay"||undefined,color:st.color||"#5B6670",a:{t:pt.t,p:pt.p},sl:+(pt.p-dir*off).toFixed(dec),tp:+(pt.p+dir*off*2).toFixed(dec),t2:pt.t+CH.gran*30})}
-  if(type==="pitchfork")return Object.assign(base,{type,color:st.color||"#2962FF",a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p},_st:1});
+  if(type==="pitchfork")return Object.assign(base,{type,color:st.color||"#2962FF",pf:pfDefault(),a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p},_st:1});
   if(type==="fib"){const f=fibDefault();return Object.assign(base,{type,a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p},levels:f.levels,fopt:f.opt})}
   return Object.assign(base,{type:type==="ray"?"trend":type,ext:st.ext||(type==="ray"?"right":"none"),a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p}})}
 const ONE_CLICK=["hline","hray","vline","long","short"];
@@ -1935,6 +1948,7 @@ function drPropsUi(){const el=$("#dtProps");if(!el)return;const d=DR.sel;if(!d){
     <div class="seg" role="group" aria-label="Зузаан">${[1,1.5,2.5].map((w,i)=>`<button type="button" data-prop="width" data-v="${w}" aria-pressed="${(d.width||1.5)===w}" title="${["Нимгэн","Дунд","Зузаан"][i]}" aria-label="${["Нимгэн","Дунд","Зузаан"][i]}"><svg width="16" height="10" viewBox="0 0 16 10" aria-hidden="true"><path d="M1 5h14" stroke="currentColor" stroke-width="${[1,2,3.5][i]}"/></svg></button>`).join("")}</div>
     <button type="button" class="btn sm" data-prop="dash" aria-pressed="${!!d.dash}" title="${d.dash?"Тасархай":"Үргэлжилсэн"} (солих)" aria-label="Шугамын хэв маяг"><svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true"><path d="M1 5h16" stroke="currentColor" stroke-width="2" ${d.dash?'stroke-dasharray="4 3"':""}/></svg></button><span class="vsep"></span>`}
     ${lineish?`<div class="seg" role="group" aria-label="Сунгах">${(d.type==="fib"?[["none","Богино"],["right","Сунгах →"]]:[["none","—"],["right","→"],["both","↔"]]).map(([v,l])=>`<button type="button" data-prop="ext" data-v="${v}" aria-pressed="${(d.ext||"none")===v}" title="${{none:"Сунгахгүй",right:"Баруун тийш сунгах",both:"Хоёр тийш сунгах"}[v]}">${l}</button>`).join("")}</div><span class="vsep"></span>`:""}
+    ${d.type==="pitchfork"?`<button type="button" class="btn sm" data-prop="pfset" title="Төрөл (Original, Schiff, Modified Schiff), түвшин, өнгө, сунгалт (зураг дээр давхар дарж ч нээнэ)">⚙ Тохиргоо</button><span class="vsep"></span>`:""}
     ${d.type==="fib"?`<button type="button" class="btn sm" data-prop="fibset" title="Түвшин, өнгө, сунгалт (зураг дээр давхар дарж ч нээнэ)">⚙ Түвшин</button><span class="vsep"></span>`:""}
     ${pos?`<button type="button" class="btn sm primary" data-prop="toOrder" title="Орох, SL, TP-г захиалгын тооцоо руу шилжүүлэх">Захиалгад ашиглах</button>`:""}
     <button type="button" class="btn sm" data-prop="clone" title="Хуулбарлах" aria-label="Хуулбарлах"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M13 4H4.5A1.5 1.5 0 003 5.5V13"/></svg></button>
@@ -1942,10 +1956,11 @@ function drPropsUi(){const el=$("#dtProps");if(!el)return;const d=DR.sel;if(!d){
 function drProp(btn){const d=DR.sel;if(!d)return;const k=btn.dataset.prop,v=btn.dataset.v;
   if(k==="del"){drDelete();return}
   if(k==="fibset"){fibOpen(d);return}
+  if(k==="pfset"){pfOpen(d);return}
   if(k==="toOrder"){CH.dir=d.type==="long"?"Buy":"Sell";if(CH.mode!=="replay"){CH.mkt=false;$("#opMkt").checked=false;$("#opEntry").value=(+d.a.p).toFixed(decOf(CH.inst))}
     $("#opSl").value=(+d.sl).toFixed(decOf(CH.inst));$("#opTp").value=(+d.tp).toFixed(decOf(CH.inst));if($("#chartRoot").classList.contains("wide"))chWide(false);chUpdate();toast("Захиалгын тооцоонд шилжүүллээ");return}
   drPush();
-  if(k==="clone"){const c=JSON.parse(JSON.stringify(drClean(d)));c.id=uid();const dt=CH.gran*10;c.a.t+=dt;if(c.b)c.b.t+=dt;if(c.t2)c.t2+=dt;drList().push(c);DR.sel=c}
+  if(k==="clone"){const c=JSON.parse(JSON.stringify(drClean(d)));c.id=uid();const dt=CH.gran*10;c.a.t+=dt;if(c.b)c.b.t+=dt;if(c.c)c.c.t+=dt;if(c.t2)c.t2+=dt;drList().push(c);DR.sel=c}
   else if(k==="color"){d.color=v;DR.color=v;drOptsSave()}
   else if(k==="width")d.width=+v;else if(k==="dash")d.dash=!d.dash;else if(k==="ext")d.ext=v;
   if(k!=="clone")styleRemember(d);
@@ -1953,6 +1968,35 @@ function drProp(btn){const d=DR.sel;if(!d)return;const k=btn.dataset.prop,v=btn.
 
 /* --- Фибоначчийн тохиргоо --- */
 let FIBED=null;
+// Сэрээний тохиргооны цонх (TradingView-ийн Pitchfork-ийн Style таб шиг)
+let PFED=null;
+function pfOpen(d){let dl=$("#pfDlg");
+  if(!dl){dl=document.createElement("dialog");dl.id="pfDlg";dl.className="fib-dlg";document.body.appendChild(dl);
+    const live=e=>{if(!PFED)return;const o=PFED.d.pf,t=e.target;
+      if(t.dataset.pfo){const k=t.dataset.pfo;o[k]=t.type==="checkbox"?t.checked:k==="alpha"?+t.value/100:t.value}
+      else if(t.dataset.pfl!=null){const l=o.levels[+t.dataset.pfl],k=t.dataset.k;if(k==="on")l.on=t.checked;else if(k==="v"){const v=parseFloat(t.value);if(isFinite(v))l.v=v}else l.c=t.value;
+        t.closest(".fib-row")&&t.closest(".fib-row").classList.toggle("off",!l.on)}
+      drDirty()};
+    dl.addEventListener("input",live);dl.addEventListener("change",live);
+    dl.addEventListener("click",e=>{const b=e.target.closest("[data-pf]");if(!b||!PFED)return;const a=b.dataset.pf,d=PFED.d;
+      if(a==="cancel"){dl.close();return}
+      if(a==="reset"){d.pf=JSON.parse(JSON.stringify(PF_BASE));pfRender();drDirty();return}
+      if(a==="ok"||a==="okdef"){PFED.saved=true;if(a==="okdef"){styleRemember(d);toast("Шинэ сэрээ энэ тохиргоогоор зурагдана")}drSave();drDirty();dl.close()}});
+    dl.addEventListener("close",()=>{if(PFED&&!PFED.saved){PFED.d.pf=PFED.orig;drDirty()}PFED=null})}
+  d.pf=JSON.parse(JSON.stringify(pfOf(d)));PFED={d,orig:JSON.parse(JSON.stringify(d.pf)),saved:false};drPush();pfRender();dl.showModal()}
+function pfRender(){const dl=$("#pfDlg"),o=PFED.d.pf;
+  const ck=(k,l)=>`<label class="chk fib-opt"><input type="checkbox" data-pfo="${k}"${o[k]?" checked":""}> ${l}</label>`;
+  dl.innerHTML=`<form method="dialog" class="dlg" onsubmit="return false">
+    <div class="dlg-h"><h2>Сэрээ (Pitchfork)</h2><button type="button" class="btn sm ghost" data-pf="cancel" aria-label="Хаах">✕</button></div>
+    <div class="dlg-b">
+      <label class="f"><span class="lbl">Төрөл (Style)</span><select data-pfo="style">${[["orig","Original (Andrews)"],["schiff","Schiff"],["mschiff","Modified Schiff"]].map(([v,l])=>`<option value="${v}"${o.style===v?" selected":""}>${l}</option>`).join("")}</select></label>
+      <div class="fib-row"><span>Голч шугам (Median)</span><input type="color" data-pfo="mc" value="${o.mc}"></div>
+      <div class="fib-grid">${o.levels.map((l,i)=>`<div class="fib-row${l.on?"":" off"}"><input type="checkbox" data-pfl="${i}" data-k="on"${l.on?" checked":""} aria-label="Түвшин"><input class="num" type="number" step="0.001" data-pfl="${i}" data-k="v" value="${l.v}" aria-label="Утга"><input type="color" data-pfl="${i}" data-k="c" value="${l.c}" aria-label="Өнгө"></div>`).join("")}</div>
+      <div class="fib-opts">${ck("ext","Шугамуудыг сунгах (Extend lines)")}${ck("bg","Дэвсгэр (Background)")}${ck("one","Нэг өнгө ашиглах")}
+        <label class="chk fib-opt">Тунгалаг байдал <input type="range" min="0" max="40" data-pfo="alpha" value="${Math.round((o.alpha||0)*100)}"></label></div>
+    </div>
+    <div class="dlg-f"><button type="button" class="btn sm ghost" data-pf="reset">Анхдагч</button><span class="sp"></span>
+      <div class="fib-ok"><button type="button" class="btn sm" data-pf="okdef" title="Шинэ сэрээнүүд мөн энэ тохиргоогоор зурагдана">Анхдагч болгож хадгалах</button><button type="button" class="btn sm primary" data-pf="ok">OK</button></div></div></form>`}
 function fibOpen(d){let dl=$("#fibDlg");
   if(!dl){dl=document.createElement("dialog");dl.id="fibDlg";dl.className="fib-dlg";document.body.appendChild(dl);
     dl.addEventListener("input",fibLive);dl.addEventListener("change",fibLive);
@@ -2024,7 +2068,7 @@ function drInit(){
   bar.addEventListener("click",e=>{const b=e.target.closest("button");if(b)drBarClick(b)});
   $("#dtProps").addEventListener("click",e=>{const b=e.target.closest("[data-prop]");if(b)drProp(b)});
   w.addEventListener("pointerdown",rtDown,true);w.addEventListener("pointerdown",drDown,true);
-  w.addEventListener("dblclick",e=>{if(!e.target.closest("#chChart"))return;const p=evPt(e,true);const h=p&&drHit(p.x,p.y);if(h&&h.d.type==="fib"){e.preventDefault();e.stopPropagation();DR.sel=h.d;drSelUi();fibOpen(h.d)}},true);
+  w.addEventListener("dblclick",e=>{if(!e.target.closest("#chChart"))return;const p=evPt(e,true);const h=p&&drHit(p.x,p.y);if(h&&(h.d.type==="fib"||h.d.type==="pitchfork")){e.preventDefault();e.stopPropagation();DR.sel=h.d;drSelUi();h.d.type==="fib"?fibOpen(h.d):pfOpen(h.d)}},true);
   w.addEventListener("contextmenu",e=>{if(e.target.closest("#chChart")){const p=evPt(e,true);if(p&&drHit(p.x,p.y))e.preventDefault()}});
   ["mousedown","touchstart"].forEach(ev=>w.addEventListener(ev,e=>{if(e.target.closest("#dtBar,#dtProps"))return;if(DR.intercept||DR.tool!=="cursor"){e.stopPropagation();if(ev==="touchstart"&&DR.tool!=="cursor")e.preventDefault()}},{capture:true,passive:false}));
   w.addEventListener("touchmove",e=>{if(DR.intercept||DR.draft){e.stopPropagation();e.preventDefault()}},{capture:true,passive:false});
