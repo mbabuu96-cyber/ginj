@@ -1641,10 +1641,11 @@ const TOOLS=[ // [түлхүүр, нэр, товчлол, svg path]
   ["vline","Босоо шугам","Alt+V",'<path d="M10 2v16"/>'],
   ["rect","Тэгш өнцөгт","Alt+R",'<rect x="3.5" y="5.5" width="13" height="9" rx="1"/>'],
   ["fib","Фибоначчи","Alt+F",'<path d="M3 4h14M3 8h14M3 12h14M3 16h14"/>'],
+  ["pitchfork","Сэрээ (Andrews' Pitchfork) — 3 цэг","Alt+P",'<path d="M3 10L17 10M8 4L17 4M8 16L17 16M8 4L8 16"/><circle cx="3" cy="10" r="1.6"/>'],
   ["long","Long позиц","Alt+L",'<path d="M3 10h14"/><path d="M3 4h14v6H3z" fill="currentColor" fill-opacity=".25"/><path d="M3 10h14v4H3z"/>'],
   ["short","Short позиц","Alt+S",'<path d="M3 10h14"/><path d="M3 10h14v6H3z" fill="currentColor" fill-opacity=".25"/><path d="M3 6h14v4H3z"/>'],
 ];
-const KEYMAP={t:"trend",y:"ray",h:"hline",j:"hray",v:"vline",r:"rect",f:"fib",l:"long",s:"short"};
+const KEYMAP={p:"pitchfork",t:"trend",y:"ray",h:"hline",j:"hray",v:"vline",r:"rect",f:"fib",l:"long",s:"short"};
 const TB=40; // зүүн хэрэгслийн самбарын өргөн
 const DR={tool:"cursor",color:DCOLORS[0],sel:null,hover:null,draft:null,drag:null,intercept:false,dirty:true,sig:"",raf:0,saveT:{},undo:{},
   mtf:0,sess:false,magnet:false,lock:false,hidden:false,styles:{}};
@@ -1656,7 +1657,7 @@ function drKey(){return CH.inst?CH.inst.name+(CH.mode==="replay"?"|rp":""):""}
 // Давтан тоглуулалтад одоогийн лаанаас хойш (ирээдүйд) зурагдсан зургийг нууна
 function drVis(d){if(CH.mode!=="replay"||!d||!d.a||CH.lastTime==null)return true;const now=CH.lastTime-TZ+(CH.gran||60),t0=Math.min(d.a.t,d.b&&d.b.t!=null?d.b.t:d.a.t);return t0<=now}
 function drList(){S.drawings=S.drawings||{};const k=drKey();if(!S.drawings[k])S.drawings[k]=[];return S.drawings[k]}
-const drClean=d=>{const o={};for(const k of ["id","type","a","b","sl","tp","t2","color","width","dash","ext","levels","fopt","rp"])if(d[k]!==undefined)o[k]=d[k];return o};
+const drClean=d=>{const o={};for(const k of ["id","type","a","b","sl","tp","t2","color","width","dash","ext","levels","fopt","rp","c"])if(d[k]!==undefined)o[k]=d[k];return o};
 function drSave(){const k=drKey(),items=drList().map(drClean);
   clearTimeout(DR.saveT[k]);DR.saveT[k]=setTimeout(()=>{
     if(S.mode==="supa")supaQueue({t:"put",coll:"settings",id:"draw:"+k,data:{items}});
@@ -1810,6 +1811,15 @@ function drShape(ctx,d,box,font,sel,hov){
       if(txt&&R>4&&(Math.abs(l.y-lastLbl)>=13||key)){const tw=ctx.measureText(txt).width;
         let tx=o.side==="right"?R+8:L-tw-8;if(tx+tw>box.w-2)tx=Math.min(R,box.w)-tw-4;if(tx<2)tx=Math.max(L,0)+4;
         ctx.fillText(txt,tx,yy);lastLbl=l.y}}}
+  else if(d.type==="pitchfork"&&xb!=null){const P=pfGeom(d,box);if(!P)return;
+    if(!P.c){ctx.beginPath();ctx.moveTo(xa,ya);ctx.lineTo(xb,yb);ctx.stroke()}
+    else{const col=d.color,hx=col.startsWith("#");
+      // сэрээний хооронд бүдэг өнгө
+      const fb=P.tine(1),fc=P.tine(-1);ctx.fillStyle=hx?rgba(col,0.07):col;ctx.beginPath();ctx.moveTo(fb[0],fb[1]);ctx.lineTo(fb[2],fb[3]);ctx.lineTo(fc[2],fc[3]);ctx.lineTo(fc[0],fc[1]);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(P.a[0],P.a[1]);ctx.lineTo(P.med[2],P.med[3]);ctx.stroke(); // голч шугам
+      for(const f of [1,-1]){const L=P.tine(f);ctx.beginPath();ctx.moveTo(L[0],L[1]);ctx.lineTo(L[2],L[3]);ctx.stroke()}
+      ctx.save();ctx.setLineDash([4,4]);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.b[0],P.b[1]);ctx.lineTo(P.c[0],P.c[1]);ctx.stroke();
+      for(const f of [0.5,-0.5]){const L=P.tine(f);ctx.globalAlpha=.7;ctx.beginPath();ctx.moveTo(L[0],L[1]);ctx.lineTo(L[2],L[3]);ctx.stroke()}ctx.restore()}}
   else if((d.type==="long"||d.type==="short")&&d.t2!=null){const x2=dX(d.t2),ys=pY(d.sl),yt=pY(d.tp);if(x2==null||ys==null||yt==null)return;
     const L=Math.min(xa,x2),W=Math.abs(x2-xa),gain=cssVar("--gain")||"#1C7449",loss=cssVar("--loss")||"#B13636",gx=gain.startsWith("#"),lx=loss.startsWith("#");
     ctx.setLineDash([]);ctx.fillStyle=gx?rgba(gain,0.18):gain;ctx.fillRect(L,Math.min(ya,yt),W,Math.abs(yt-ya));
@@ -1820,11 +1830,20 @@ function drShape(ctx,d,box,font,sel,hov){
     drLabel(ctx,`Stop ${(+d.sl).toFixed(dec)} · ${CH.inst.kind==="step"?c.steps+" алхам":c.dist.toFixed(dec)} · ${cur}${fm(c.risk)}`,lx0,ys+(ys>ya?12:-12),lx?rgba(loss,0.95):loss,"#fff");
     if(sel||hov)drLabel(ctx,`${d.type==="long"?"Long":"Short"} ${fm(c.lots,2)} лот @ ${(+d.a.p).toFixed(dec)}`,lx0,ya+(d.type==="long"?12:-12),rgba("#202826",0.9),"#fff")}
   if(sel||hov){ctx.setLineDash([]);for(const h of drHandles(d)){ctx.fillStyle=cssVar("--surface")||"#fff";ctx.beginPath();ctx.arc(h.x,h.y,sel?6:5,0,Math.PI*2);ctx.fill();ctx.strokeStyle=d.color||cssVar("--ink");ctx.lineWidth=2;ctx.stroke()}}}
+// Сэрээний геометр (пикселээр): A-аас B,C-ийн дунд цэг рүү голч шугам, B ба C-ээр дайрсан параллель шугамууд, баруун тийш сунгана
+function pfGeom(d,box){const a=[dX(d.a.t),pY(d.a.p)];if(a[0]==null||a[1]==null||!d.b)return null;const b=[dX(d.b.t),pY(d.b.p)];if(b[0]==null||b[1]==null)return null;
+  let c=null;if(d.c){c=[dX(d.c.t),pY(d.c.p)];if(c[0]==null||c[1]==null)c=null}if(!c)return {a,b,c:null};
+  const m=[(b[0]+c[0])/2,(b[1]+c[1])/2];let vx=m[0]-a[0],vy=m[1]-a[1];if(Math.hypot(vx,vy)<1){vx=1;vy=0}
+  const W=(box&&box.w)||plotBox().w,H=(box&&box.h)||plotBox().h;
+  const end=(px,py)=>{let k;if(Math.abs(vx)>1e-6)k=vx>0?(W-px)/vx:(-px)/vx;else k=(2*H)/Math.abs(vy);k=Math.max(k,1);k=Math.min(k,1e4);return [px+vx*k,py+vy*k]};
+  const tine=f=>{const sx=m[0]+(b[0]-m[0])*f,sy=m[1]+(b[1]-m[1])*f;const e=end(sx,sy);return [sx,sy,e[0],e[1]]};
+  const me=end(m[0],m[1]);return {a,b,c,m,med:[a[0],a[1],me[0],me[1]],tine}}
 function drHandles(d){const xa=dX(d.a.t),ya=pY(d.a.p);if(xa==null||ya==null)return [];const H=[];
   if(d.type==="trend"||d.type==="rect"||d.type==="fib"){H.push({k:"a",x:xa,y:ya});const xb=dX(d.b.t),yb=pY(d.b.p);if(xb!=null&&yb!=null)H.push({k:"b",x:xb,y:yb})}
   else if(d.type==="hray")H.push({k:"a",x:xa,y:ya});
+  else if(d.type==="pitchfork"){H.push({k:"a",x:xa,y:ya});if(d.b)H.push({k:"b",x:dX(d.b.t),y:pY(d.b.p)});if(d.c)H.push({k:"c",x:dX(d.c.t),y:pY(d.c.p)})}
   else if(d.type==="long"||d.type==="short"){const x2=dX(d.t2);H.push({k:"a",x:xa,y:ya},{k:"sl",x:xa,y:pY(d.sl)},{k:"tp",x:xa,y:pY(d.tp)});if(x2!=null)H.push({k:"t2",x:x2,y:ya})}
-  return H.filter(h=>h.y!=null&&isFinite(h.y))}
+  return H.filter(h=>h.x!=null&&h.y!=null&&isFinite(h.y))}
 
 /* --- хит тест --- */
 function segDist(px,py,x1,y1,x2,y2){const dx=x2-x1,dy=y2-y1,L=dx*dx+dy*dy;let t=L?((px-x1)*dx+(py-y1)*dy)/L:0;t=Math.max(0,Math.min(1,t));return Math.hypot(px-(x1+t*dx),py-(y1+t*dy))}
@@ -1837,6 +1856,8 @@ function drHit(x,y){if(DR.hidden)return null;const box=plotBox();
     if(d.type==="vline"){if(Math.abs(x-xa)<6)return {d,h:"move"};continue}
     if(d.type==="long"||d.type==="short"){const x2=dX(d.t2),ys=pY(d.sl),yt=pY(d.tp);if(x2==null)continue;const t=Math.min(ys,yt,ya),b=Math.max(ys,yt,ya);
       if(x>=Math.min(xa,x2)-4&&x<=Math.max(xa,x2)+4&&y>=t-4&&y<=b+4)return {d,h:"move"};continue}
+    if(d.type==="pitchfork"){const P=pfGeom(d,box);if(!P||!P.c)continue;const segs=[P.med,P.tine(1),P.tine(-1),[P.b[0],P.b[1],P.c[0],P.c[1]]];
+      if(segs.some(L=>segDist(x,y,L[0],L[1],L[2],L[3])<6))return {d,h:"move"};continue}
     const xb=dX(d.b.t),yb=pY(d.b.p);if(xb==null||yb==null)continue;
     if(d.type==="trend"){const [p,q,r,s]=extendLine(xa,ya,xb,yb,d.ext,box.w);if(segDist(x,y,p,q,r,s)<6)return {d,h:"move"}}
     if(d.type==="rect"){const l=Math.min(xa,xb),r=Math.max(xa,xb),t=Math.min(ya,yb),bt=Math.max(ya,yb);const inside=x>=l-4&&x<=r+4&&y>=t-4&&y<=bt+4;
@@ -1852,6 +1873,7 @@ function drNew(type,pt){const st=styleFor(type)||{};const base={id:uid(),color:s
   if(type==="long"||type==="short"){const r=CH.series.priceToCoordinate(pt.p),box=plotBox();
     const off=Math.abs((yP(r-box.h*0.08)||pt.p)-pt.p)||pt.p*0.002,dir=type==="long"?1:-1,dec=decOf(CH.inst);
     return Object.assign(base,{type,rp:CH.mode==="replay"||undefined,color:st.color||"#5B6670",a:{t:pt.t,p:pt.p},sl:+(pt.p-dir*off).toFixed(dec),tp:+(pt.p+dir*off*2).toFixed(dec),t2:pt.t+CH.gran*30})}
+  if(type==="pitchfork")return Object.assign(base,{type,color:st.color||"#2962FF",a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p},_st:1});
   if(type==="fib"){const f=fibDefault();return Object.assign(base,{type,a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p},levels:f.levels,fopt:f.opt})}
   return Object.assign(base,{type:type==="ray"?"trend":type,ext:st.ext||(type==="ray"?"right":"none"),a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p}})}
 const ONE_CLICK=["hline","hray","vline","long","short"];
@@ -1864,7 +1886,9 @@ function drDown(e){
   const stop=()=>{e.preventDefault();e.stopPropagation();DR.intercept=true};
   if(DR.tool!=="cursor"){stop();
     if(ONE_CLICK.includes(DR.tool)){drPush();const d=drNew(DR.tool,pt);drList().push(d);drFinish(d);return}
-    if(!DR.draft){DR.draft=drNew(DR.tool,pt);DR.drag={mode:"draw",x:pt.x,y:pt.y};drHint("Хоёр дахь цэг дээр дарна уу (эсвэл чирээд суллана) · Shift: хэвтээ")}
+    if(DR.draft&&DR.draft.type==="pitchfork"){const d=DR.draft;if(!d._st||d._st===1){d.b={t:pt.t,p:pt.p};d.c={t:pt.t,p:pt.p};d._st=2;DR.drag=null;drHint("Гурав дахь цэг (C) дээр дарна уу · Esc цуцлах")}
+      else{d.c={t:pt.t,p:pt.p};delete d._st;DR.draft=null;DR.drag=null;drPush();drList().push(d);drFinish(d)}drDirty();return}
+    if(!DR.draft){DR.draft=drNew(DR.tool,pt);DR.drag={mode:"draw",x:pt.x,y:pt.y};drHint(DR.tool==="pitchfork"?"Сэрээ: A (эхлэл) тавьсан — B цэг дээр дарна уу, дараа нь C":"Хоёр дахь цэг дээр дарна уу (эсвэл чирээд суллана) · Shift: хэвтээ")}
     else{drSetB(DR.draft,pt,e);const d=DR.draft;DR.draft=null;DR.drag=null;drPush();drList().push(d);drFinish(d)}
     drDirty();return}
   const p0=evPt(e,true);const hit=p0&&drHit(p0.x,p0.y);
@@ -1875,27 +1899,29 @@ function drMove(e){
   if(!DR.drag&&!DR.draft){if(CH.chart&&!CH.pick&&e.target.closest&&e.target.closest("#chChart")){const p=evPt(e,true);const hit=p&&DR.tool==="cursor"?drHit(p.x,p.y):null;
       const hv=hit?hit.d:null;if(hv!==DR.hover){DR.hover=hv;drDirty()}$("#chChart").style.cursor=hit?(hit.h==="move"?"move":"pointer"):""}return}
   if(DR.intercept)e.preventDefault();
-  if(DR.draft){const pt=evPt(e);if(pt){drSetB(DR.draft,pt,e);drDirty()}return}
+  if(DR.draft){const pt=evPt(e);if(pt){if(DR.draft.type==="pitchfork"&&DR.draft._st===2)DR.draft.c={t:pt.t,p:pt.p};else drSetB(DR.draft,pt,e);drDirty()}return}
   const g=DR.drag,d=DR.sel;if(!g||!d)return;const o=g.orig;
   const pt=evPt(e,g.mode==="move");if(!pt)return;if(!g.moved){drPushFrom(o);g.moved=true}
   const dec=decOf(CH.inst);
   if(g.mode==="move"){const dt=pt.t-g.start.t,dp=pt.p-g.start.p;
     d.a={t:o.a.t+(d.type==="hline"?0:dt),p:+(o.a.p+(d.type==="vline"?0:dp)).toFixed(dec)};
-    if(o.b)d.b={t:o.b.t+dt,p:+(o.b.p+dp).toFixed(dec)};
+    if(o.b)d.b={t:o.b.t+dt,p:+(o.b.p+dp).toFixed(dec)};if(o.c)d.c={t:o.c.t+dt,p:+(o.c.p+dp).toFixed(dec)};
     if(o.sl!=null){d.sl=+(o.sl+dp).toFixed(dec);d.tp=+(o.tp+dp).toFixed(dec);d.t2=o.t2+dt}}
   else if(g.mode==="a"){if(d.type==="long"||d.type==="short"){d.a={t:pt.t,p:pt.p}}else d.a={t:pt.t,p:pt.p}}
-  else if(g.mode==="b")drSetB(d,pt,e);
+  else if(g.mode==="b"){if(d.type==="pitchfork")d.b={t:pt.t,p:pt.p};else drSetB(d,pt,e)}
+  else if(g.mode==="c")d.c={t:pt.t,p:pt.p};
   else if(g.mode==="sl")d.sl=+(+pt.p).toFixed(dec);else if(g.mode==="tp")d.tp=+(+pt.p).toFixed(dec);
   else if(g.mode==="t2")d.t2=Math.max(pt.t,d.a.t+CH.gran);
   drDirty()}
 function drPushFrom(orig){const k=drKey();const st=DR.undo[k]=DR.undo[k]||[];const list=drList().map(x=>x.id===orig.id?orig:drClean(x));st.push(JSON.stringify(list));if(st.length>40)st.shift()}
 function drUp(e){const g=DR.drag;
-  if(DR.draft&&g&&g.mode==="draw"){const pt=evPt(e);if(pt&&Math.hypot(pt.x-g.x,pt.y-g.y)>6){drSetB(DR.draft,pt,e);const d=DR.draft;DR.draft=null;drPush();drList().push(d);drFinish(d)}DR.drag=null}
+  if(DR.draft&&DR.draft.type==="pitchfork"&&g&&g.mode==="draw"){const pt=evPt(e);if(pt&&Math.hypot(pt.x-g.x,pt.y-g.y)>6){const d=DR.draft;d.b={t:pt.t,p:pt.p};d.c={t:pt.t,p:pt.p};d._st=2;drHint("Гурав дахь цэг (C) дээр дарна уу · Esc цуцлах");drDirty()}DR.drag=null}
+  else if(DR.draft&&g&&g.mode==="draw"){const pt=evPt(e);if(pt&&Math.hypot(pt.x-g.x,pt.y-g.y)>6){drSetB(DR.draft,pt,e);const d=DR.draft;DR.draft=null;drPush();drList().push(d);drFinish(d)}DR.drag=null}
   else if(g&&g.mode!=="draw"){DR.drag=null;if(g.moved){drSave();drPropsUi()}}
   setTimeout(()=>{DR.intercept=false},0)}
 function drFinish(d){DR.sel=d;if(!DR.lock)drSetTool("cursor");else drHint(drToolHint(DR.tool));drSave();drSelUi();drDirty()}
 function drHint(t){const h=$("#chHint");h.hidden=!t;if(t)h.textContent=t}
-function drToolHint(t){return t==="cursor"?"":ONE_CLICK.includes(t)?(t==="long"||t==="short"?"Орох үнэ дээр дарна уу · дараа нь SL, TP-г чирж тохируулна":"Байрлуулах цэг дээр дарна уу"):"Эхний цэг дээр дарна уу"}
+function drToolHint(t){return t==="cursor"?"":ONE_CLICK.includes(t)?(t==="long"||t==="short"?"Орох үнэ дээр дарна уу · дараа нь SL, TP-г чирж тохируулна":"Байрлуулах цэг дээр дарна уу"):(t==="pitchfork"?"Сэрээ: A (эхлэх оргил/ёроол) → B → C гэж гурван цэг дээр дарна уу":"Эхний цэг дээр дарна уу")}
 function drSetTool(t){DR.tool=t;DR.draft=null;$$("#dtBar [data-tool]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.tool===t)));
   $("#chWrap").classList.toggle("drawing",t!=="cursor");drHint(drToolHint(t))}
 function drSelUi(){drPropsUi()}
