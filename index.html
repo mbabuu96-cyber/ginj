@@ -1021,7 +1021,8 @@ function doRender(){
 // Фибогийн түвшин = (p0 − үнэ)/(p0 − p1) — графикт харагдах түвшний тоо (жишээ нь 0.618, −0.236, 4)
 function fibRatioAt(ep,prices){if(!S.drawings)return null;const L=drList().filter(d=>d.type==="fib"&&d.a&&d.b&&drVis(d)&&Math.min(d.a.t,d.b.t)<=ep+(CH.gran||60));if(!L.length)return null;
   const d=L[L.length-1],o=fibOf(d).opt,p0=o.reverse?d.a.p:d.b.p,p1=o.reverse?d.b.p:d.a.p,rg=p0-p1;if(!rg)return null;
-  const out={};for(const k in prices){const v=prices[k];out[k]=v==null||v===""||!isFinite(+v)?null:+((p0-+v)/rg).toFixed(3)}out.fid=d.id;return out}
+  const out={};for(const k in prices){const v=prices[k];out[k]=v==null||v===""||!isFinite(+v)?null:+((p0-+v)/rg).toFixed(3)}out.fid=d.id;
+  const A0=o.reverse?d.a:d.b,A1=o.reverse?d.b:d.a;out.z=[Math.round(A0.t),+A0.p];out.o=[Math.round(A1.t),+A1.p];return out}
 function lfLearn(inst){const A=enriched(S.trades,"backtest").filter(t=>t.fibr&&t._.closed&&(!inst||t.inst===inst));
   // «Миний арга»-ын фибо: 0 = sweep-ийн оргил/ёроол, 1.618 = CHoCH-ын ёроол/оргил → SL < орох < TP байх ёстой. Эсрэг чиглэлд татсан фибог эргүүлж уншихгүй, тооцоонд оруулахгүй
   const L=A.filter(t=>{const f=t.fibr;return f.e!=null&&f.sl!=null&&f.tp!=null&&f.sl<f.e&&f.e<f.tp});
@@ -1036,9 +1037,9 @@ const PBR={bars:{},last:{},timer:null,log:[],busy:false,opt:{busy:false,p:0,res:
 function pbSave(){try{localStorage.setItem("alkham-pb",JSON.stringify(PB))}catch(e){}}
 function pbLog(t){PBR.log.unshift({ts:Date.now(),t});PBR.log=PBR.log.slice(0,40);pbUi()}
 function pbUi(){if(S.view==="bot"&&!document.querySelector("#app input:focus,#app select:focus")){clearTimeout(PBR.uiT);PBR.uiT=setTimeout(()=>render(),150)}}
-function pbParams(){const base={nEq:MY.nEq,tol:MY.tol,ph:MY.ph,lb:MY.lb,kc:MY.kc,anc:MY.anc,ent:MY.ent,sl:MY.sl,tp:MY.tp,be:null,exp:MY.exp,side:MY.side,maxB:MY.maxB};
+function pbParams(inst){inst=inst||PB.insts[0];const base={nEq:MY.nEq,tol:MY.tol,ph:MY.ph,lb:MY.lb,kc:MY.kc,anc:MY.anc,body:false,ent:MY.ent,sl:MY.sl,tp:MY.tp,be:null,exp:MY.exp,side:MY.side,maxB:MY.maxB};
   if(PB.src==="learned"){const lf=lfLearn();if(lf.n>=3){const a=lf.all;if(a.e!=null)base.ent=a.e;if(a.sl!=null)base.sl=a.sl;if(a.tp!=null)base.tp=a.tp;if(a.be!=null&&a.nBe>=2)base.be=a.be}}
-  else if(PB.src==="opt"&&PB.opt)Object.assign(base,PB.opt.p);return base}
+  else if(PB.src==="opt"){const o=(PB.optBy||{})[inst]||PB.opt;if(o)Object.assign(base,o.p)}return base}
 function pbBal(){return (+PB.bal0||0)+enriched(S.trades,"bot").filter(t=>t._.closed).reduce((a,t)=>a+(t._.pnl||0),0)}
 function pbSt(inst){return PB.st[inst]=PB.st[inst]||{pend:[],pos:[],seen:{}}}
 async function pbLoad(inst){const sym=await derivSymbol(instOf(inst));if(!sym)throw new Error(inst+": Deriv тэмдэгт олдсонгүй");
@@ -1071,7 +1072,7 @@ function pbManage(inst,bars){const S0=pbSt(inst);
   pbSave()}
 // хаагдсан шинэ 1м лаа бүрт «Миний арга»-аар setup хайж лимит тавина
 function pbDetect(inst){const B=PBR.bars[inst];if(!B||B.length<600)return;const C=B.slice(-3001,-1),n=C.length,D={n,t:new Float64Array(n),o:new Float64Array(n),h:new Float64Array(n),l:new Float64Array(n),c:new Float64Array(n)};
-  C.forEach((b,i)=>{D.t[i]=b.t;D.o[i]=b.o;D.h[i]=b.h;D.l[i]=b.l;D.c[i]=b.c});const P=pbParams();let res;try{res=myRun({D,g:60,P:Object.assign({},P,{noRand:true})})}catch(e){pbLog("Тооцооны алдаа: "+e.message);return}
+  C.forEach((b,i)=>{D.t[i]=b.t;D.o[i]=b.o;D.h[i]=b.h;D.l[i]=b.l;D.c[i]=b.c});const P=pbParams(inst);let res;try{res=myRun({D,g:60,P:Object.assign({},P,{noRand:true})})}catch(e){pbLog("Тооцооны алдаа: "+e.message);return}
   if(!res||res.err)return;const S0=pbSt(inst),lastT=D.t[n-1];
   for(const x of res.live||[]){if(x.st!=="order")continue;const key=inst+"|"+x.dir+"|"+x.K.k;if(S0.seen[key])continue;if(D.t[x.place]<lastT-180)continue;S0.seen[key]=Date.now();
     const dir=x.dir>0?"Buy":"Sell",lvl=v=>{const u=(x.hi-x.lo)/P.anc;return x.dir<0?x.hi-v*u:x.lo+v*u};
@@ -1090,19 +1091,60 @@ async function pbTick(){if(!PB.on||PBR.busy)return;PBR.busy=true;
   catch(e){PBR.err=e.message||String(e)}PBR.busy=false;pbUi()}
 function pbStart(){if(PBR.timer)return;PBR.timer=setInterval(pbTick,20000);pbTick()}
 function pbStop(){clearInterval(PBR.timer);PBR.timer=null}
-// ===== «Надаас илүү»: фибогийн Entry/SL/TP/BE хослолуудыг түүхэн өгөгдөл дээр туршиж, эхний хагаст сонгоод хоёр дахь хагаст шалгана =====
-async function pbOptimize(){if(PBR.opt.busy)return;const inst=PB.insts[0]||"Step Index";PBR.opt={busy:true,p:0,res:null,msg:"60 хоногийн 1м лаа ачаалж байна…"};pbUi();
-  try{const sym=await derivSymbol(instOf(inst));let end=Math.floor(Date.now()/1000),all=[];
-    for(let k=0;k<18;k++){const r=await dvSend({ticks_history:sym,style:"candles",granularity:60,count:5000,end,adjust_start_time:1});const c=(r.candles||[]).map(c=>({t:+c.epoch,o:+c.open,h:+c.high,l:+c.low,c:+c.close}));
-      if(!c.length)break;all=c.concat(all.filter(b=>b.t>c[c.length-1].t));end=c[0].t-1;PBR.opt.p=(k+1)/18*0.3;pbUi();await new Promise(r=>setTimeout(r,300))}
-    const n=all.length,mk=(a,b)=>{const m=b-a,D={n:m,t:new Float64Array(m),o:new Float64Array(m),h:new Float64Array(m),l:new Float64Array(m),c:new Float64Array(m)};for(let i=a;i<b;i++){const x=all[i],j=i-a;D.t[j]=x.t;D.o[j]=x.o;D.h[j]=x.h;D.l[j]=x.l;D.c[j]=x.c}return D};
-    const A=mk(0,n>>1),B2=mk(n>>1,n),grid=[];for(const ent of [0.5,0.618,0.705,0.786])for(const sl of [0,-0.1,-0.236,-0.382])for(const tp of [2,2.618,3,4,4.236])for(const be of [null,1,1.618,2,2.618])if(be==null||be<tp)grid.push({ent,sl,tp,be});
-    const base=Object.assign({},pbParams(),{noRand:true}),run=(D,p)=>{const r=myRun({D,g:60,P:Object.assign({},base,p)});return r&&!r.err?{N:r.N,tot:r.total,avg:r.avg,win:r.win,dd:r.dd}:{N:0,tot:0,avg:0,win:0,dd:0}};
-    const out=[];for(let i=0;i<grid.length;i++){out.push(Object.assign({p:grid[i]},{a:run(A,grid[i])}));if(i%6===5){PBR.opt.p=0.3+0.6*i/grid.length;PBR.opt.msg=`Туршиж байна ${i+1}/${grid.length}`;pbUi();await new Promise(r=>setTimeout(r,0))}}
-    const ok=out.filter(x=>x.a.N>=10).sort((x,y)=>y.a.tot-x.a.tot).slice(0,5);ok.forEach(x=>x.b=run(B2,x.p));
-    const lf=lfLearn(),mine={ent:lf.all.e??MY.ent,sl:lf.all.sl??MY.sl,tp:lf.all.tp??MY.tp,be:lf.n>=3&&lf.all.nBe>=2?lf.all.be:null};
-    PBR.opt={busy:false,p:1,res:{inst,n,days:(all[n-1].t-all[0].t)/86400,top:ok,mine:{p:mine,a:run(A,mine),b:run(B2,mine)},tested:grid.length}}}
-  catch(e){PBR.opt={busy:false,p:0,res:{err:e.message||String(e)}}}pbUi()}
+// ===== «Надаас илүү»: бот фибогоо ЯАЖ татахыг (CHoCH swing-ийн хэмжээ, сүүл/бие, ёроолыг аль түвшин гэж тавих) ба Entry/SL/TP/BE-г
+// хэрэгсэл бүрээр (алт, Step тус тусдаа) сурна. Сонголт: эхний хагаст ашиг/эрсдэлийн харьцаагаар, шалгалт: хоёр дахь хагаст (харж байгаагүй өгөгдөл)
+function pbScore(x){return x.N<8?-1e9:x.tot-0.5*x.dd} // эрсдэл барих: нийт R-ээс хамгийн их уналтын хагасыг хасна
+async function pbHist(inst,days){const sym=await derivSymbol(instOf(inst));if(!sym)throw new Error(inst+": Deriv тэмдэгт олдсонгүй");let end=Math.floor(Date.now()/1000),all=[];const need=days*86400,t0=end-need;
+  for(let k=0;k<30&&end>t0;k++){const r=await dvSend({ticks_history:sym,style:"candles",granularity:60,count:5000,end,adjust_start_time:1});const c=(r.candles||[]).map(c=>({t:+c.epoch,o:+c.open,h:+c.high,l:+c.low,c:+c.close}));
+    if(!c.length)break;all=c.concat(all.filter(b=>b.t>c[c.length-1].t));end=c[0].t-1;PBR.opt.msg=`${inst}: ${Math.round((Date.now()/1000-end)/86400)}/${days} хоног ачааллаа`;pbUi();await new Promise(r=>setTimeout(r,250))}
+  return all}
+function pbD(all,a,b){const m=b-a,D={n:m,t:new Float64Array(m),o:new Float64Array(m),h:new Float64Array(m),l:new Float64Array(m),c:new Float64Array(m)};for(let i=a;i<b;i++){const x=all[i],j=i-a;D.t[j]=x.t;D.o[j]=x.o;D.h[j]=x.h;D.l[j]=x.l;D.c[j]=x.c}return D}
+async function pbOptimize(){if(PBR.opt.busy)return;const insts=PB.insts.length?PB.insts.slice():["Step Index"];PBR.opt={busy:true,p:0,res:null,msg:"Эхэлж байна…"};pbUi();const res={};
+  try{for(let q=0;q<insts.length;q++){const inst=insts[q],all=await pbHist(inst,60),n=all.length;if(n<20000){res[inst]={err:`${inst}: түүх хүрэлцэхгүй (${n} лаа)`};continue}
+      const A=pbD(all,0,n>>1),B=pbD(all,n>>1,n),base=Object.assign({},pbParams(inst),{noRand:true});
+      const run=(D,p)=>{try{const r=myRun({D,g:60,P:Object.assign({},base,p)});return r&&!r.err?{N:r.N,tot:r.total,avg:r.avg,win:r.win,dd:r.dd}:{N:0,tot:0,avg:0,win:0,dd:0}}catch(e){return {N:0,tot:0,avg:0,win:0,dd:0}}};
+      const tick=async(k,tot,st)=>{if(k%4===3){PBR.opt.p=(q+k/tot)/insts.length;PBR.opt.msg=`${inst}: ${st} ${k+1}/${tot}`;pbUi();await new Promise(r=>setTimeout(r,0))}};
+      // 1-р шат: фибо ЯАЖ татах (таны түвшнүүдээр)
+      const lf=lfLearn(inst),lv={ent:lf.n>=3&&lf.all.e!=null?lf.all.e:MY.ent,sl:lf.n>=3&&lf.all.sl!=null?lf.all.sl:MY.sl,tp:lf.n>=3&&lf.all.tp!=null?lf.all.tp:MY.tp,be:lf.n>=3&&lf.all.nBe>=2?lf.all.be:null};
+      const draw=[];for(const kc of [2,3,5,8])for(const body of [false,true])for(const anc of [1.272,1.618,2])draw.push({kc,body,anc});
+      const s1=[];for(let k=0;k<draw.length;k++){s1.push({p:draw[k],a:run(A,Object.assign({},draw[k],lv))});await tick(k,draw.length,"фибо татах арга")}
+      const topD=s1.sort((x,y)=>pbScore(y.a)-pbScore(x.a)).slice(0,3).map(x=>x.p);
+      // 2-р шат: тэдгээр дээр Entry/SL/TP/BE
+      const lvG=[];for(const ent of [0.5,0.618,0.705,0.786])for(const sl of [0,-0.1,-0.236,-0.382])for(const tp of [2,2.618,3,4,4.236])for(const be of [null,1.618,2.618])if(be==null||be<tp)lvG.push({ent,sl,tp,be});
+      const s2=[];let k2=0,tot2=topD.length*lvG.length;for(const d of topD)for(const l of lvG){const p=Object.assign({},d,l);s2.push({p,a:run(A,p)});await tick(k2++,tot2,"түвшин")}
+      const top=s2.filter(x=>x.a.N>=8).sort((x,y)=>pbScore(y.a)-pbScore(x.a)).slice(0,5);top.forEach(x=>x.b=run(B,x.p));
+      const mineP=Object.assign({kc:MY.kc,body:false,anc:MY.anc},lv);
+      res[inst]={n,days:(all[n-1].t-all[0].t)/86400,top,mine:{p:mineP,a:run(A,mineP),b:run(B,mineP)},tested:draw.length+s2.length}}
+    PBR.opt={busy:false,p:1,res}}
+  catch(e){PBR.opt={busy:false,p:0,res:{_err:e.message||String(e)}}}pbUi()}
+// ===== Таны фибо ба ботын фибо: арилжаа бүрт таны татсан 0 ба ёроолын цэгийг ботынхтой харьцуулна =====
+async function pbCompare(){if(PBR.cmp&&PBR.cmp.busy)return;const L=enriched(S.trades,"backtest").filter(t=>t.fibr&&t.fibr.z&&t._.closed&&Date.parse(t.open));PBR.cmp={busy:true,done:0,n:L.length,rows:[]};pbUi();
+  for(const t of L){const ep=Date.parse(t.open)/1000,f=t.fibr;try{const sym=await derivSymbol(instOf(t.inst));
+      const r=await dvSend({ticks_history:sym,style:"candles",granularity:60,end:Math.floor(ep)+600*60,count:3600,adjust_start_time:1});
+      const bars=(r.candles||[]).map(c=>({t:+c.epoch,o:+c.open,h:+c.high,l:+c.low,c:+c.close}));if(bars.length<500)throw 0;const D=pbD(bars,0,bars.length);
+      const P=pbParams(t.inst),anc=P.anc,rg=f.z[1]-f.o[1],u0=f.z[1],uA=f.z[1]-rg*anc; // таны 0 ба «ёроол» (anc) үнэ
+      // таны 0 цэг лааны сүүл үү, бие үү
+      const near=bars.filter(b=>Math.abs(b.t-f.z[0])<=90),atr=(()=>{const a=bars.filter(b=>b.t<ep).slice(-240);return a.length?a.reduce((s,b)=>s+b.h-b.l,0)/a.length*8:0})();
+      let kind="—";if(near.length){const dw=Math.min(...near.map(b=>Math.min(Math.abs(b.h-u0),Math.abs(b.l-u0)))),db=Math.min(...near.map(b=>Math.min(Math.abs(Math.max(b.o,b.c)-u0),Math.abs(Math.min(b.o,b.c)-u0))));kind=dw<=db?"сүүл":"бие"}
+      const res=myRun({D,g:60,P:Object.assign({},P,{noRand:true})}),dir=t.dir==="Buy"?1:-1;
+      let best=null;if(res&&!res.err)for(const x of res.trades){if(x.dir!==dir)continue;const dt=Math.abs(D.t[x.b]-ep);if(dt<=6*3600&&(!best||dt<best.dt))best={dt,x}}
+      const row={id:t.id,inst:t.inst,dir:t.dir,ep,kind,uR:t._.R,u0,uA,atr};
+      if(best){const s0=best.x.s,b0=dir<0?s0.hi:s0.lo,bA=dir<0?s0.lo:s0.hi;Object.assign(row,{b0,bA,d0:atr?(u0-b0)/atr:null,dA:atr?(uA-bA)/atr:null,bR:best.x.R,dt:best.dt})}
+      PBR.cmp.rows.push(row)}catch(e){PBR.cmp.rows.push({id:t.id,inst:t.inst,dir:t.dir,ep,err:true})}
+    PBR.cmp.done++;pbUi();await new Promise(r=>setTimeout(r,250))}
+  PBR.cmp.busy=false;pbUi()}
+function pbCmpHtml(){const C=PBR.cmp,n=enriched(S.trades,"backtest").filter(t=>t.fibr&&t.fibr.z&&t._.closed).length;
+  let h=`<h3 class="bt-h3" style="margin-top:12px">Таны фибо ба ботын фибо</h3><p class="muted" style="font-size:12px;margin:4px 0">Давтан тоглуулалтад фибо татаж хийсэн арилжаа бүрт таны <b>0</b> (sweep) ба <b>ёроол</b> (${MY.anc}) цэгийг бот тухайн мөчид өөрөө олох цэгтэй харьцуулж, хэн нь илүү үр дүнтэй байсныг харуулна. Фибогийн цэгүүд одооноос эхлэн хадгалагдана (${n} арилжаа бэлэн).</p>
+    <div><button type="button" class="btn sm" data-pb="cmp"${C&&C.busy||!n?" disabled":""}>${C&&C.busy?`Харьцуулж байна ${C.done}/${C.n}…`:"Харьцуулах"}</button></div>`;
+  if(!C||!C.rows.length)return h;const R=C.rows.filter(r=>!r.err),M=R.filter(r=>r.bR!=null),wick=R.filter(r=>r.kind==="сүүл").length,avg=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:0;
+  const uSum=M.reduce((s,r)=>s+(r.uR||0),0),bSum=M.reduce((s,r)=>s+(r.bR||0),0);
+  h+=`<div class="pb-kpis" style="margin-top:8px"><div class="np-kv"><span class="lbl">Таны 0 цэг</span><b>${R.length?Math.round(100*wick/R.length):0}% сүүлээр</b><span class="muted">${R.length-wick} нь лааны биеэр</span></div>
+    <div class="np-kv"><span class="lbl">Бот ижил setup олсон</span><b>${M.length} / ${R.length}</b><span class="muted">±6 цагийн дотор, ижил чиглэлд</span></div>
+    <div class="np-kv"><span class="lbl">0 цэгийн зөрүү</span><b>${M.length?avg(M.map(r=>Math.abs(r.d0||0))).toFixed(2):"—"} ATR</b><span class="muted">ёроол: ${M.length?avg(M.map(r=>Math.abs(r.dA||0))).toFixed(2):"—"} ATR</span></div>
+    <div class="np-kv"><span class="lbl">Ижил setup-ууд дээр</span><b><span class="${cls(uSum)}">Та ${rfmt(uSum)}</span> · <span class="${cls(bSum)}">Бот ${rfmt(bSum)}</span></b><span class="muted">${M.length?(bSum>uSum?"ботын фибо илүү үр дүнтэй":"таны фибо илүү үр дүнтэй"):""}</span></div></div>
+    <div class="tw np-tw"><table class="np-table"><thead><tr><th>Огноо</th><th>Чиглэл</th><th>Таны 0</th><th class="r">Таны 0 / ёроол</th><th class="r">Ботын 0 / ёроол</th><th class="r">Зөрүү (ATR)</th><th class="r">Таны R</th><th class="r">Ботын R</th></tr></thead><tbody>
+    ${C.rows.map(r=>`<tr><td class="num">${new Date(r.ep*1000).toLocaleString("en-GB",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</td><td>${r.dir}</td>${r.err?`<td colspan="6" class="muted">лаа татаж чадсангүй</td>`:`<td>${r.kind}</td><td class="r num">${fmtP(r.u0)} / ${fmtP(r.uA)}</td><td class="r num">${r.b0!=null?fmtP(r.b0)+" / "+fmtP(r.bA):"<span class='muted'>олдоогүй</span>"}</td><td class="r num">${r.d0!=null?r.d0.toFixed(2)+" / "+r.dA.toFixed(2):"—"}</td><td class="r num ${cls(r.uR)}">${r.uR!=null?rfmt(r.uR):"—"}</td><td class="r num ${cls(r.bR)}">${r.bR!=null?rfmt(r.bR):"—"}</td>`}</tr>`).join("")}</tbody></table></div>`;
+  return h}
 function viewBot(){const lf=lfLearn(),P=pbParams(),bal=pbBal(),fmtL=v=>v==null?"—":String(v),O=PBR.opt;
   const insts=S.settings.instruments.filter(i=>i.kind==="step"||isGoldInst(i)).map(i=>i.name);
   const pos=[],pend=[];for(const inst of PB.insts){const s=pbSt(inst);s.pos.forEach(p=>pos.push([inst,p]));s.pend.forEach(o=>pend.push([inst,o]))}
@@ -1111,13 +1153,13 @@ function viewBot(){const lf=lfLearn(),P=pbParams(),bal=pbBal(),fmtL=v=>v==null?"
   <div class="ch-tools" style="flex-wrap:wrap;gap:8px 14px;margin-top:10px">
     <button type="button" class="btn ${PB.on?"":"primary"}" data-pb="toggle">${PB.on?"■ Зогсоох":"▶ Ботыг асаах"}</button>
     <span class="lbl">Хэрэгсэл</span>${insts.map(n=>`<label class="chk"><input type="checkbox" data-pbi="${esc(n)}"${PB.insts.includes(n)?" checked":""}> ${esc(n)}</label>`).join("")}
-    <label class="lbl" for="pbSrc">Фибо тохиргоо</label><select id="pbSrc"><option value="learned"${PB.src==="learned"?" selected":""}>Надаас сурсан</option><option value="my"${PB.src==="my"?" selected":""}>«Миний арга»-ын тохиргоо</option><option value="opt"${PB.src==="opt"?" selected":""}${PB.opt?"":" disabled"}>Хамгийн сайн олдсон</option></select>
+    <label class="lbl" for="pbSrc">Фибо тохиргоо</label><select id="pbSrc"><option value="learned"${PB.src==="learned"?" selected":""}>Надаас сурсан</option><option value="my"${PB.src==="my"?" selected":""}>«Миний арга»-ын тохиргоо</option><option value="opt"${PB.src==="opt"?" selected":""}${PB.opt||PB.optBy?"":" disabled"}>Бот сурсан (хамгийн сайн)</option></select>
     <label class="lbl" for="pbRisk">Эрсдэл</label><input id="pbRisk" type="number" step="0.1" min="0.1" max="5" value="${PB.risk}" style="width:64px"><span class="muted">%</span>
     <label class="lbl" for="pbBal0">Эхлэх данс $</label><input id="pbBal0" type="number" step="100" min="100" value="${PB.bal0}" style="width:90px">
     <label class="chk" title="Таны «Миний арга (сурсан)»-д ижил нөхцөлд алдагдалтай байсан setup-ыг алгасна"><input type="checkbox" id="pbKnn"${PB.knn?" checked":""}> Миний туршлагаар шүүх</label></div>
   <div class="pb-kpis" style="margin-top:10px">
     <div class="np-kv"><span class="lbl">Ботын данс</span><b class="${bal>=PB.bal0?"pos":"neg"}">${money(bal)}</b><span class="muted">эхлэл ${money(+PB.bal0)}</span></div>
-    <div class="np-kv"><span class="lbl">Ашиглаж буй фибо</span><b>${P.ent} / ${P.sl} / ${P.tp}</b><span class="muted">орох / SL / TP${P.be!=null?` · BE ${P.be}`:" · BE-гүй"} · ёроол = ${P.anc}</span></div>
+    <div class="np-kv"><span class="lbl">Ашиглаж буй фибо</span><b>${P.ent} / ${P.sl} / ${P.tp}</b><span class="muted">орох / SL / TP${P.be!=null?` · BE ${P.be}`:" · BE-гүй"} · ёроол = ${P.anc} · CHoCH ${P.kc} лаа · ${P.body?"бие":"сүүл"}ээр${PB.insts.length>1?` (${esc(PB.insts[0])})`:""}</span></div>
     <div class="np-kv"><span class="lbl">Надаас сурсан (${lf.n} арилжаа)</span><b>${fmtL(lf.all.e)} / ${fmtL(lf.all.sl)} / ${fmtL(lf.all.tp)}</b><span class="muted">BE ${fmtL(lf.all.be)} (${lf.all.nBe} удаа) · ашигтай ${lf.w}-ийн: ${fmtL(lf.win.e)} / ${fmtL(lf.win.sl)} / ${fmtL(lf.win.tp)}</span></div>
     <div class="np-kv"><span class="lbl">Нээлттэй / хүлээгдэж буй</span><b>${pos.length} / ${pend.length}</b><span class="muted">${PBR.err?`<span class="neg">${esc(PBR.err)}</span>`:"20 секунд тутам шалгана"}</span></div></div>
   ${lf.bad?`<p class="muted" style="font-size:12px">⚠ ${lf.bad} арилжааны фибо «0 = sweep-ийн оргил, 1.618 = CHoCH-ын ёроол» дүрэмтэй таарахгүй (SL &lt; орох &lt; TP биш) тул сургалтад оруулаагүй.</p>`:""}
@@ -1126,14 +1168,19 @@ function viewBot(){const lf=lfLearn(),P=pbParams(),bal=pbBal(),fmtL=v=>v==null?"
     ${pos.map(([i,p])=>`<tr><td><b>Нээлттэй</b></td><td>${esc(i)}</td><td>${p.dir}</td><td class="r num">${fmtP(p.E)}</td><td class="r num">${fmtP(p.SL)}${p.beDone?" (BE)":""}</td><td class="r num">${fmtP(p.TP)}</td><td class="r num">${p.BE!=null?fmtP(p.BE):"—"}</td><td class="r num">${p.lots}</td><td><button type="button" class="btn sm" data-pb="close" data-i="${esc(i)}" data-id="${p.id}">Хаах</button></td></tr>`).join("")}
     ${pend.map(([i,o])=>`<tr><td class="muted">Лимит</td><td>${esc(i)}</td><td>${o.dir}</td><td class="r num">${fmtP(o.E)}</td><td class="r num">${fmtP(o.SL)}</td><td class="r num">${fmtP(o.TP)}</td><td class="r num">${o.BE!=null?fmtP(o.BE):"—"}</td><td></td><td><button type="button" class="btn sm ghost" data-pb="cancel" data-i="${esc(i)}" data-id="${o.id}">Цуцлах</button></td></tr>`).join("")}</tbody></table></div>`:""}
   <details class="bt-det"${PBR.log.length?" open":""}><summary>Ботын тэмдэглэл (${PBR.log.length})</summary><div class="pb-log">${PBR.log.map(l=>`<div><span class="muted num">${new Date(l.ts).toLocaleTimeString("en-GB")}</span> ${esc(l.t)}</div>`).join("")||`<div class="muted">Одоогоор хоосон</div>`}</div></details>
-  <h3 class="bt-h3" style="margin-top:12px">Надаас илүү фибо хайх</h3>
-  <p class="muted" style="font-size:12px;margin:4px 0">Сүүлийн ~60 хоногийн 1м лаан дээр «Миний арга»-ын setup-уудад орох (0.5–0.786), SL (0 … −0.382), TP (2 … 4.236), BE (байхгүй, 1 … 2.618) түвшний ${"~"}300 хослолыг туршина. Эхний хагаст хамгийн сайныг сонгоод <b>хоёр дахь хагаст (харж байгаагүй өгөгдөл)</b> шалгана — тэнд ч сайн бол л жинхэнэ давуу тал.</p>
-  <div><button type="button" class="btn sm primary" data-pb="opt"${O.busy?" disabled":""}>${O.busy?`${O.msg||"…"} ${Math.round(O.p*100)}%`:"Хамгийн сайн тохиргоо хайх"}</button></div>`;
-  const R0=O.res;if(R0&&R0.err)h+=`<div class="warns"><div>${esc(R0.err)}</div></div>`;
-  else if(R0){const row=(lab,x,act)=>`<tr><td>${lab}</td><td class="num">${x.p.ent} / ${x.p.sl} / ${x.p.tp} / ${x.p.be??"—"}</td><td class="r num">${x.a.N}</td><td class="r num ${cls(x.a.tot)}">${rfmt(x.a.tot)}</td><td class="r num">${x.b.N}</td><td class="r num ${cls(x.b.tot)}"><b>${rfmt(x.b.tot)}</b></td><td class="r num">${pct(x.b.win)}</td><td>${act||""}</td></tr>`;
-    h+=`<p class="muted" style="font-size:12px">${R0.inst} · ${R0.n.toLocaleString("en-US")} лаа · ${Math.round(R0.days)} хоног · ${R0.tested} хослол</p><div class="tw np-tw"><table class="np-table"><thead><tr><th></th><th>Орох / SL / TP / BE</th><th class="r">I хагас: тоо</th><th class="r">I: нийт R</th><th class="r">II хагас: тоо</th><th class="r">II: нийт R</th><th class="r">II: хожил</th><th></th></tr></thead><tbody>
-      ${row("<b>Таны (сурсан)</b>",R0.mine)}${R0.top.map((x,i)=>row(`#${i+1}`,x,`<button type="button" class="btn sm" data-pb="useopt" data-k="${i}">Ботод ашиглах</button>`)).join("")}</tbody></table></div>
-      <p class="muted" style="font-size:12px">${R0.top.length&&R0.top[0].b.tot>R0.mine.b.tot&&R0.top[0].b.tot>0?`#1 тохиргоо харж байгаагүй II хагаст таныхаас <b>${rfmt(R0.top[0].b.tot-R0.mine.b.tot)}</b>-ээр илүү гарлаа.`:"Олдсон тохиргоонууд II хагаст таныхаас тодорхой илүү гараагүй — таны тохиргоог хэвээр үлдээх нь зүйтэй."} Олон хослол туршихад санамсаргүй сайн гарах эрсдэлтэй тул II хагасын үр дүнд л итгэнэ үү.</p>`}
+  <h3 class="bt-h3" style="margin-top:12px">Бот фибогоо хамгийн сайн татахыг сурах</h3>
+  <p class="muted" style="font-size:12px;margin:4px 0">Сонгосон хэрэгсэл бүрээр (алт, Step <b>тус тусдаа</b>) сүүлийн ~60 хоногийн 1м лаан дээр: ① фибо <b>яаж татах</b> — CHoCH-ын swing-ийн хэмжээ (2–8 лаа), лааны <b>сүүл эсвэл бие</b>гээр, ёроолыг 1.272 / 1.618 / 2 гэж тавих; ② <b>Entry, SL, TP, BE</b> түвшин. Нийт ~700 хослол. Эрсдэлийг барихын тулд «нийт R − хамгийн их уналтын хагас»-аар эхний хагаст сонгоод, <b>хоёр дахь хагаст (харж байгаагүй өгөгдөл)</b> шалгана.</p>
+  <div><button type="button" class="btn sm primary" data-pb="opt"${O.busy?" disabled":""}>${O.busy?`${O.msg||"…"} ${Math.round(O.p*100)}%`:"Сургах (хамгийн сайн фибо хайх)"}</button></div>`;
+  const R0=O.res;if(R0&&R0._err)h+=`<div class="warns"><div>${esc(R0._err)}</div></div>`;
+  else if(R0)for(const inst in R0){const X=R0[inst];if(X.err){h+=`<div class="warns"><div>${esc(X.err)}</div></div>`;continue}
+    const dn=p=>`${p.kc} лаа · ${p.body?"бие":"сүүл"} · ёроол ${p.anc}`,lv=p=>`${p.ent} / ${p.sl} / ${p.tp} / ${p.be??"—"}`,cur=(PB.optBy||{})[inst];
+    const row=(lab,x,act)=>`<tr><td>${lab}</td><td>${dn(x.p)}</td><td class="num">${lv(x.p)}</td><td class="r num">${x.a.N}</td><td class="r num ${cls(x.a.tot)}">${rfmt(x.a.tot)}</td><td class="r num">${x.b.N}</td><td class="r num ${cls(x.b.tot)}"><b>${rfmt(x.b.tot)}</b></td><td class="r num neg">−${x.b.dd.toFixed(1)}R</td><td class="r num">${x.b.dd?(x.b.tot/x.b.dd).toFixed(2):"—"}</td><td class="r num">${pct(x.b.win)}</td><td>${act||""}</td></tr>`;
+    const best=X.top[0],better=best&&best.b.tot>X.mine.b.tot&&best.b.tot>0&&(best.b.tot/Math.max(best.b.dd,1))>(X.mine.b.tot/Math.max(X.mine.b.dd,1));
+    h+=`<h4 style="margin:10px 0 4px">${esc(inst)} <span class="muted" style="font-weight:400;font-size:12px">${X.n.toLocaleString("en-US")} лаа · ${Math.round(X.days)} хоног · ${X.tested} хослол${cur?` · ботод: ${dn(cur.p)} · ${lv(cur.p)}`:""}</span></h4>
+      <div class="tw np-tw"><table class="np-table"><thead><tr><th></th><th>Фибо татах</th><th>Орох / SL / TP / BE</th><th class="r">I: тоо</th><th class="r">I: R</th><th class="r">II: тоо</th><th class="r">II: R</th><th class="r">II: уналт</th><th class="r">II: R/уналт</th><th class="r">II: хожил</th><th></th></tr></thead><tbody>
+      ${row("<b>Таны</b>",X.mine)}${X.top.map((x,i)=>row(`#${i+1}`,x,`<button type="button" class="btn sm" data-pb="useopt" data-inst="${esc(inst)}" data-k="${i}">Ботод ашиглах</button>`)).join("")}</tbody></table></div>
+      <p class="muted" style="font-size:12px;margin:4px 0">${better?`<b class="pos">Бот олсон #1 тохиргоо харж байгаагүй II хагаст таныхаас илүү ашигтай, эрсдэл нь ч бага/тэнцүү (${rfmt(best.b.tot)}, уналт −${best.b.dd.toFixed(1)}R).</b>`:"Олдсон тохиргоонууд II хагаст таныхаас ашиг ба эрсдэлийн хувьд тодорхой илүү гараагүй — таны фибог хэвээр үлдээх нь зүйтэй."} Олон хослол туршихад санамсаргүй сайн гарах эрсдэлтэй тул II хагасын үр дүнд л итгэнэ үү.</p>`}
+  h+=pbCmpHtml();
   h+=`</section><section class="panel c12 bt-page">${btHtml("bot")}</section></div>`;return h}
 
 function viewBacktest(){return `<div class="grid"><section class="panel c12 bt-page">${btHtml(true)}</section></div>`}
@@ -1145,7 +1192,8 @@ document.addEventListener("click",e=>{const b=e.target.closest("#app [data-pb]")
   else if(a==="close"){const inst=b.dataset.i,s0=pbSt(inst),p=s0.pos.find(x=>x.id===b.dataset.id),B=PBR.bars[inst];if(p&&B&&B.length){pbClose(inst,p,B[B.length-1].c,"гараар",B[B.length-1].t);render()}else toast("Үнэ ачаалагдаагүй байна — ботыг асаана уу")}
   else if(a==="cancel"){const s0=pbSt(b.dataset.i);s0.pend=s0.pend.filter(x=>x.id!==b.dataset.id);pbSave();pbLog("Лимит цуцаллаа");render()}
   else if(a==="opt")pbOptimize();
-  else if(a==="useopt"){const x=PBR.opt.res&&PBR.opt.res.top[+b.dataset.k];if(x){PB.opt={p:x.p,b:x.b};PB.src="opt";pbSave();toast("Ботод энэ тохиргоог ашиглана");render()}}});
+  else if(a==="useopt"){const X=PBR.opt.res&&PBR.opt.res[b.dataset.inst],x=X&&X.top[+b.dataset.k];if(x){PB.optBy=PB.optBy||{};PB.optBy[b.dataset.inst]={p:x.p,b:x.b};PB.src="opt";pbSave();toast(b.dataset.inst+": ботод энэ тохиргоог ашиглана");render()}}
+  else if(a==="cmp")pbCompare();});
 document.addEventListener("change",e=>{const t=e.target;if(!t.closest("#app"))return;
   if(t.dataset.pbi!=null){const n=t.dataset.pbi;PB.insts=PB.insts.filter(x=>x!==n);if(t.checked)PB.insts.push(n);pbSave();render();return}
   if(t.id==="pbSrc"){PB.src=t.value;pbSave();render();return}if(t.id==="pbRisk"){PB.risk=Math.min(5,Math.max(0.1,+t.value||1));pbSave();render();return}
@@ -2885,8 +2933,10 @@ function myRun(R){const D=R.D,n=D.n,g=R.g||CH.gran,H4=14400,P=R.P||MY;if(g>=H4)r
     else{cur.i1=i;if(D.h[i]>cur.h){cur.h=D.h[i];cur.hi=i}if(D.l[i]<cur.l){cur.l=D.l[i];cur.li=i}cur.c=D.c[i]}}
   const nowEp=D.t[n-1]+g;const a4=npATR(Float64Array.from(C4,x=>x.h),Float64Array.from(C4,x=>x.l),Float64Array.from(C4,x=>x.c),14);
   const kh=Math.max(2,Math.round(P.ph*3600/g)),piv=npRawPivots(D.h,D.l,kh),pH=piv.filter(p=>p.t===1),pL=piv.filter(p=>p.t===-1);
-  const sp=npRawPivots(D.h,D.l,P.kc),sH=sp.filter(p=>p.t===1),sL=sp.filter(p=>p.t===-1);
-  const rMax=myRange(D.h,true),rMin=myRange(D.l,false);
+  // Фибогийн цэг: P.body бол лааны биеэр (open/close), эс бол сүүлээр (high/low) татна
+  let AH=D.h,AL=D.l;if(P.body){AH=new Float64Array(n);AL=new Float64Array(n);for(let i=0;i<n;i++){AH[i]=Math.max(D.o[i],D.c[i]);AL[i]=Math.min(D.o[i],D.c[i])}}
+  const sp=npRawPivots(AH,AL,P.kc),sH=sp.filter(p=>p.t===1),sL=sp.filter(p=>p.t===-1);
+  const rMax=myRange(D.h,true),rMin=myRange(D.l,false),aMax=P.body?myRange(AH,true):rMax,aMin=P.body?myRange(AL,false):rMin;
   // фибо: 0 = sweep-ийн оргил, CHoCH-ын ёроол = ${P.anc} түвшин (таны арга: 1.618) → нэг нэгж = хөл / anc
   const lvl=(dir,hi,lo,L)=>{const u=(hi-lo)/P.anc;return dir<0?hi-L*u:lo+L*u};
   // pool хайх: тухайн мөчөөс өмнө баталгаажсан, хадгалагдсан (шүүрдэгдээгүй) ижил оргилууд
@@ -2907,7 +2957,7 @@ function myRun(R){const D=R.D,n=D.n,g=R.g||CH.gran,H4=14400,P=R.P||MY;if(g>=H4)r
       cnt.sweep++;
       // Дараа нь 1м/5м дээр CHoCH: оргил шинэчлэгдэх бүрт өмнөх жижиг ёроолыг лавлана
       const refs=dir<0?sL:sH,lim=Math.min(n-1,K.i1+Math.round(H4/g));let ext=dir<0?-Infinity:Infinity,pk=sw,ref=null,j=-1;
-      for(let t=sw;t<=lim;t++){if(dir<0?D.h[t]>ext:D.l[t]<ext){ext=dir<0?D.h[t]:D.l[t];pk=t;const ri=myLB(refs,pk,p=>p.i)-1;ref=ri>=0?refs[ri]:null}
+      for(let t=sw;t<=lim;t++){if(dir<0?AH[t]>ext:AL[t]<ext){ext=dir<0?AH[t]:AL[t];pk=t;const ri=myLB(refs,pk,p=>p.i)-1;ref=ri>=0?refs[ri]:null}
         if(!ref||t<=pk||t<ref.conf)continue;if(dir<0?D.c[t]<ref.p:D.c[t]>ref.p){j=t;break}}
       if(j<0){if(lim>=n-1)live.push({st:closed?"choch":"sweep",dir,pool,K,ref:ref||{p:NaN}});continue}
       cnt.choch++;
@@ -2915,8 +2965,8 @@ function myRun(R){const D=R.D,n=D.n,g=R.g||CH.gran,H4=14400,P=R.P||MY;if(g>=H4)r
       const legs=dir<0?sL:sH;let li=myLB(legs,j,p=>p.i);let leg=legs[li];
       if(!leg||leg.conf>=n){live.push({st:"leg",dir,pool,K,ref,j});continue}
       const place=leg.conf;
-      if(dir<0?rMax(pk+1,place)>ext:rMin(pk+1,place)<ext){cnt.inval++;continue}
-      let lo1=dir<0?rMin(pk,place):rMax(pk,place);
+      if(dir<0?aMax(pk+1,place)>ext:aMin(pk+1,place)<ext){cnt.inval++;continue}
+      let lo1=dir<0?aMin(pk,place):aMax(pk,place);
       const calc=()=>{const hi=dir<0?ext:lo1,lo=dir<0?lo1:ext;return {hi,lo,E:lvl(dir,hi,lo,P.ent),SL:lvl(dir,hi,lo,P.sl),TP:lvl(dir,hi,lo,P.tp)}};
       let L=calc();if(!(Math.abs(L.E-L.SL)>0))continue;const tp0=L.TP;
       // байршуулах үед үнэ орох түвшнээс аль хэдийн давсан бол хоцорсон
@@ -2924,7 +2974,7 @@ function myRun(R){const D=R.D,n=D.n,g=R.g||CH.gran,H4=14400,P=R.P||MY;if(g>=H4)r
       cnt.placed++;
       // хүлээх хугацаанд шинэ ёроол хийвэл фибог шинэ ёроолоос дахин татна (TP-д хүрвэл цуцална)
       let f=-1,why="";for(let t=place+1;t<=Math.min(n-1,place+P.exp);t++){
-        if(dir<0?D.l[t]<lo1:D.h[t]>lo1){lo1=dir<0?D.l[t]:D.h[t];if(dir<0?lo1<=tp0:lo1>=tp0){why="cancel";break}L=calc();continue}
+        if(dir<0?AL[t]<lo1:AH[t]>lo1){lo1=dir<0?AL[t]:AH[t];if(dir<0?lo1<=tp0:lo1>=tp0){why="cancel";break}L=calc();continue}
         if(dir<0?D.h[t]>=L.E:D.l[t]<=L.E){f=t;break}}
       const s={dir,pool,K,pk,ref,j,leg,place,lo1,hi:L.hi,lo:L.lo,E:L.E,SL:L.SL,TP:L.TP,f,R:Math.abs(L.TP-L.E)/Math.abs(L.E-L.SL)};
       if(f<0){if(why)cnt.cancel++;else if(place+P.exp>=n-1)live.push(Object.assign({st:"order"},s));else cnt.expired++;continue}
