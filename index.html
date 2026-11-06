@@ -1443,7 +1443,7 @@ function chBuild(){
         <div class="seg" id="rtOt" role="group" aria-label="Захиалгын төрөл"><button type="button" data-ch="rtOt" data-v="mkt">Зах зээл</button><button type="button" data-ch="rtOt" data-v="lmt" title="Графикт дарж лимит/стоп захиалга тавих">Лимит/Стоп</button></div>
         <select id="rtSlSel" aria-label="Анхдагч SL" title="Анхдагч stop (дараа нь графикт чирж өөрчилнө)"><option value="atr1">SL 1×ATR</option><option value="atr1.5">SL 1.5×ATR</option><option value="atr2">SL 2×ATR</option><option value="atr3">SL 3×ATR</option><option value="swing">SL сүүлийн swing</option></select>
         <select id="rtRrSel" aria-label="Анхдагч TP" title="Анхдагч зорилт (R)"><option value="1">TP 1R</option><option value="1.5">TP 1.5R</option><option value="2">TP 2R</option><option value="3">TP 3R</option><option value="4">TP 4R</option><option value="5">TP 5R</option></select>
-        <span class="muted mono" id="rtLot"></span></div>
+        <button type="button" class="btn sm ghost mono" id="rtLot" data-ch="rtLotMode" title="Дарж солино: хамгийн бага лот ↔ дансны %-иар тооцох"></button></div>
       <div class="rt-pos" id="rtPos" hidden></div>
 
       <div class="ch-empty" id="chEmpty">График ачаалж байна…</div></div>
@@ -1762,7 +1762,7 @@ function rpDrawCheck(bar){if(CH.mode!=="replay"||!S.drawings)return;const R=CH.r
   for(const d of drList()){if(!d.rp||(d.type!=="long"&&d.type!=="short")||!d.a||d.sl==null||d.tp==null)continue;let st=RT.dp[d.id];if(st&&st.done)continue;
     const buy=d.type==="long",e=+d.a.p,sl=+d.sl,tp=+d.tp;
     if(!st){if(ep+R._g<=d.a.t)continue;if(!(bar.low<=e&&bar.high>=e))continue;
-      const c=posCalc(d);st=RT.dp[d.id]={id:uid(),fibr:fibRatioAt(ep,{e,sl,tp}),entry:e,lots:c.lots,risk:c.risk,openEp:ep,balance:R.balance,seq:bar.seq};meCapture({id:st.id,epoch:ep,dir:buy?"Buy":"Sell",entry:e,sl,tp});
+      const c=posCalc(d),ml=+(CH.inst.minLot||CH.inst.lotStep||0.01),lt=RT.minLot?ml:c.lots;st=RT.dp[d.id]={id:uid(),fibr:fibRatioAt(ep,{e,sl,tp}),entry:e,lots:lt,risk:RT.minLot?Math.abs(e-sl)*(+CH.inst.cs||1)*lt:c.risk,openEp:ep,balance:R.balance,seq:bar.seq};meCapture({id:st.id,epoch:ep,dir:buy?"Buy":"Sell",entry:e,sl,tp});
       R.markers.push({time:bar.time,position:buy?"belowBar":"aboveBar",color:buy?"#2962FF":"#F23645",shape:buy?"arrowUp":"arrowDown",text:`${buy?"Long":"Short"} ${fm(c.lots,2)}`});CH.series.setMarkers(R.markers.slice().sort((a,b)=>a.time-b.time));continue}
     if(bar.seq!=null&&bar.seq<=st.seq)continue;
     const hs=buy?bar.low<=sl:bar.high>=sl,ht=buy?bar.high>=tp:bar.low<=tp;if(!hs&&!ht)continue;
@@ -3097,7 +3097,9 @@ function rtDefaults(dir,entry){const d=dir==="Buy"?1:-1,tick=+CH.inst.tick||0.01
   if(RT.sl==="swing"){const b=rtBars().slice(-20);sl=d>0?Math.min(...b.map(x=>x.low))-tick:Math.max(...b.map(x=>x.high))+tick;if((entry-sl)*d<=tick)sl=entry-d*rtATR()}
   else{const m=+RT.sl.replace("atr","")||1.5;sl=entry-d*m*(rtATR()||entry*0.001)}
   sl=rtRound(sl);const tp=rtRound(entry+d*Math.abs(entry-sl)*RT.rr);return {sl,tp}}
-function rtLots(entry,sl){const ins=CH.inst,cs=+ins.cs||1,step=+ins.lotStep||0.01,minLot=+ins.minLot||step,dist=Math.abs(entry-sl);if(!dist)return minLot;
+// Давтан тоглуулалтад анхдагчаар хамгийн бага лот — P/L хэт томроод «их ашиг олсон» мэт харагдахгүй (R нь лотоос хамаарахгүй)
+RT.minLot=(()=>{try{return localStorage.getItem("alkham-rt-minlot")!=="0"}catch(e){return true}})();
+function rtLots(entry,sl){const ins=CH.inst,cs=+ins.cs||1,step=+ins.lotStep||0.01,minLot=+ins.minLot||step,dist=Math.abs(entry-sl);if(!dist||RT.minLot)return minLot;
   const lots=Math.floor(CH.rp.balance*(CH.risk||1)/100/(dist*cs)/step+1e-9)*step;return +Math.max(minLot,lots).toFixed(4)}
 function rtOpenPos(dir,entry,sl,tp,lots,bar){const R=CH.rp,cs=+CH.inst.cs||1;
   R.pos={inst:CH.inst.name,seq:R.seq||0,dir,entry,sl,sl0:sl,tp,lots,risk:Math.abs(entry-sl)*cs*lots,time:bar.time,epoch:bar.time-TZ,balance:R.balance,idx:R.idx};rpPersistOpen(R.pos);
@@ -3166,7 +3168,7 @@ function rtUi(){const on=CH.mode==="replay",bar=$("#rtBar"),hud=$("#rtHud"),pos=
   $("#rpSpeedBtn").textContent=(CH.rp.speed||2)+"x";if(document.activeElement!==$("#rpGran"))$("#rpGran").value=String(CH.gran);$("#rpSelBtn").setAttribute("aria-pressed",String(!!RT.selBar));
   const R=CH.rp,last=R.all[R.idx-1],px=CH.last!=null?fmtP(CH.last):"—";$("#rtBid").textContent=px;$("#rtAsk").textContent=px;
   $$("#rtOt button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===RT.ot)));
-  if(last){const {sl}=rtDefaults("Buy",last.close);$("#rtLot").textContent=`${fm(rtLots(last.close,sl),2)} лот · ${CH.risk||1}%`}
+  if(last){const {sl}=rtDefaults("Buy",last.close);$("#rtLot").textContent=`${fm(rtLots(last.close,sl),2)} лот · ${RT.minLot?"хамгийн бага":(CH.risk||1)+"%"}`}
   const p=R.pos,q=RT.pend,cs=+CH.inst.cs||1;
   if(p){const pl=(CH.last-p.entry)*(p.dir==="Buy"?1:-1)*cs*p.lots;pos.innerHTML=`<span class="dir ${p.dir==="Sell"?"sell":"buy"}">${p.dir}</span><b class="num">${fm(p.lots,2)} @ ${fmtP(p.entry)}</b><b class="num ${cls(pl)}">${money(pl)} · ${rfmt(p.risk?pl/p.risk:null)}</b>
       <button type="button" class="btn sm" data-ch="rtBE" title="Stop-ийг орох үнэ рүү (E)">BE</button><button type="button" class="btn sm danger" data-ch="rpCloseNow" title="Одоо хаах (X)">Хаах ✕</button>`}
@@ -3203,11 +3205,15 @@ function rtRandom(){const g=CH.gran,days=g<=60?25:g<=300?120:300,now=Date.now()-
 const BT={src:"all",inst:"all",dir:"all",sort:"open",desc:false,rv:15};
 const BT_WD=["Ням","Даваа","Мягмар","Лхагва","Пүрэв","Баасан","Бямба"],BT_WD_ORDER=[1,2,3,4,5,6,0];
 const btEp=s=>{if(s==null||s==="")return null;if(typeof s==="number")return s;const t=new Date(s).getTime();return isFinite(t)?t/1000:null};
+// Пипийн хэмжээ: Step Index — 1.0 үнийн нэгж = 1 пип (7997.5 → 7981.7 = 15.8 пип); алт — 0.1 = 1 пип (стандарт)
+function pipSize(ins){return ins&&ins.kind==="step"?1:isGoldInst(ins)?0.1:(+ins.tick||0.0001)*10}
 function btRows(){const rows=[];
   if(BT.src!=="saved"&&BT.kind!=="bot")CH.rp.results.forEach(r=>{if(BT.src==="all"&&r.saved)return;rows.push({src:"Сешн",inst:r.inst,dir:r.dir,open:r.openEp,close:r.closeEp,entry:r.entry,exit:r.exit,sl:r.sl,tp:r.tp,lots:r.lots,pnl:r.pnl,R:r.R,reason:r.reason==="TP"?"TP":r.reason==="SL"?"SL":r.reason==="BE"?"BE":"Гараар"})});
-  if(BT.src!=="session"||BT.kind==="bot")enriched(S.trades,BT.kind||"backtest").forEach(t=>{if(!t._.closed)return;rows.push({src:"Хадгалсан",id:t.id,inst:t.inst,dir:t.dir,open:btEp(t.open),close:btEp(t.close),entry:num(t.entry),exit:num(t.exit),sl:num(t.sl),tp:num(t.tp),lots:num(t.lots),pnl:t._.pnl,R:t._.R,
+  if(BT.src!=="session"||BT.kind==="bot")enriched(S.trades,BT.kind||"backtest").forEach(t=>{if(!t._.closed)return;rows.push({src:"Хадгалсан",id:t.id,bal:num(t.balance),inst:t.inst,dir:t.dir,open:btEp(t.open),close:btEp(t.close),entry:num(t.entry),exit:num(t.exit),sl:num(t.sl),tp:num(t.tp),lots:num(t.lots),pnl:t._.pnl,R:t._.R,
     reason:/Зорилт/.test(t.exitReason||"")?"TP":/Breakeven/.test(t.exitReason||"")?"BE":/Stop/.test(t.exitReason||"")?"SL":"Гараар"})});
-  rows.forEach(r=>{const ins=instOf(r.inst),ps=ins.kind==="step"?(+ins.tick||0.1):0.1;r.ps=ps;
+  rows.forEach(r=>{const ins=instOf(r.inst),ps=pipSize(ins);r.ps=ps;
+    // Хуучин арилжаа: stop-ийг ашигтай тал руу зөөсөн тул анхны эрсдэл алга — 1% эрсдэлээр ойролцоолно (≈)
+    if(r.R==null&&r.pnl!=null&&r.bal>0){r.R=r.pnl/(r.bal*0.01);r.Rest=true}
     if(r.reason==="SL"&&r.sl!=null&&r.entry!=null&&Math.abs(r.sl-r.entry)<1e-9){r.reason="BE";if(r.R==null)r.R=0}/* хуучин BE арилжаа */
     r.pips=r.entry!=null&&r.exit!=null?Math.round((r.exit-r.entry)*(r.dir==="Sell"?-1:1)/ps*10)/10:null;
     const d=r.open?new Date(r.open*1000):null;r.wd=d?d.getDay():null;r.hr=d?d.getHours():null;r.dur=r.open&&r.close?(r.close-r.open)/60:null});
@@ -3276,7 +3282,7 @@ function btHtml(page){BT.kind=page==="bot"?"bot":"backtest";const IL=btInsts(),i
   <div class="tw bt-tw"><table class="bt-table"><thead><tr>${th("idx","#",true)}${th("inst","Хэрэгсэл")}${th("open","Огноо")}<th>Цаг</th>${th("wd","Гараг")}${th("dir","Чиглэл")}${th("entry","Орох",true)}${th("exit","Гарах",true)}${th("pips","Пип (±)",true)}${th("R","R",true)}${th("pnl","P/L",true)}${th("reason","Үр дүн")}${th("dur","Хугацаа",true)}</tr></thead><tbody>
     ${rows.map((r,i)=>`<tr><td class="r num muted">${r.idx}</td><td>${esc(r.inst)}${r.src==="Сешн"?' <span class="pill neutral" style="font-size:10px">сешн</span>':""}</td><td class="num">${r.open?btFmtD(r.open):"—"}</td><td class="num">${r.open?btFmtT(r.open):"—"}</td><td>${r.wd!=null?BT_WD[r.wd]:"—"}</td>
       <td><span class="dir ${r.dir==="Sell"?"sell":"buy"}">${r.dir}</span></td><td class="r num">${r.entry!=null?fmtP(r.entry,instOf(r.inst)):"—"}</td><td class="r num">${r.exit!=null?fmtP(r.exit,instOf(r.inst)):"—"}</td>
-      <td class="r num ${cls(r.pips)}"><b>${pip(r.pips)}</b></td><td class="r num ${cls(r.R)}">${rfmt(r.R)}</td><td class="r num ${cls(r.pnl)}">${money(r.pnl)}</td><td><span class="bt-res ${r.reason==="TP"?"tp":r.reason==="SL"?"sl":r.reason==="BE"?"be":""}">${r.reason}</span></td><td class="r num muted">${btDur(r.dur)}</td></tr>`).join("")}
+      <td class="r num ${cls(r.pips)}"><b>${pip(r.pips)}</b></td><td class="r num ${cls(r.R)}"${r.Rest?' title="Анхны SL хадгалагдаагүй хуучин арилжаа — данс × 1% эрсдэлээр ойролцоолсон"':""}>${r.Rest?"≈":""}${rfmt(r.R)}</td><td class="r num ${cls(r.pnl)}">${money(r.pnl)}</td><td><span class="bt-res ${r.reason==="TP"?"tp":r.reason==="SL"?"sl":r.reason==="BE"?"be":""}">${r.reason}</span></td><td class="r num muted">${btDur(r.dur)}</td></tr>`).join("")}
   </tbody></table></div>
   <h3 class="bt-h3">Тайлан</h3>${btStreaks(all)}${btPsych(all)}${btCurve(all)}<div class="bt-grid">`;
   const wd=btGroup(all,r=>r.wd,BT_WD_ORDER.map(k=>({k})));
@@ -3475,6 +3481,7 @@ async function chClick(e){
   else if(act==="patOpen"){PAT.open=!PAT.open;b.setAttribute("aria-pressed",String(PAT.open));PAT.focus=null;if(PAT.open)patGo();else{patRender();drDirty()}}
   else if(act==="patClose"){PAT.open=false;PAT.focus=null;$("#btnPat").setAttribute("aria-pressed","false");patRender();drDirty()}
   else if(act==="patRun"){PAT.focus=null;patGo()}
+  else if(act==="rtLotMode"){RT.minLot=!RT.minLot;try{localStorage.setItem("alkham-rt-minlot",RT.minLot?"1":"0")}catch(x){}rtUi();toast(RT.minLot?"Давтан тоглуулалт: хамгийн бага лотоор арилжаална":"Давтан тоглуулалт: дансны "+(CH.risk||1)+"% эрсдэлээр лот тооцно")}
   else if(act==="meRun")meRun(true);
   else if(act==="meFill")meBackfill();
   else if(act==="meOrder"){CH.dir=b.dataset.dir;const dc=decOf(CH.inst);if(CH.mode!=="replay"){CH.mkt=true;$("#opMkt").checked=true}
