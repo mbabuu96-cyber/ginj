@@ -3205,8 +3205,8 @@ function rtRandom(){const g=CH.gran,days=g<=60?25:g<=300?120:300,now=Date.now()-
 const BT={src:"all",inst:"all",dir:"all",sort:"open",desc:false,rv:15,norm:(()=>{try{return localStorage.getItem("alkham-bt-norm")!=="0"}catch(e){return true}})()};
 const BT_WD=["Ням","Даваа","Мягмар","Лхагва","Пүрэв","Баасан","Бямба"],BT_WD_ORDER=[1,2,3,4,5,6,0];
 const btEp=s=>{if(s==null||s==="")return null;if(typeof s==="number")return s;const t=new Date(s).getTime();return isFinite(t)?t/1000:null};
-// Пипийн хэмжээ: Step Index — 1.0 үнийн нэгж = 1 пип (7997.5 → 7981.7 = 15.8 пип); алт — 0.1 = 1 пип (стандарт)
-function pipSize(ins){return ins&&ins.kind==="step"?1:isGoldInst(ins)?0.1:(+ins.tick||0.0001)*10}
+// Пип = үнийн зөрүү (1.0 = 1 пип): Step 7997.5 → 7981.7 = 15.8 пип, алт 4190.5 → 4180.5 = 10.0 пип — 10 дахин томсгохгүй
+function pipSize(ins){return ins&&(ins.kind==="step"||ins.kind==="gold"||/XAU/i.test(ins.name||""))?1:(+ins.tick||0.0001)*10}
 function btRows(){const rows=[];
   if(BT.src!=="saved"&&BT.kind!=="bot")CH.rp.results.forEach(r=>{if(BT.src==="all"&&r.saved)return;rows.push({src:"Сешн",inst:r.inst,dir:r.dir,open:r.openEp,close:r.closeEp,entry:r.entry,exit:r.exit,sl:r.sl,tp:r.tp,lots:r.lots,pnl:r.pnl,R:r.R,reason:r.reason==="TP"?"TP":r.reason==="SL"?"SL":r.reason==="BE"?"BE":"Гараар"})});
   if(BT.src!=="session"||BT.kind==="bot")enriched(S.trades,BT.kind||"backtest").forEach(t=>{if(!t._.closed)return;rows.push({src:"Хадгалсан",id:t.id,bal:num(t.balance),inst:t.inst,dir:t.dir,open:btEp(t.open),close:btEp(t.close),entry:num(t.entry),exit:num(t.exit),sl:num(t.sl),tp:num(t.tp),lots:num(t.lots),pnl:t._.pnl,R:t._.R,
