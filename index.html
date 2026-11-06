@@ -1201,7 +1201,7 @@ document.addEventListener("change",e=>{const t=e.target;if(!t.closest("#app"))re
   if(t.dataset.pbi!=null){const n=t.dataset.pbi;PB.insts=PB.insts.filter(x=>x!==n);if(t.checked)PB.insts.push(n);pbSave();render();return}
   if(t.id==="pbSrc"){PB.src=t.value;pbSave();render();return}if(t.id==="pbRisk"){PB.risk=Math.min(5,Math.max(0.1,+t.value||1));pbSave();render();return}
   if(t.id==="pbBal0"){PB.bal0=Math.max(100,+t.value||1000);pbSave();render();return}if(t.id==="pbKnn"){PB.knn=t.checked;pbSave();return}});
-document.addEventListener("change",e=>{if(!e.target.closest("#app"))return;const id=e.target.id;if(id==="btSrc")BT.src=e.target.value;else if(id==="btInst")BT.inst=e.target.value;else if(id==="btDir")BT.dir=e.target.value;else if(id==="btRv")BT.rv=+e.target.value;else return;render()});
+document.addEventListener("change",e=>{if(!e.target.closest("#app"))return;const id=e.target.id;if(id==="btSrc")BT.src=e.target.value;else if(id==="btInst")BT.inst=e.target.value;else if(id==="btDir")BT.dir=e.target.value;else if(id==="btNorm"){BT.norm=e.target.value==="1";try{localStorage.setItem("alkham-bt-norm",BT.norm?"1":"0")}catch(x){}}else if(id==="btRv")BT.rv=+e.target.value;else return;render()});
 
 /* ---------------- trade form ---------------- */
 let editing=null;
@@ -3202,7 +3202,7 @@ function rtRandom(){const g=CH.gran,days=g<=60?25:g<=300?120:300,now=Date.now()-
   $("#rpStart").value=localStr(Math.floor(t.getTime()/1000));CH.rpStart=$("#rpStart").value;drOptsSave();rpLoad()}
 
 /* --- Backtest статистикийн цонх: хүснэгт + график тайлан --- */
-const BT={src:"all",inst:"all",dir:"all",sort:"open",desc:false,rv:15};
+const BT={src:"all",inst:"all",dir:"all",sort:"open",desc:false,rv:15,norm:(()=>{try{return localStorage.getItem("alkham-bt-norm")!=="0"}catch(e){return true}})()};
 const BT_WD=["Ням","Даваа","Мягмар","Лхагва","Пүрэв","Баасан","Бямба"],BT_WD_ORDER=[1,2,3,4,5,6,0];
 const btEp=s=>{if(s==null||s==="")return null;if(typeof s==="number")return s;const t=new Date(s).getTime();return isFinite(t)?t/1000:null};
 // Пипийн хэмжээ: Step Index — 1.0 үнийн нэгж = 1 пип (7997.5 → 7981.7 = 15.8 пип); алт — 0.1 = 1 пип (стандарт)
@@ -3214,6 +3214,8 @@ function btRows(){const rows=[];
   rows.forEach(r=>{const ins=instOf(r.inst),ps=pipSize(ins);r.ps=ps;
     // Хуучин арилжаа: stop-ийг ашигтай тал руу зөөсөн тул анхны эрсдэл алга — 1% эрсдэлээр ойролцоолно (≈)
     if(r.R==null&&r.pnl!=null&&r.bal>0){r.R=r.pnl/(r.bal*0.01);r.Rest=true}
+    // P/L-ийг хамгийн бага лотоор харуулах (хуучин том лоттой арилжаа ч ижил хэмжээнд) — R ба пип өөрчлөгдөхгүй
+    const ml=+ins.minLot||+ins.lotStep||0.01;if(BT.norm&&r.pnl!=null&&r.lots>0&&Math.abs(r.lots-ml)>1e-9){r.pnl=r.pnl*ml/r.lots;r.lots=ml;r.normed=true}
     if(r.reason==="SL"&&r.sl!=null&&r.entry!=null&&Math.abs(r.sl-r.entry)<1e-9){r.reason="BE";if(r.R==null)r.R=0}/* хуучин BE арилжаа */
     r.pips=r.entry!=null&&r.exit!=null?Math.round((r.exit-r.entry)*(r.dir==="Sell"?-1:1)/ps*10)/10:null;
     const d=r.open?new Date(r.open*1000):null;r.wd=d?d.getDay():null;r.hr=d?d.getHours():null;r.dur=r.open&&r.close?(r.close-r.open)/60:null});
@@ -3265,7 +3267,7 @@ function btHtml(page){BT.kind=page==="bot"?"bot":"backtest";const IL=btInsts(),i
   const th=(k,t,r)=>`<th class="${r?"r ":""}sort" data-bts="${k}" aria-sort="${BT.sort===k?(BT.desc?"descending":"ascending"):"none"}">${t}${BT.sort===k?(BT.desc?" ▾":" ▴"):""}</th>`;
   const pip=v=>v==null?"—":`${v>0?"+":""}${(+v).toFixed(1)}`;
   let h=`<div class="dlg-h"><h2>${page==="bot"?"Ботын арилжаа (тусдаа статистик)":page?"Backtest арилжаа":"Backtest статистик"}</h2>${BT.kind==="bot"?"":sel("btSrc",[["all","Бүгд (сешн + хадгалсан)"],["session","Энэ сешн"],["saved","Хадгалсан backtest"]],BT.src)}
-      ${sel("btDir",[["all","Buy + Sell"],["Buy","Buy"],["Sell","Sell"]],BT.dir)}
+      ${sel("btDir",[["all","Buy + Sell"],["Buy","Buy"],["Sell","Sell"]],BT.dir)}${sel("btNorm",[["1","P/L: хамгийн бага лотоор"],["0","P/L: бодит лотоор"]],BT.norm?"1":"0")}
       <button type="button" class="btn sm" data-bt="csv" ${all.length?"":"disabled"}>CSV татах</button>${page==="bot"?"":page?`<button type="button" class="btn sm primary" data-bt="goReplay">Давтан тоглуулах руу</button>`:`<button type="button" class="btn sm ghost" data-bt="close" aria-label="Хаах">✕</button>`}</div>
     <div class="dlg-b bt-b">`;
   if(BT.kind==="backtest"){const ML=btMislabeled();if(ML.length)h+=`<div class="banner info" style="padding:8px 12px"><p style="font-size:12px;margin:0"><b>${ML.length}</b> арилжаа буруу хэрэгслээр хадгалагдсан бололтой (давтан тоглуулалтын үеэр хэрэгсэл сольсноос): ${ML.slice(0,6).map(x=>`${esc(x.from)} → <b>${esc(x.to)}</b> (@ ${fmtP(x.e)})`).join(", ")}${ML.length>6?"…":""}</p><button type="button" class="btn sm" data-bt="fixInst">Зөв хэрэгсэлд шилжүүлэх</button></div>`}
@@ -3443,7 +3445,7 @@ function btOpen(){let d=$("#btDlg");if(!d){d=document.createElement("dialog");d.
     d.addEventListener("click",e=>{const b=e.target.closest("[data-bt]");if(b){if(b.dataset.bt==="inst"){BT.inst=b.dataset.v;btRender();return}
     if(b.dataset.bt==="fixInst"){const ML=btMislabeled();ML.forEach(x=>{const raw=S.trades[x.id];if(raw)put("trades",x.id,Object.assign({},raw,{inst:x.to}))});toast(`${ML.length} арилжааг зөв хэрэгсэлд шилжүүллээ`);btRender();return}if(b.dataset.bt==="close")d.close();else if(b.dataset.bt==="csv")btCsv();else if(b.dataset.bt==="delOpen"){const live=CH.rp.pos&&CH.rp.pos.id;enriched(S.trades,"backtest").filter(t=>!t._.closed&&t.id!==live).forEach(t=>del("trades",t.id));btRender()}else if(b.dataset.bt==="save")rpSave().then(()=>btRender());return}
       const s=e.target.closest("[data-bts]");if(s){const k=s.dataset.bts;if(BT.sort===k)BT.desc=!BT.desc;else{BT.sort=k;BT.desc=k==="open"?false:true}btRender()}});
-    d.addEventListener("change",e=>{const id=e.target.id;if(id==="btSrc")BT.src=e.target.value;else if(id==="btInst")BT.inst=e.target.value;else if(id==="btDir")BT.dir=e.target.value;else if(id==="btRv")BT.rv=+e.target.value;else return;btRender()})}
+    d.addEventListener("change",e=>{const id=e.target.id;if(id==="btSrc")BT.src=e.target.value;else if(id==="btInst")BT.inst=e.target.value;else if(id==="btDir")BT.dir=e.target.value;else if(id==="btNorm"){BT.norm=e.target.value==="1";try{localStorage.setItem("alkham-bt-norm",BT.norm?"1":"0")}catch(x){}}else if(id==="btRv")BT.rv=+e.target.value;else return;btRender()})}
   btRender();if(!d.open)d.showModal()}
 function btRender(){const d=$("#btDlg");if(d)d.innerHTML=btHtml()}
 function btCsv(){const rows=btRows().sort((a,b)=>(a.open||0)-(b.open||0));const head=["#","Хэрэгсэл","Огноо","Цаг","Гараг","Чиглэл","Орох","Гарах","Пип","R","P/L","Үр дүн","Хугацаа (мин)"];
