@@ -1869,7 +1869,8 @@ function dX(ep){const data=CH.series.data();if(!data.length)return null;const t=
   if(t>=data[n-1].time)l=(n-1)+(t-data[n-1].time)/g;
   else if(t<=data[0].time)l=(t-data[0].time)/g;
   else{let lo=0,hi=n-1;while(hi-lo>1){const m=(lo+hi)>>1;if(data[m].time<=t)lo=m;else hi=m}l=lo+(t-data[lo].time)/((data[hi].time-data[lo].time)||g)}
-  return ts.logicalToCoordinate(l)}
+  // logicalToCoordinate() бутархай логик индекс дээр 0 буцаадаг тул бүхэл индексүүдийн хооронд шугаман интерполяц хийнэ (иначе зураг «сунаж» харагддаг)
+  const i=Math.floor(l),f=l-i,x0=ts.logicalToCoordinate(i);if(x0==null||f<1e-9)return x0;const x1=ts.logicalToCoordinate(i+1);return x1==null?x0:x0+(x1-x0)*f}
 function xEp(x){const data=CH.series.data();if(!data.length)return null;const l=CH.chart.timeScale().coordinateToLogical(x);if(l==null)return null;const n=data.length;let t;
   if(l>=n-1)t=data[n-1].time+(l-(n-1))*CH.gran;else if(l<=0)t=data[0].time+l*CH.gran;else{const i=Math.floor(l),f=l-i;t=data[i].time+f*(data[i+1].time-data[i].time)}
   return Math.round(t-TZ)}
