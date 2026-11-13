@@ -1582,7 +1582,7 @@ async function chLoadLive(){
       else if(m.tick){const q=+m.tick.quote,t=Math.floor(+m.tick.epoch/g)*g+TZ;const data=CH.series.data();const lb=data.length?data[data.length-1]:null;
         bar=lb&&lb.time===t?{time:t,open:lb.open,high:Math.max(lb.high,q),low:Math.min(lb.low,q),close:q}:{time:t,open:q,high:q,low:q,close:q}}
       if(!bar||!isFinite(bar.close))return;
-      try{CH.series.update(bar)}catch(e){}CH.last=bar.close;CH.lastTime=bar.time;chUpdate(true)};
+      try{CH.series.update(bar)}catch(e){}CH.last=bar.close;CH.lastTime=bar.time;alCheck(bar.close,m.tick?+m.tick.epoch:+(m.ohlc.epoch||Date.now()/1000));chUpdate(true)};
     const req={ticks_history:sym,style:"candles",granularity:CH.gran,count:5000,end:"latest",adjust_start_time:1};
     let r,closed=false;
     try{r=await dvSend(Object.assign({subscribe:1},req),onBar)}catch(e){if(e&&e.code==="MarketIsClosed"){closed=true;r=await dvSend(req)}else throw e}
@@ -1838,10 +1838,11 @@ const TOOLS=[ // [түлхүүр, нэр, товчлол, svg path]
   ["rect","Тэгш өнцөгт","Alt+R",'<rect x="3.5" y="5.5" width="13" height="9" rx="1"/>'],
   ["fib","Фибоначчи","Alt+F",'<path d="M3 4h14M3 8h14M3 12h14M3 16h14"/>'],
   ["pitchfork","Сэрээ (Andrews' Pitchfork) — 3 цэг","Alt+P",'<path d="M3 10L17 10M8 4L17 4M8 16L17 16M8 4L8 16"/><circle cx="3" cy="10" r="1.6"/>'],
+  ["alert","Хонх — үнэ энэ түвшинг эвдэхэд дохио өгнө (графикт нэг дарна)","Alt+A",'<path d="M10 3a4.5 4.5 0 00-4.5 4.5c0 4-1.5 5-1.5 6h12c0-1-1.5-2-1.5-6A4.5 4.5 0 0010 3z"/><path d="M8.5 16a1.6 1.6 0 003 0"/>'],
   ["long","Long позиц","Alt+L",'<path d="M3 10h14"/><path d="M3 4h14v6H3z" fill="currentColor" fill-opacity=".25"/><path d="M3 10h14v4H3z"/>'],
   ["short","Short позиц","Alt+S",'<path d="M3 10h14"/><path d="M3 10h14v6H3z" fill="currentColor" fill-opacity=".25"/><path d="M3 6h14v4H3z"/>'],
 ];
-const KEYMAP={p:"pitchfork",t:"trend",y:"ray",h:"hline",j:"hray",v:"vline",r:"rect",f:"fib",l:"long",s:"short"};
+const KEYMAP={a:"alert",p:"pitchfork",t:"trend",y:"ray",h:"hline",j:"hray",v:"vline",r:"rect",f:"fib",l:"long",s:"short"};
 const TB=40; // зүүн хэрэгслийн самбарын өргөн
 const DR={tool:"cursor",color:DCOLORS[0],sel:null,hover:null,draft:null,drag:null,intercept:false,dirty:true,sig:"",raf:0,saveT:{},undo:{},
   mtf:0,sess:false,magnet:false,lock:false,hidden:false,styles:{}};
@@ -1853,7 +1854,7 @@ function drKey(){return CH.inst?CH.inst.name+(CH.mode==="replay"?"|rp":""):""}
 // Давтан тоглуулалтад одоогийн лаанаас хойш (ирээдүйд) зурагдсан зургийг нууна
 function drVis(d){if(CH.mode!=="replay"||!d||!d.a||CH.lastTime==null)return true;const now=CH.lastTime-TZ+(CH.gran||60),t0=Math.min(d.a.t,d.b&&d.b.t!=null?d.b.t:d.a.t);return t0<=now}
 function drList(){S.drawings=S.drawings||{};const k=drKey();if(!S.drawings[k])S.drawings[k]=[];return S.drawings[k]}
-const drClean=d=>{const o={};for(const k of ["id","type","a","b","sl","tp","t2","color","width","dash","ext","levels","fopt","rp","c","pf"])if(d[k]!==undefined)o[k]=d[k];return o};
+const drClean=d=>{const o={};for(const k of ["id","type","a","b","sl","tp","t2","color","width","dash","ext","levels","fopt","rp","c","pf","al"])if(d[k]!==undefined)o[k]=d[k];return o};
 function drSave(){const k=drKey(),items=drList().map(drClean);
   clearTimeout(DR.saveT[k]);DR.saveT[k]=setTimeout(()=>{
     if(S.mode==="supa")supaQueue({t:"put",coll:"settings",id:"draw:"+k,data:{items}});
@@ -1897,7 +1898,7 @@ function drRender(){
   if(DR.sess&&CH.gran<=3600)drSessions(ctx,box,font);
   if(DR.mtf&&DR.mtf>CH.gran)drMtf(ctx,box);
   patDraw(ctx,box);rtDraw(ctx,box);
-  if(!DR.hidden)for(const d of drList())if(drVis(d))drShape(ctx,d,box,font,d===DR.sel,d===DR.hover);
+  if(!DR.hidden)for(const d of drList())if(drVis(d)){drShape(ctx,d,box,font,d===DR.sel,d===DR.hover);if(d.al)alDraw(ctx,d,box)}
   if(DR.draft)drShape(ctx,DR.draft,box,font,true,false);
   ctx.restore()}
 function drSessions(ctx,box,font){const t0=xEp(0),t1=xEp(box.w);if(t0==null||t1==null)return;const day=86400;
@@ -2078,6 +2079,7 @@ function drHit(x,y){if(DR.hidden)return null;const box=plotBox();
 
 /* --- үүсгэх --- */
 function drNew(type,pt){const st=styleFor(type)||{};const base={id:uid(),color:st.color||DR.color,width:st.width||1.5,dash:!!st.dash,_tool:type};
+  if(type==="alert"){alInit();if(CH.mode!=="live")toast("Хонх зөвхөн «Шууд» горимд дуугарна");return Object.assign(base,{type:"hline",al:CH.mode==="live"?1:undefined,color:"#FF9800",dash:true,width:1.5,a:{t:pt.t,p:pt.p}})}
   if(type==="hline"||type==="hray"||type==="vline")return Object.assign(base,{type,a:{t:pt.t,p:pt.p}});
   if(type==="long"||type==="short"){const r=CH.series.priceToCoordinate(pt.p),box=plotBox();
     const off=Math.abs((yP(r-box.h*0.08)||pt.p)-pt.p)||pt.p*0.002,dir=type==="long"?1:-1,dec=decOf(CH.inst);
@@ -2085,7 +2087,7 @@ function drNew(type,pt){const st=styleFor(type)||{};const base={id:uid(),color:s
   if(type==="pitchfork")return Object.assign(base,{type,color:st.color||"#2962FF",pf:pfDefault(),a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p},_st:1});
   if(type==="fib"){const f=fibDefault();return Object.assign(base,{type,a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p},levels:f.levels,fopt:f.opt})}
   return Object.assign(base,{type:type==="ray"?"trend":type,ext:st.ext||(type==="ray"?"right":"none"),a:{t:pt.t,p:pt.p},b:{t:pt.t,p:pt.p}})}
-const ONE_CLICK=["hline","hray","vline","long","short"];
+const ONE_CLICK=["hline","hray","vline","long","short","alert"];
 
 /* --- хулгана / хуруу --- */
 function drDown(e){
@@ -2130,7 +2132,7 @@ function drUp(e){const g=DR.drag;
   setTimeout(()=>{DR.intercept=false},0)}
 function drFinish(d){DR.sel=d;if(!DR.lock)drSetTool("cursor");else drHint(drToolHint(DR.tool));drSave();drSelUi();drDirty()}
 function drHint(t){const h=$("#chHint");h.hidden=!t;if(t)h.textContent=t}
-function drToolHint(t){return t==="cursor"?"":ONE_CLICK.includes(t)?(t==="long"||t==="short"?"Орох үнэ дээр дарна уу · дараа нь SL, TP-г чирж тохируулна":"Байрлуулах цэг дээр дарна уу"):(t==="pitchfork"?"Сэрээ: A (эхлэх оргил/ёроол) → B → C гэж гурван цэг дээр дарна уу":"Эхний цэг дээр дарна уу")}
+function drToolHint(t){return t==="cursor"?"":ONE_CLICK.includes(t)?(t==="long"||t==="short"?"Орох үнэ дээр дарна уу · дараа нь SL, TP-г чирж тохируулна":t==="alert"?"Хонх тавих үнэ дээр дарна уу — үнэ тэр түвшинг эвдэхэд дуугарна":"Байрлуулах цэг дээр дарна уу"):(t==="pitchfork"?"Сэрээ: A (эхлэх оргил/ёроол) → B → C гэж гурван цэг дээр дарна уу":"Эхний цэг дээр дарна уу")}
 function drSetTool(t){DR.tool=t;DR.draft=null;$$("#dtBar [data-tool]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.tool===t)));
   $("#chWrap").classList.toggle("drawing",t!=="cursor");drHint(drToolHint(t))}
 function drSelUi(){drPropsUi()}
@@ -2138,6 +2140,29 @@ function drDelete(){if(!DR.sel)return;drPush();const L=drList(),i=L.indexOf(DR.s
 function drDirty(){DR.dirty=true}
 
 /* --- сонгосон зургийн самбар --- */
+// ===== Хонх (үнийн дохио): хонхтой зургийн түвшинг шууд үнэ эвдэхэд дуу, мэдэгдэл өгнө =====
+const AL={ac:null,titleT:0,title0:null};
+function alInit(){try{AL.ac=AL.ac||new (window.AudioContext||window.webkitAudioContext)();if(AL.ac.state==="suspended")AL.ac.resume()}catch(e){}
+  try{if(window.Notification&&Notification.permission==="default")Notification.requestPermission()}catch(e){}}
+document.addEventListener("pointerdown",()=>{if(AL.ac&&AL.ac.state==="suspended")AL.ac.resume().catch(()=>{})},true);
+const AL_OK=d=>["hline","hray","rect","trend","fib","long","short"].includes(d.type);
+// зургийн дохио өгөх үнийн түвшнүүд (трендийн шугамд одоогийн цагийн үнэ)
+function alLevels(d,ep){if(d.type==="hline"||d.type==="hray")return [+d.a.p];if(d.type==="rect")return [+d.a.p,+d.b.p];
+  if(d.type==="long"||d.type==="short")return [+d.a.p,+d.sl,+d.tp].filter(isFinite);
+  if(d.type==="trend"){const dt=d.b.t-d.a.t;return dt?[d.a.p+(d.b.p-d.a.p)*(ep-d.a.t)/dt]:[+d.a.p]}
+  if(d.type==="fib"){const F=fibOf(d),p0=F.opt.reverse?d.a.p:d.b.p,p1=F.opt.reverse?d.b.p:d.a.p;return F.levels.filter(l=>l.on).map(l=>p0-(p0-p1)*l.v)}return []}
+function alRing(){try{alInit();const a=AL.ac;if(!a)return;const t0=a.currentTime;for(let k=0;k<3;k++)for(const [f,g0] of [[1318,.5],[1976,.25],[2637,.12]]){const o=a.createOscillator(),g=a.createGain(),t=t0+k*.45;
+      o.type="sine";o.frequency.value=f;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(g0,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+.42);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+.45)}}catch(e){}}
+function alCheck(price,ep){if(CH.mode!=="live"||!S.drawings)return;const L=drList();let fired=false;
+  for(const d of L){if(d.al!==1||!AL_OK(d))continue;const lv=alLevels(d,ep),sg=lv.map(v=>price>v?1:price<v?-1:0);const pv=d._als,pl=d._alv;d._als=sg;d._alv=lv;
+    if(!pv||pv.length!==sg.length)continue;if(d.type!=="trend"&&pl&&lv.some((v,i)=>Math.abs(v-pl[i])>1e-9))continue; /* зургийг зөөсөн бол шинээр эхэлнэ */ let hit=-1;for(let i=0;i<sg.length;i++)if(pv[i]!==0&&sg[i]!==pv[i]){hit=i;break}if(hit<0)continue;
+    d.al=2;fired=true;const up=pv[hit]<0,name={hline:"шугамыг",hray:"шугамыг",rect:"бүсийн хилийг",trend:"трендийн шугамыг",fib:"фибо түвшнийг",long:"Long позицын түвшнийг",short:"Short позицын түвшнийг"}[d.type];
+    const msg=`🔔 ${CH.inst.name}: үнэ ${fmtP(lv[hit])} ${name} ${up?"дээш ▲":"доош ▼"} эвдлээ (одоо ${fmtP(price)})`;
+    alRing();toast(msg);try{if(window.Notification&&Notification.permission==="granted")new Notification("Алхам — хонх",{body:msg,requireInteraction:true})}catch(e){}
+    AL.title0=AL.title0||document.title;document.title="🔔 "+fmtP(lv[hit])+" эвдлээ — "+AL.title0;clearTimeout(AL.titleT);AL.titleT=setTimeout(()=>{document.title=AL.title0},60000)}
+  if(fired){drSave();drPropsUi();drDirty()}}
+function alDraw(ctx,d,box){if(!AL_OK(d))return;const ep=(CH.lastTime||0)-TZ;ctx.save();ctx.setLineDash([]);ctx.font="13px sans-serif";ctx.textBaseline="middle";ctx.globalAlpha=d.al===1?1:.45;
+  for(const v of alLevels(d,ep)){const y=pY(v);if(y==null||y<0||y>box.h)continue;ctx.fillText(d.al===1?"🔔":"🔕",box.w-(d.type==="hline"||d.type==="hray"?70:18),y-9)}ctx.restore()}
 function drPropsUi(){const el=$("#dtProps");if(!el)return;const d=DR.sel;if(!d){el.hidden=true;return}el.hidden=false;
   const pos=d.type==="long"||d.type==="short",lineish=d.type==="trend";
   el.innerHTML=`${pos?"":`<div class="swatches">${DCOLORS.map(c=>`<button type="button" data-prop="color" data-v="${c}" style="background:${c}" aria-label="Өнгө" aria-pressed="${c===d.color}"></button>`).join("")}</div>
@@ -2146,6 +2171,7 @@ function drPropsUi(){const el=$("#dtProps");if(!el)return;const d=DR.sel;if(!d){
     ${lineish?`<div class="seg" role="group" aria-label="Сунгах">${(d.type==="fib"?[["none","Богино"],["right","Сунгах →"]]:[["none","—"],["right","→"],["both","↔"]]).map(([v,l])=>`<button type="button" data-prop="ext" data-v="${v}" aria-pressed="${(d.ext||"none")===v}" title="${{none:"Сунгахгүй",right:"Баруун тийш сунгах",both:"Хоёр тийш сунгах"}[v]}">${l}</button>`).join("")}</div><span class="vsep"></span>`:""}
     ${d.type==="pitchfork"?`<button type="button" class="btn sm" data-prop="pfset" title="Төрөл (Original, Schiff, Modified Schiff), түвшин, өнгө, сунгалт (зураг дээр давхар дарж ч нээнэ)">⚙ Тохиргоо</button><span class="vsep"></span>`:""}
     ${d.type==="fib"?`<button type="button" class="btn sm" data-prop="fibset" title="Түвшин, өнгө, сунгалт (зураг дээр давхар дарж ч нээнэ)">⚙ Түвшин</button><span class="vsep"></span>`:""}
+    ${AL_OK(d)&&CH.mode==="live"?`<button type="button" class="btn sm${d.al===1?" primary":""}" data-prop="bell" aria-pressed="${d.al===1}" title="${d.al===1?"Хонх асаалттай — үнэ энэ түвшинг эвдэхэд дохио өгнө (дарж унтраана)":d.al===2?"Хонх дуугарсан — дарж дахин асаана":"Хонх асаах — үнэ энэ зургийн түвшинг эвдэхэд дохио өгнө"}">${d.al===1?"🔔 Асаалттай":d.al===2?"🔕 Дуугарсан":"🔔 Хонх"}</button><span class="vsep"></span>`:""}
     ${pos?`<button type="button" class="btn sm primary" data-prop="toOrder" title="Орох, SL, TP-г захиалгын тооцоо руу шилжүүлэх">Захиалгад ашиглах</button>`:""}
     <button type="button" class="btn sm" data-prop="clone" title="Хуулбарлах" aria-label="Хуулбарлах"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M13 4H4.5A1.5 1.5 0 003 5.5V13"/></svg></button>
     <button type="button" class="btn sm danger" data-prop="del" title="Устгах (Delete)" aria-label="Устгах"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M6 6l1 11h6l1-11"/></svg></button>`}
@@ -2153,6 +2179,7 @@ function drProp(btn){const d=DR.sel;if(!d)return;const k=btn.dataset.prop,v=btn.
   if(k==="del"){drDelete();return}
   if(k==="fibset"){fibOpen(d);return}
   if(k==="pfset"){pfOpen(d);return}
+  if(k==="bell"){d.al=d.al===1?0:1;d._als=null;if(d.al){alInit();toast("Хонх асаалаа — үнэ энэ түвшинг эвдэхэд дуугарна")}else toast("Хонх унтраалаа");drSave();drPropsUi();drDirty();return}
   if(k==="toOrder"){CH.dir=d.type==="long"?"Buy":"Sell";if(CH.mode!=="replay"){CH.mkt=false;$("#opMkt").checked=false;$("#opEntry").value=(+d.a.p).toFixed(decOf(CH.inst))}
     $("#opSl").value=(+d.sl).toFixed(decOf(CH.inst));$("#opTp").value=(+d.tp).toFixed(decOf(CH.inst));if($("#chartRoot").classList.contains("wide"))chWide(false);chUpdate();toast("Захиалгын тооцоонд шилжүүллээ");return}
   drPush();
