@@ -2157,7 +2157,7 @@ function alRing(){try{alInit();const a=AL.ac;if(!a)return;const t0=a.currentTime
 // түвшний нөгөө талд хаагдсан үед л «эвдэрсэн» гэж үзэж унтарна. d.as = хонх асаах үеийн үнийн тал (−1 доор, 1 дээр, 0 = эвдэрсэн)
 function alNote(msg,ttl){alRing();toast(msg);try{if(window.Notification&&Notification.permission==="granted")new Notification("Алхам — хонх",{body:msg,requireInteraction:true})}catch(e){}
   AL.title0=AL.title0||document.title;document.title="🔔 "+ttl+" — "+AL.title0;clearTimeout(AL.titleT);AL.titleT=setTimeout(()=>{document.title=AL.title0},60000)}
-function alCheck(price,ep){if(CH.mode!=="live"||!S.drawings)return;const L=drList(),data=CH.series.data(),n=data.length;if(!n)return;let save=false;
+function alCheck(price,ep){if(CH.mode!=="live"||!S.drawings)return;const L=drList(),data=CH.series.data(),n=data.length;if(!n)return;let save=false,kill=null;
   const curT=data[n-1].time,done=AL.barT!=null&&curT>AL.barT&&n>1?data[n-2]:null;AL.barT=curT; // шинэ лаа эхэлбэл өмнөх нь хаагдсан
   const NM={hline:"шугам",hray:"шугам",rect:"бүсийн хил",trend:"трендийн шугам",fib:"фибо түвшин",long:"Long позицын түвшин",short:"Short позицын түвшин"};
   for(const d of L){if(d.al!==1||!AL_OK(d))continue;const lv=alLevels(d,ep),sg=lv.map(v=>price>v?1:price<v?-1:0);const pv=d._als,pl=d._alv;d._als=sg;d._alv=lv;
@@ -2167,11 +2167,13 @@ function alCheck(price,ep){if(CH.mode!=="live"||!S.drawings)return;const L=drLis
     for(let i=0;i<lv.length;i++){let side=d.as[i];if(side===0)continue;if(side==null||isNaN(side)){d.as[i]=sg[i];continue}
       // 1) лаа бүтэн биеэрээ давж хаагдсан уу
       if(done){const lo=Math.min(done.open,done.close),hi=Math.max(done.open,done.close);
-        if(side<0?lo>lv[i]:hi<lv[i]){d.as[i]=0;save=true;alNote(`🔔 ${CH.inst.name}: лаа ${fmtP(lv[i])} ${NM[d.type]}ыг бүтэн биеэрээ ${side<0?"дээш ▲":"доош ▼"} давж хаагдлаа — энэ хонх унтарлаа`.replace("түвшиныг","түвшнийг").replace("хилыг","хилийг"),fmtP(lv[i])+" эвдэрлээ");continue}}
+        if(side<0?lo>lv[i]:hi<lv[i]){d.as[i]=0;save=true;if(d.type==="rect"&&d.as[1-i]===-side)d.as[1-i]=0; /* бүсийн дотроос аль нэг тал руу гарвал бүс эвдэрсэн */
+          alNote(`🔔 ${CH.inst.name}: лаа ${fmtP(lv[i])} ${NM[d.type]}ыг бүтэн биеэрээ ${side<0?"дээш ▲":"доош ▼"} давж хаагдлаа — ${["hline","hray","rect","trend"].includes(d.type)&&d.as.every(x=>x===0)?"хонхыг устгалаа (Ctrl+Z буцаана)":"энэ хонх унтарлаа"}`.replace("түвшиныг","түвшнийг").replace("хилыг","хилийг"),fmtP(lv[i])+" эвдэрлээ");continue}}
       // 2) үнэ түвшинг шалгаж байна уу (огтолсон) — нэг лаанд нэг удаа
       if(pv&&pv.length===sg.length&&pv[i]!==0&&sg[i]!==0&&sg[i]!==pv[i]&&d._rt[i]!==curT){d._rt[i]=curT;
         alNote(`🔔 ${CH.inst.name}: үнэ ${fmtP(lv[i])} ${NM[d.type]}ыг ${pv[i]<0?"доороос ▲":"дээрээс ▼"} шалгаж байна (одоо ${fmtP(price)}) · биеэр давж хаагдах хүртэл хонх идэвхтэй`.replace("түвшиныг","түвшнийг").replace("хилыг","хилийг"),fmtP(lv[i])+" шалгаж байна")}}
-    if(d.as.every(x=>x===0)){d.al=2;save=true}}
+    if(d.as.every(x=>x===0)){d.al=2;save=true;if(["hline","hray","rect","trend"].includes(d.type))(kill=kill||[]).push(d)}}
+  if(kill){drPush();kill.forEach(d=>{d.al=1;d.as=null});const snap=DR.undo[drKey()];if(snap&&snap.length)snap[snap.length-1]=JSON.stringify(L.map(drClean));kill.forEach(d=>{const i=L.indexOf(d);if(i>=0)L.splice(i,1);if(DR.sel===d)DR.sel=null;if(DR.hover===d)DR.hover=null});drSelUi()}
   if(save){drSave();drPropsUi();drDirty()}}
 function alDraw(ctx,d,box){if(!AL_OK(d))return;const ep=(CH.lastTime||0)-TZ;ctx.save();ctx.setLineDash([]);ctx.font="13px sans-serif";ctx.textBaseline="middle";ctx.globalAlpha=d.al===1?1:.45;
   const lv=alLevels(d,ep);for(let i=0;i<lv.length;i++){const v=lv[i],off=d.al!==1||(d.as&&d.as[i]===0);ctx.globalAlpha=off?.45:1;const y=pY(v);if(y==null||y<0||y>box.h)continue;ctx.fillText(off?"🔕":"🔔",box.w-(d.type==="hline"||d.type==="hray"?70:18),y-9)}ctx.restore()}
