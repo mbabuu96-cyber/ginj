@@ -1854,7 +1854,7 @@ function drKey(){return CH.inst?CH.inst.name+(CH.mode==="replay"?"|rp":""):""}
 // Давтан тоглуулалтад одоогийн лаанаас хойш (ирээдүйд) зурагдсан зургийг нууна
 function drVis(d){if(CH.mode!=="replay"||!d||!d.a||CH.lastTime==null)return true;const now=CH.lastTime-TZ+(CH.gran||60),t0=Math.min(d.a.t,d.b&&d.b.t!=null?d.b.t:d.a.t);return t0<=now}
 function drList(){S.drawings=S.drawings||{};const k=drKey();if(!S.drawings[k])S.drawings[k]=[];return S.drawings[k]}
-const drClean=d=>{const o={};for(const k of ["id","type","a","b","sl","tp","t2","color","width","dash","ext","levels","fopt","rp","c","pf","al"])if(d[k]!==undefined)o[k]=d[k];return o};
+const drClean=d=>{const o={};for(const k of ["id","type","a","b","sl","tp","t2","color","width","dash","ext","levels","fopt","rp","c","pf","al","as"])if(d[k]!==undefined)o[k]=d[k];return o};
 function drSave(){const k=drKey(),items=drList().map(drClean);
   clearTimeout(DR.saveT[k]);DR.saveT[k]=setTimeout(()=>{
     if(S.mode==="supa")supaQueue({t:"put",coll:"settings",id:"draw:"+k,data:{items}});
@@ -2153,16 +2153,28 @@ function alLevels(d,ep){if(d.type==="hline"||d.type==="hray")return [+d.a.p];if(
   if(d.type==="fib"){const F=fibOf(d),p0=F.opt.reverse?d.a.p:d.b.p,p1=F.opt.reverse?d.b.p:d.a.p;return F.levels.filter(l=>l.on).map(l=>p0-(p0-p1)*l.v)}return []}
 function alRing(){try{alInit();const a=AL.ac;if(!a)return;const t0=a.currentTime;for(let k=0;k<3;k++)for(const [f,g0] of [[1318,.5],[1976,.25],[2637,.12]]){const o=a.createOscillator(),g=a.createGain(),t=t0+k*.45;
       o.type="sine";o.frequency.value=f;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(g0,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+.42);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+.45)}}catch(e){}}
-function alCheck(price,ep){if(CH.mode!=="live"||!S.drawings)return;const L=drList();let fired=false;
+// Хонх идэвхтэй хэвээр: үнэ түвшинг шалгах (хүрэх/огтлох) бүрт дуугарна (нэг лаанд нэг удаа). Лаа БҮТЭН БИЕЭРЭЭ (нээлт ба хаалт хоёулаа)
+// түвшний нөгөө талд хаагдсан үед л «эвдэрсэн» гэж үзэж унтарна. d.as = хонх асаах үеийн үнийн тал (−1 доор, 1 дээр, 0 = эвдэрсэн)
+function alNote(msg,ttl){alRing();toast(msg);try{if(window.Notification&&Notification.permission==="granted")new Notification("Алхам — хонх",{body:msg,requireInteraction:true})}catch(e){}
+  AL.title0=AL.title0||document.title;document.title="🔔 "+ttl+" — "+AL.title0;clearTimeout(AL.titleT);AL.titleT=setTimeout(()=>{document.title=AL.title0},60000)}
+function alCheck(price,ep){if(CH.mode!=="live"||!S.drawings)return;const L=drList(),data=CH.series.data(),n=data.length;if(!n)return;let save=false;
+  const curT=data[n-1].time,done=AL.barT!=null&&curT>AL.barT&&n>1?data[n-2]:null;AL.barT=curT; // шинэ лаа эхэлбэл өмнөх нь хаагдсан
+  const NM={hline:"шугам",hray:"шугам",rect:"бүсийн хил",trend:"трендийн шугам",fib:"фибо түвшин",long:"Long позицын түвшин",short:"Short позицын түвшин"};
   for(const d of L){if(d.al!==1||!AL_OK(d))continue;const lv=alLevels(d,ep),sg=lv.map(v=>price>v?1:price<v?-1:0);const pv=d._als,pl=d._alv;d._als=sg;d._alv=lv;
-    if(!pv||pv.length!==sg.length)continue;if(d.type!=="trend"&&pl&&lv.some((v,i)=>Math.abs(v-pl[i])>1e-9))continue; /* зургийг зөөсөн бол шинээр эхэлнэ */ let hit=-1;for(let i=0;i<sg.length;i++)if(pv[i]!==0&&sg[i]!==pv[i]){hit=i;break}if(hit<0)continue;
-    d.al=2;fired=true;const up=pv[hit]<0,name={hline:"шугамыг",hray:"шугамыг",rect:"бүсийн хилийг",trend:"трендийн шугамыг",fib:"фибо түвшнийг",long:"Long позицын түвшнийг",short:"Short позицын түвшнийг"}[d.type];
-    const msg=`🔔 ${CH.inst.name}: үнэ ${fmtP(lv[hit])} ${name} ${up?"дээш ▲":"доош ▼"} эвдлээ (одоо ${fmtP(price)})`;
-    alRing();toast(msg);try{if(window.Notification&&Notification.permission==="granted")new Notification("Алхам — хонх",{body:msg,requireInteraction:true})}catch(e){}
-    AL.title0=AL.title0||document.title;document.title="🔔 "+fmtP(lv[hit])+" эвдлээ — "+AL.title0;clearTimeout(AL.titleT);AL.titleT=setTimeout(()=>{document.title=AL.title0},60000)}
-  if(fired){drSave();drPropsUi();drDirty()}}
+    const moved=d.type!=="trend"&&pl&&(pl.length!==lv.length||lv.some((v,i)=>Math.abs(v-pl[i])>1e-9));
+    if(!Array.isArray(d.as)||d.as.length!==lv.length||moved){d.as=sg.slice();d._rt=[];save=true;continue} // шинээр асаасан / зөөсөн
+    d._rt=d._rt||[];
+    for(let i=0;i<lv.length;i++){let side=d.as[i];if(side===0)continue;if(side==null||isNaN(side)){d.as[i]=sg[i];continue}
+      // 1) лаа бүтэн биеэрээ давж хаагдсан уу
+      if(done){const lo=Math.min(done.open,done.close),hi=Math.max(done.open,done.close);
+        if(side<0?lo>lv[i]:hi<lv[i]){d.as[i]=0;save=true;alNote(`🔔 ${CH.inst.name}: лаа ${fmtP(lv[i])} ${NM[d.type]}ыг бүтэн биеэрээ ${side<0?"дээш ▲":"доош ▼"} давж хаагдлаа — энэ хонх унтарлаа`.replace("түвшиныг","түвшнийг").replace("хилыг","хилийг"),fmtP(lv[i])+" эвдэрлээ");continue}}
+      // 2) үнэ түвшинг шалгаж байна уу (огтолсон) — нэг лаанд нэг удаа
+      if(pv&&pv.length===sg.length&&pv[i]!==0&&sg[i]!==0&&sg[i]!==pv[i]&&d._rt[i]!==curT){d._rt[i]=curT;
+        alNote(`🔔 ${CH.inst.name}: үнэ ${fmtP(lv[i])} ${NM[d.type]}ыг ${pv[i]<0?"доороос ▲":"дээрээс ▼"} шалгаж байна (одоо ${fmtP(price)}) · биеэр давж хаагдах хүртэл хонх идэвхтэй`.replace("түвшиныг","түвшнийг").replace("хилыг","хилийг"),fmtP(lv[i])+" шалгаж байна")}}
+    if(d.as.every(x=>x===0)){d.al=2;save=true}}
+  if(save){drSave();drPropsUi();drDirty()}}
 function alDraw(ctx,d,box){if(!AL_OK(d))return;const ep=(CH.lastTime||0)-TZ;ctx.save();ctx.setLineDash([]);ctx.font="13px sans-serif";ctx.textBaseline="middle";ctx.globalAlpha=d.al===1?1:.45;
-  for(const v of alLevels(d,ep)){const y=pY(v);if(y==null||y<0||y>box.h)continue;ctx.fillText(d.al===1?"🔔":"🔕",box.w-(d.type==="hline"||d.type==="hray"?70:18),y-9)}ctx.restore()}
+  const lv=alLevels(d,ep);for(let i=0;i<lv.length;i++){const v=lv[i],off=d.al!==1||(d.as&&d.as[i]===0);ctx.globalAlpha=off?.45:1;const y=pY(v);if(y==null||y<0||y>box.h)continue;ctx.fillText(off?"🔕":"🔔",box.w-(d.type==="hline"||d.type==="hray"?70:18),y-9)}ctx.restore()}
 function drPropsUi(){const el=$("#dtProps");if(!el)return;const d=DR.sel;if(!d){el.hidden=true;return}el.hidden=false;
   const pos=d.type==="long"||d.type==="short",lineish=d.type==="trend";
   el.innerHTML=`${pos?"":`<div class="swatches">${DCOLORS.map(c=>`<button type="button" data-prop="color" data-v="${c}" style="background:${c}" aria-label="Өнгө" aria-pressed="${c===d.color}"></button>`).join("")}</div>
@@ -2171,7 +2183,7 @@ function drPropsUi(){const el=$("#dtProps");if(!el)return;const d=DR.sel;if(!d){
     ${lineish?`<div class="seg" role="group" aria-label="Сунгах">${(d.type==="fib"?[["none","Богино"],["right","Сунгах →"]]:[["none","—"],["right","→"],["both","↔"]]).map(([v,l])=>`<button type="button" data-prop="ext" data-v="${v}" aria-pressed="${(d.ext||"none")===v}" title="${{none:"Сунгахгүй",right:"Баруун тийш сунгах",both:"Хоёр тийш сунгах"}[v]}">${l}</button>`).join("")}</div><span class="vsep"></span>`:""}
     ${d.type==="pitchfork"?`<button type="button" class="btn sm" data-prop="pfset" title="Төрөл (Original, Schiff, Modified Schiff), түвшин, өнгө, сунгалт (зураг дээр давхар дарж ч нээнэ)">⚙ Тохиргоо</button><span class="vsep"></span>`:""}
     ${d.type==="fib"?`<button type="button" class="btn sm" data-prop="fibset" title="Түвшин, өнгө, сунгалт (зураг дээр давхар дарж ч нээнэ)">⚙ Түвшин</button><span class="vsep"></span>`:""}
-    ${AL_OK(d)&&CH.mode==="live"?`<button type="button" class="btn sm${d.al===1?" primary":""}" data-prop="bell" aria-pressed="${d.al===1}" title="${d.al===1?"Хонх асаалттай — үнэ энэ түвшинг эвдэхэд дохио өгнө (дарж унтраана)":d.al===2?"Хонх дуугарсан — дарж дахин асаана":"Хонх асаах — үнэ энэ зургийн түвшинг эвдэхэд дохио өгнө"}">${d.al===1?"🔔 Асаалттай":d.al===2?"🔕 Дуугарсан":"🔔 Хонх"}</button><span class="vsep"></span>`:""}
+    ${AL_OK(d)&&CH.mode==="live"?`<button type="button" class="btn sm${d.al===1?" primary":""}" data-prop="bell" aria-pressed="${d.al===1}" title="${d.al===1?"Хонх асаалттай — үнэ түвшинг шалгах бүрт дуугарна; лаа бүтэн биеэрээ давж хаагдахад унтарна (дарж унтраана)":d.al===2?"Түвшин биеэр эвдэрсэн — дарж дахин асаана":"Хонх асаах — үнэ энэ зургийн түвшинг эвдэхэд дохио өгнө"}">${d.al===1?"🔔 Асаалттай":d.al===2?"🔕 Эвдэрсэн":"🔔 Хонх"}</button><span class="vsep"></span>`:""}
     ${pos?`<button type="button" class="btn sm primary" data-prop="toOrder" title="Орох, SL, TP-г захиалгын тооцоо руу шилжүүлэх">Захиалгад ашиглах</button>`:""}
     <button type="button" class="btn sm" data-prop="clone" title="Хуулбарлах" aria-label="Хуулбарлах"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M13 4H4.5A1.5 1.5 0 003 5.5V13"/></svg></button>
     <button type="button" class="btn sm danger" data-prop="del" title="Устгах (Delete)" aria-label="Устгах"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M6 6l1 11h6l1-11"/></svg></button>`}
@@ -2179,7 +2191,7 @@ function drProp(btn){const d=DR.sel;if(!d)return;const k=btn.dataset.prop,v=btn.
   if(k==="del"){drDelete();return}
   if(k==="fibset"){fibOpen(d);return}
   if(k==="pfset"){pfOpen(d);return}
-  if(k==="bell"){d.al=d.al===1?0:1;d._als=null;if(d.al){alInit();toast("Хонх асаалаа — үнэ энэ түвшинг эвдэхэд дуугарна")}else toast("Хонх унтраалаа");drSave();drPropsUi();drDirty();return}
+  if(k==="bell"){d.al=d.al===1?0:1;d._als=null;d.as=null;if(d.al){alInit();toast("Хонх асаалаа — үнэ түвшинг шалгах бүрт дуугарч, лаа биеэрээ давж хаагдахад унтарна")}else toast("Хонх унтраалаа");drSave();drPropsUi();drDirty();return}
   if(k==="toOrder"){CH.dir=d.type==="long"?"Buy":"Sell";if(CH.mode!=="replay"){CH.mkt=false;$("#opMkt").checked=false;$("#opEntry").value=(+d.a.p).toFixed(decOf(CH.inst))}
     $("#opSl").value=(+d.sl).toFixed(decOf(CH.inst));$("#opTp").value=(+d.tp).toFixed(decOf(CH.inst));if($("#chartRoot").classList.contains("wide"))chWide(false);chUpdate();toast("Захиалгын тооцоонд шилжүүллээ");return}
   drPush();
