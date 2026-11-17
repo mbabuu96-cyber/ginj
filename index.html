@@ -178,6 +178,7 @@ input[type=number]{font-family:var(--f-mono)}
 
 .principle{border-left:3px solid var(--accent);padding:4px 0 4px 12px;font-size:13px}
 .principle b.lab{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--loss)!important;box-shadow:0 0 0 2px rgba(242,54,69,.25)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:13px;z-index:100;max-width:calc(100vw - 32px)}
 .confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--loss-soft);padding:8px 10px;border-radius:8px;font-size:13px}
 svg text{font-family:var(--f-mono)}
@@ -395,7 +396,7 @@ svg text{font-family:var(--f-mono)}
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const num=v=>{if(v===""||v==null)return null;const n=+v;return isFinite(n)?n:null};
+const num=v=>{if(v===""||v==null)return null;if(typeof v==="string"){v=v.trim().replace(/\s/g,"").replace(",",".");if(v==="")return null}const n=+v;return isFinite(n)?n:null}; // "4190,5" ч зөв уншина
 const pad=n=>String(n).padStart(2,"0");
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const nowLocal=()=>{const d=new Date();return `${ymd(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`};
@@ -408,7 +409,9 @@ function pct(v,d=0){if(v==null||!isFinite(v))return "—";return (v*100).toFixed
 const cls=v=>v==null?"":v>0?"pos":v<0?"neg":"";
 function isoWeek(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);const y=t.getUTCFullYear();const w=Math.ceil(((t-Date.UTC(y,0,1))/864e5+1)/7);return `${y}-W${pad(w)}`}
 function weekStart(key){const [y,w]=key.split("-W").map(Number);const s=new Date(y,0,4);const day=s.getDay()||7;s.setDate(s.getDate()-day+1+(w-1)*7);return s}
-let toastT;function toast(msg){let el=$(".toast");if(!el){el=document.createElement("div");el.className="toast";el.setAttribute("role","status");document.body.appendChild(el)}el.textContent=msg;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,3200)}
+let toastT;function toast(msg){let el=$(".toast");if(!el){el=document.createElement("div");el.className="toast";el.setAttribute("role","status");document.body.appendChild(el)}
+  // нээлттэй цонх (dialog) байвал мэдэгдлийг түүн дотор харуулна — иначе цонхны ард нуугдаж «юу ч болохгүй» мэт санагддаг
+  const md=[...document.querySelectorAll("dialog[open]")].pop();const host=md||document.body;if(el.parentNode!==host)host.appendChild(el);el.textContent=msg;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,3200)}
 
 /* ---------------- defaults ---------------- */
 const DEFAULT_SETTINGS={
@@ -1232,11 +1235,11 @@ function openForm(id,preset){
       <div class="f"><span class="lbl">Чиглэл</span>${segHTML("dir",t.dir,[["Buy","Buy"],["Sell","Sell"]],"bs")}</div>
       <div class="f w2"><label for="tSetup">Setup</label><select id="tSetup" name="setup">${opt(setups,t.setup,"— сонгох —")}</select></div>
       <div class="f"><label for="tOpen">Орсон цаг</label><input type="datetime-local" id="tOpen" name="open" value="${esc(t.open)}"></div>
-      <div class="f"><label for="tEntry">Орох үнэ</label><input type="number" step="any" id="tEntry" name="entry" value="${esc(t.entry)}"></div>
-      <div class="f"><label for="tSl">Stop-loss</label><input type="number" step="any" id="tSl" name="sl" value="${esc(t.sl)}"></div>
-      <div class="f"><label for="tTp">Зорилтот үнэ</label><input type="number" step="any" id="tTp" name="tp" value="${esc(t.tp)}"></div>
-      <div class="f"><label for="tBal">Дансны үлдэгдэл</label><input type="number" step="any" id="tBal" name="balance" value="${esc(t.balance)}"></div>
-      <div class="f"><label for="tLots">Лот</label><input type="number" step="any" id="tLots" name="lots" value="${esc(t.lots)}"><button type="button" class="btn sm" data-act="useLot" id="lotHint" style="margin-top:4px">Зөвлөмж: —</button></div>
+      <div class="f"><label for="tEntry">Орох үнэ</label><input type="text" inputmode="decimal" autocomplete="off" id="tEntry" name="entry" value="${esc(t.entry)}"></div>
+      <div class="f"><label for="tSl">Stop-loss</label><input type="text" inputmode="decimal" autocomplete="off" id="tSl" name="sl" value="${esc(t.sl)}"></div>
+      <div class="f"><label for="tTp">Зорилтот үнэ</label><input type="text" inputmode="decimal" autocomplete="off" id="tTp" name="tp" value="${esc(t.tp)}"></div>
+      <div class="f"><label for="tBal">Дансны үлдэгдэл</label><input type="text" inputmode="decimal" autocomplete="off" id="tBal" name="balance" value="${esc(t.balance)}"></div>
+      <div class="f"><label for="tLots">Лот</label><input type="text" inputmode="decimal" autocomplete="off" id="tLots" name="lots" value="${esc(t.lots)}"><button type="button" class="btn sm" data-act="useLot" id="lotHint" style="margin-top:4px">Зөвлөмж: —</button></div>
       <div class="f"><label for="tEmo">Орохын өмнөх мэдрэмж</label><select id="tEmo" name="emotion">${opt(EMOTIONS,t.emotion)}</select></div>
       <div class="f"><span class="lbl">Эрсдэлийг урьдчилан хүлээн зөвшөөрсөн үү?</span>${segHTML("accepted",t.accepted,[["y","Тийм"],["n","Үгүй"]],"yn")}</div>
     </div>
@@ -1245,9 +1248,9 @@ function openForm(id,preset){
     <fieldset><legend class="eyebrow">Үр дүн — гарсны дараа</legend>
     <div class="fg">
       <div class="f"><label for="tClose">Гарсан цаг</label><input type="datetime-local" id="tClose" name="close" value="${esc(t.close)}"></div>
-      <div class="f"><label for="tExit">Гарах үнэ</label><input type="number" step="any" id="tExit" name="exit" value="${esc(t.exit)}"></div>
-      <div class="f"><label for="tFees">Шимтгэл / своп (+/−)</label><input type="number" step="any" id="tFees" name="fees" value="${esc(t.fees)}"></div>
-      <div class="f"><label for="tAct">Бодит P/L (MT5-аас)</label><input type="number" step="any" id="tAct" name="actual" value="${esc(t.actual)}" placeholder="заавал биш"></div>
+      <div class="f"><label for="tExit">Гарах үнэ</label><input type="text" inputmode="decimal" autocomplete="off" id="tExit" name="exit" value="${esc(t.exit)}"></div>
+      <div class="f"><label for="tFees">Шимтгэл / своп (+/−)</label><input type="text" inputmode="decimal" autocomplete="off" id="tFees" name="fees" value="${esc(t.fees)}"></div>
+      <div class="f"><label for="tAct">Бодит P/L (MT5-аас)</label><input type="text" inputmode="decimal" autocomplete="off" id="tAct" name="actual" value="${esc(t.actual)}" placeholder="заавал биш"></div>
       <div class="f w2"><label for="tExitR">Гарсан шалтгаан</label><select id="tExitR" name="exitReason">${opt(EXITS,t.exitReason,"— сонгох —")}</select></div>
       <div class="f w2"><label for="tCalm">Сэтгэлийн тайван байдал</label><select id="tCalm" name="calm">${opt(["1","2","3","4","5"],String(t.calm||""),"—")}</select></div>
     </div>
@@ -1294,14 +1297,19 @@ function updatePreview(){
   if(t.movedStop==="y"||t.addedLoser==="y")w.push(["bad","Энэ арилжаа дүрэм зөрчсөн гэж тэмдэглэгдэнэ."]);
   $("#pvw").innerHTML=w.map(([k,m])=>`<div class="${k}">${esc(m)}</div>`).join("");
 }
+function formErr(msg,field){const w=$("#pvw");if(w){w.innerHTML=`<div class="bad"><b>Хадгалагдсангүй:</b> ${esc(msg)}</div>`+w.innerHTML;w.scrollIntoView({block:"nearest"})}toast(msg);if(field){const el=$(field);if(el){el.focus();el.setAttribute("aria-invalid","true");setTimeout(()=>el.removeAttribute("aria-invalid"),4000)}}}
 async function submitForm(){
-  const t=readForm();
-  if(!t.inst||t.entry===""){toast("Хэрэгсэл болон орох үнийг оруулна уу.");return}
-  if(!S.canSave){toast("Энэ хуудсанд хадгалах эрх алга.");return}
+  let t;try{t=readForm()}catch(e){formErr("Маягтыг уншиж чадсангүй: "+(e.message||e));return}
+  if(!t.inst){formErr("Хэрэгсэл сонгоно уу.","#tInst");return}
+  if(t.entry===""){formErr($("#tEntry").value.trim()?"Орох үнэ тоо биш байна (жишээ нь 4190.5).":"Орох үнийг оруулна уу.","#tEntry");return}
+  const bad=[["sl","#tSl","Stop-loss"],["tp","#tTp","Зорилтот үнэ"],["exit","#tExit","Гарах үнэ"],["lots","#tLots","Лот"],["balance","#tBal","Дансны үлдэгдэл"],["fees","#tFees","Шимтгэл"],["actual","#tAct","Бодит P/L"]].find(([k,sel])=>t[k]===""&&$(sel)&&$(sel).value.trim());
+  if(bad){formErr(`${bad[2]} тоо биш байна.`,bad[1]);return}
+  if(!S.canSave){formErr("Энэ хуудсанд хадгалах эрх алга.");return}
   const id=editing.id||uid();const clean={};Object.keys(t).forEach(k=>{if(t[k]!==undefined)clean[k]=t[k]});
   $("#dlg").close();editing=null;
   if(S.view==="dash"&&!Object.keys(S.trades).length)DEMO=null;
-  await put("trades",id,clean);toast("Хадгаллаа");
+  try{await put("trades",id,clean);toast(S.mode==="supa"&&pendingGet().length?"Хадгаллаа — сервер рүү илгээгдэхийг хүлээж байна":"Хадгаллаа")}
+  catch(e){console.error(e);toast("Хадгалахад алдаа гарлаа: "+(e&&e.message||e))}
 }
 
 /* ---------------- export / import ---------------- */
@@ -3670,7 +3678,7 @@ document.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset
 $("#importFile").addEventListener("change",e=>{const f=e.target.files[0];if(f)importJson(f);e.target.value=""});
 $("#tradeForm").addEventListener("input",updatePreview);
 $("#tradeForm").addEventListener("change",updatePreview);
-$("#tradeForm").addEventListener("submit",e=>{e.preventDefault();submitForm()});
+$("#tradeForm").addEventListener("submit",e=>{e.preventDefault();submitForm().catch(err=>formErr("Алдаа: "+(err&&err.message||err)))});
 $("#dlg").addEventListener("close",()=>{editing=null});
 document.addEventListener("change",async e=>{const el=e.target;
   if(el.id==="fInst"){S.filter.inst=el.value;doRender()}else if(el.id==="fMonth"){S.filter.month=el.value;doRender()}else if(el.id==="fRes"){S.filter.res=el.value;doRender()}
