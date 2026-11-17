@@ -178,6 +178,7 @@ input[type=number]{font-family:var(--f-mono)}
 
 .principle{border-left:3px solid var(--accent);padding:4px 0 4px 12px;font-size:13px}
 .principle b.lab{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+#qcDlg{padding:0;border:0;border-radius:12px;max-width:min(560px,calc(100vw - 24px));width:100%}.qc-btns{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:12px 0}.qc-btns .btn{flex-direction:column;line-height:1.3;padding:8px;height:auto}.btn.qclose{padding:3px 12px}
 input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--loss)!important;box-shadow:0 0 0 2px rgba(242,54,69,.25)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:13px;z-index:100;max-width:calc(100vw - 32px)}
 .confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--loss-soft);padding:8px 10px;border-radius:8px;font-size:13px}
@@ -829,7 +830,7 @@ function viewTrades(){
       return `<tr class="click" data-edit="${esc(t.id)}" tabindex="0"><td class="num">${esc((t.open||"").replace("T"," "))}</td><td>${esc(t.inst)}</td><td><span class="dir ${t.dir==="Sell"?"sell":"buy"}">${esc(t.dir||"")}</span></td>
       <td class="r num">${fm(num(t.lots))}</td><td class="r num">${t.entry??"—"}</td><td class="r num">${t.exit===""||t.exit==null?"—":t.exit}</td>
       <td class="r num">${c.riskPct==null?"—":`<span class="${c.riskPct>S.settings.maxRiskPct/100?"neg":""}">${(c.riskPct*100).toFixed(2)}%</span>`}</td>
-      <td class="r num ${cls(c.pnl)}">${c.closed?money(c.pnl):`<span class="pill warn">Нээлттэй</span>`}</td><td class="r num ${cls(c.R)}">${rfmt(c.R)}</td>
+      <td class="r num ${cls(c.pnl)}">${c.closed?money(c.pnl):`<button type="button" class="btn sm qclose" data-qclose="${esc(t.id)}" title="Гарах үнэ, цагийг оруулж арилжааг хаах">Хаах</button>`}</td><td class="r num ${cls(c.R)}">${rfmt(c.R)}</td>
       <td>${esc(t.emotion||"—")}</td><td>${q?`<span class="pill ${qc}">${q}</span>`:"—"}</td><td>${esc(t.setup||"")}</td></tr>`}).join("")}
     </tbody></table></div>`:`<div class="empty">Шүүлтүүрт тохирох арилжаа алга.</div>`}
   </section>`;
@@ -1298,6 +1299,33 @@ function updatePreview(){
   $("#pvw").innerHTML=w.map(([k,m])=>`<div class="${k}">${esc(m)}</div>`).join("");
 }
 function formErr(msg,field){const w=$("#pvw");if(w){w.innerHTML=`<div class="bad"><b>Хадгалагдсангүй:</b> ${esc(msg)}</div>`+w.innerHTML;w.scrollIntoView({block:"nearest"})}toast(msg);if(field){const el=$(field);if(el){el.focus();el.setAttribute("aria-invalid","true");setTimeout(()=>el.removeAttribute("aria-invalid"),4000)}}}
+// Нээлттэй арилжааг хурдан хаах: TP / SL / BE / одоогийн үнэ эсвэл гараар бичсэн үнээр
+function qcOpen(id){const t=S.trades[id];if(!t)return;let dl=$("#qcDlg");
+  if(!dl){dl=document.createElement("dialog");dl.id="qcDlg";document.body.appendChild(dl);
+    dl.addEventListener("click",e=>{const b=e.target.closest("[data-qc]");if(!b)return;const a=b.dataset.qc;
+      if(a==="cancel"){dl.close();return}
+      if(a==="px"){$("#qcExit").value=b.dataset.v;$("#qcWhy").value=b.dataset.why||"";qcPrev();return}
+      if(a==="full"){const id=dl.dataset.id;dl.close();openForm(id);return}
+      if(a==="ok"){const id=dl.dataset.id,t=S.trades[id],x=num($("#qcExit").value);if(!t)return;
+        if(x==null){toast("Гарах үнийг оруулна уу (жишээ нь 4190.5).");$("#qcExit").focus();return}
+        const tm=$("#qcTime").value||nowLocal(),why=$("#qcWhy").value;dl.close();
+        put("trades",id,Object.assign({},t,{exit:x,close:tm,exitReason:why||t.exitReason||"Дүрмээр гарсан",movedStop:t.movedStop||"n"})).then(()=>toast("Арилжаа хаагдлаа"))}});
+    dl.addEventListener("input",qcPrev)}
+  dl.dataset.id=id;const dec=decOf(instOf(t.inst)),f=v=>v==null||v===""?null:(+v).toFixed(dec);
+  const live=CH&&CH.inst&&CH.inst.name===t.inst&&CH.mode==="live"&&CH.last!=null?f(CH.last):null;
+  const ch=(lab,v,why,cl)=>v==null?"":`<button type="button" class="btn ${cl||""}" data-qc="px" data-v="${v}" data-why="${why}">${lab}<br><b class="num">${v}</b></button>`;
+  dl.innerHTML=`<form class="dlg" method="dialog" onsubmit="return false"><div class="dlg-h"><h2>Арилжаа хаах</h2><button type="button" class="btn sm ghost" data-qc="cancel" aria-label="Хаах">✕</button></div>
+    <div class="dlg-b"><p class="muted" style="margin:0;font-size:13px">${esc(t.inst)} · <b class="${t.dir==="Sell"?"neg":"pos"}">${esc(t.dir)}</b> · орох ${esc(t.entry)} · ${esc(String(t.open||"").replace("T"," "))}</p>
+      <div class="qc-btns">${ch("TP-д хүрсэн",f(t.tp),"Зорилтод хүрсэн","primary")}${ch("SL-д хүрсэн",f(t.sl),"Stop-д хүрсэн","danger")}${ch("BE (орох үнэ)",f(t.entry),"Дүрмээр гарсан")}${ch("Одоогийн үнэ",live,"Дүрмээр гарсан")}</div>
+      <div class="fg"><div class="f"><label for="qcExit">Гарах үнэ</label><input type="text" inputmode="decimal" id="qcExit" autocomplete="off" placeholder="4190.5"></div>
+        <div class="f"><label for="qcTime">Гарсан цаг</label><input type="datetime-local" id="qcTime" value="${nowLocal()}"></div>
+        <div class="f w2"><label for="qcWhy">Гарсан шалтгаан</label><select id="qcWhy"><option value="">— сонгох —</option>${EXITS.map(x=>`<option>${esc(x)}</option>`).join("")}</select></div></div>
+      <div class="preview" id="qcPv"></div></div>
+    <div class="dlg-f"><button type="button" class="btn ghost" data-qc="full">Бүтэн маягт</button><span class="sp"></span><button type="button" class="btn" data-qc="cancel">Болих</button><button type="button" class="btn primary" data-qc="ok">Хаах</button></div></form>`;
+  dl.showModal();qcPrev();setTimeout(()=>$("#qcExit").focus(),50)}
+function qcPrev(){const dl=$("#qcDlg");if(!dl)return;const t=S.trades[dl.dataset.id];if(!t)return;const x=num($("#qcExit").value);
+  const c=calc(Object.assign({},t,{exit:x==null?"":x,close:x==null?"":"x"}));
+  $("#qcPv").innerHTML=x==null?`<div class="muted" style="grid-column:1/-1">Дээрх товчоос сонгох эсвэл гарах үнээ бичнэ үү.</div>`:`<div><span class="lbl">P/L</span><b class="${cls(c.pnl)}">${money(c.pnl)}</b></div><div><span class="lbl">R</span><b class="${cls(c.R)}">${rfmt(c.R)}</b></div>`}
 async function submitForm(){
   let t;try{t=readForm()}catch(e){formErr("Маягтыг уншиж чадсангүй: "+(e.message||e));return}
   if(!t.inst){formErr("Хэрэгсэл сонгоно уу.","#tInst");return}
@@ -3582,6 +3610,7 @@ document.addEventListener("click",async e=>{
     const nv=toggleOff?"":segBtn.dataset.v;
     if(seg.dataset.day){const today=ymd(new Date());const d=clone(S.days[today]||{a:{}});d.a=d.a||{};d.a[seg.dataset.day]=nv;await put("days",today,d);return}
     if(seg.closest("#tradeForm"))updatePreview();return}
+  const qc=e.target.closest("[data-qclose]");if(qc){qcOpen(qc.dataset.qclose);return}
   const row=e.target.closest("tr[data-edit]");if(row){openForm(row.dataset.edit);return}
   const a=e.target.closest("[data-act]");if(!a)return;const act=a.dataset.act;
   if(act==="add"){if(!needsLogin())openForm()}
